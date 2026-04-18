@@ -56,6 +56,36 @@ The platform is built as **separate, independently-deployable services** that co
 
 ---
 
+## Verticals
+
+The three-layer architecture describes *how* services are built. A **vertical** describes *which* services group together to cover one market family end-to-end.
+
+A vertical is a self-contained stack across all three layers for a single market family. The first vertical is BTC. Future verticals follow the same pattern:
+
+```
+Vertical: BTC
+├── Layer 1: kujaku-data-btc       (collector)
+├── Layer 2: kujaku-bot-btc-*      (trading bots, one per strategy)
+│            kujaku-analysis-btc   (future shared analysis service)
+└── Layer 3: reached via kujaku-web (shared frontend across verticals)
+Vertical: SPX (future example)
+├── Layer 1: kujaku-data-spx
+├── Layer 2: kujaku-bot-spx-*, kujaku-analysis-spx
+└── Layer 3: reached via kujaku-web
+Vertical: QC — quantum computing sector (future example)
+├── Layer 1: kujaku-data-qc       (basket: IONQ, RGTI, QBTS, etc.)
+├── Layer 2: kujaku-bot-qc-*, kujaku-analysis-qc
+└── Layer 3: reached via kujaku-web
+```
+
+**Implications:**
+- Adding a new market family = creating a new vertical = copying the BTC pattern with asset-specific swaps
+- Verticals are independent; a bug or outage in one vertical does not affect another
+- Layer 3 (the public website) is the only service shared across verticals — it aggregates data from each vertical's public API surface
+- The BTC vertical is both the first deliverable AND the template for every future vertical. Build it well; copy it later.
+
+---
+
 ## Layer 1 Convention: One Collector Per Market Family
 
 Every market family (BTC, ETH, elections, sports, etc.) gets its **own collector service**: own repo, own SQLite database, own Railway deploy, own subdomain, own failure mode.
@@ -94,6 +124,8 @@ Same pattern as Layer 1. Each trading bot is its own service, its own repo, its 
 | Spec doc | `BOT.md` | repo root |
 
 Bots hold the Anthropic API key and are the only place in the platform where LLM calls happen.
+
+*Future note:* Layer 2 may eventually split into **analysis services** (produce biases, signals, regime classifications; e.g. `kujaku-analysis-btc`) and **trading bots** (consume analysis + Layer 1 data to execute trades). The first bot will contain bias logic inline. Extraction into a separate analysis service happens only when a second bot needs to consume the same logic — not before.
 
 ---
 
