@@ -44,7 +44,20 @@ kujaku-meta/                            (the platform monorepo)
 │       ├── reset.css                   base resets brand assumes
 │       ├── recipes.css                 reusable patterns (.card, .eyebrow, .hanko, .reveal, etc.)
 │       ├── textures.css                body background, emboss shadows, watermark
-│       ├── logo.svg                    canonical embossed logo
+│       ├── logo-mark-red.svg           mark, flat, red (default scale color)
+│       ├── logo-mark-red-pressed.svg   mark, pressed, red (primary mark — default)
+│       ├── logo-mark-gold.svg          mark, flat, gold (ceremonial)
+│       ├── logo-mark-gold-pressed.svg  mark, pressed, gold
+│       ├── logo-mark-ink.svg           mark, flat, ink (print/monochrome)
+│       ├── logo-mark-ink-pressed.svg   mark, pressed, ink
+│       ├── logo-mark-paper.svg         mark, flat, paper (for dark bg)
+│       ├── logo-mark-paper-pressed.svg mark, pressed, paper (press-light filter)
+│       ├── logo-lockup-red.svg         lockup, flat, red + ink text
+│       ├── logo-lockup-red-pressed.svg lockup, pressed scales + flat text (primary lockup)
+│       ├── logo-lockup-gold.svg        lockup, flat, gold scales + paper text
+│       ├── logo-lockup-gold-pressed.svg
+│       ├── logo-lockup-paper.svg       lockup, flat, paper scales + paper text (dark bg)
+│       ├── logo-lockup-paper-pressed.svg
 │       ├── fonts/                      woff2 font files (see Fonts section)
 │       └── assets/
 │           ├── illustrations/          koi, brushwork, sumi-e plates
@@ -69,7 +82,7 @@ The split is by **concern**, not by component. Adding a new shadow recipe goes i
 | `reset.css` | Minimal base reset. Box-sizing, body defaults, link defaults, image defaults. Not a full Normalize.css — only what brand explicitly assumes. |
 | `recipes.css` | Reusable component patterns. `.card`, `.eyebrow`, `.hanko`, `.reveal`, `.reveal-frame`, `.watermark`. Each must be self-contained — usable by adding the class to a single element. |
 | `textures.css` | Surface treatments. Body background (the three-layer cardstock recipe), emboss shadow utilities, kanji watermark. |
-| `logo.svg` | Canonical logo. Variant 08 (embossed original) per STYLE.md. Self-contained SVG with embedded filter definitions. |
+| `logo-*.svg` | 14 logo variants: `logo-mark-{token}[-pressed].svg` and `logo-lockup-{token}[-pressed].svg` where `{token}` is `red`, `gold`, `ink`, or `paper`. Each SVG embeds its own `#press` or `#press-light` filter in `<defs>`. See STYLE.md /assets "Logo rules" for naming and selection. |
 
 ---
 

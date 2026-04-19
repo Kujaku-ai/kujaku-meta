@@ -80,13 +80,6 @@ A reference doc and folder map. Pair this with `specimen.html` (the visual speci
 | `--ink-pale` | `#B5AE9F` | Disabled, hints |
 | `--ink-faint` | `#D8D2C2` | Hairline borders |
 
-**Silvers (logo mark only — never UI):**
-
-| Token | Hex | Use |
-|---|---|---|
-| `--silver-dark` | `#6F6F6E` | Bottom-left scale |
-| `--silver-light` | `#B0B4B1` | Bottom-right scale |
-
 **Pairing rules:**
 - Default trio: paper + ink + red. Anything builds on this.
 - Red never touches pure white or pure black — only paper and ink.
@@ -162,34 +155,40 @@ assets/
 
 ### Logo rules
 
-The mark is three overlapping fish-scale shapes — top-center scale, two below offset left and right.
+The mark is three overlapping fish-scale shapes arranged in a vertical stack (top scale above, two scales below offset left and right in a slight cascade). All three scales share the same fill color — depth comes from the filter, not from color contrast.
 
-**SVG path for one scale** (centered at `0,0`, height ~120):
-```
-M 0,-50 C 32,-50 54,-32 54,0 C 54,22 32,44 0,56 C -32,44 -54,22 -54,0 C -54,-32 -32,-50 0,-50 Z
-```
+**Naming convention** (lives in `/dist`):
 
-**Arrangement** (in 200×200 viewBox):
-- Top center: `translate(100, 90)`
-- Bottom left: `translate(60, 150)`
-- Bottom right: `translate(140, 150)`
+  logo-mark-{token}.svg          flat variant
+  logo-mark-{token}-pressed.svg  pressed-in variant (default use)
+  logo-lockup-{token}.svg        mark + wordmark, flat
+  logo-lockup-{token}-pressed.svg mark + wordmark, pressed scales
 
-**Locked treatment — Embossed Original:**
-- Top scale: `--red` (`#C8331E`)
-- Bottom-left: `--silver-dark` (`#6F6F6E`)
-- Bottom-right: `--silver-light` (`#B0B4B1`)
-- Each scale has subtle inner concentric arc (darker tone, opacity 0.45–0.5, stroke 0.8–1.2px)
-- Pressed with the SVG emboss filter (see `/textures` section)
+Where `{token}` is one of: `red`, `gold`, `ink`, `paper`.
 
-**Wordmark:** "Kujaku" in Sentient italic 300, ink. "INVESTMENTS" in Sentient regular 400, smaller, tracked wide (`0.12em`), ink-mid. Sits to the right of the mark with clear space equal to the height of one scale.
+**Color selection by context:**
+
+| Surface | Mark variant | Filter |
+|---|---|---|
+| `--paper` (default body) | `logo-mark-red-pressed.svg` | `#press` (dark inner shadow) |
+| `--paper-deep` | `logo-mark-red-pressed.svg` | `#press` |
+| `--ink` panels | `logo-mark-paper-pressed.svg` | `#press-light` (light inner highlight) |
+| Annual report / flagship covers | `logo-mark-gold-pressed.svg` | `#press` — see Gold rules in /colors |
+| Print, grayscale, monochrome | `logo-mark-ink-pressed.svg` or flat ink | flat preferred |
+
+**Default mark:** `logo-mark-red-pressed.svg`. This is the canonical Kujaku mark. Any reference to "the logo" or "the Kujaku mark" without qualification means this file.
+
+**Default lockup:** `logo-lockup-red-pressed.svg`. Mark + wordmark in ink on paper. Pressed scales, flat text.
+
+**Wordmark (inside lockups):** "Kujaku" in Sentient regular, "INVESTMENTS" in Sentient regular at smaller size with wide tracking. Text is rendered live — lockup SVGs rely on the consuming site loading Sentient via fonts.css. When using a lockup SVG, inline the SVG into HTML rather than loading via `<img src=>` so the font resolves. Mark-only variants have no text dependency.
 
 **Logo never:**
-- Recolored
-- Rotated, skewed, stretched
-- Placed on red, oxblood, or gold backgrounds (paper or ink only)
-- Smaller than 40px (mark) or 120px (with wordmark)
+- Recolored via CSS (colors are baked into the file — use the correct variant instead).
+- Rotated, skewed, stretched.
+- Placed on red, oxblood, or gold backgrounds. Paper and ink only.
+- Smaller than 40px (mark) or 240px wide (lockup).
 
-**Visual reference:** `specimen.html` → "Logo lab" section, variant 08.
+**Visual reference:** `specimen.html` → Logo section.
 
 ### Illustration rules
 
@@ -432,20 +431,43 @@ box-shadow:
   0 12px 28px rgba(40,30,18,0.06);
 ```
 
-### SVG emboss filter (for the logo and pressed shapes)
+### SVG press filters
 
-```svg
-<filter id="emboss" x="-10%" y="-10%" width="120%" height="120%">
-  <feGaussianBlur in="SourceAlpha" stdDeviation="1.2" result="blur"/>
-  <feSpecularLighting in="blur" surfaceScale="3" specularConstant="0.9"
-                      specularExponent="22" lighting-color="#ffffff" result="spec">
-    <feDistantLight azimuth="225" elevation="48"/>
-  </feSpecularLighting>
-  <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut"/>
-  <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic"
-               k1="0" k2="1" k3="1" k4="0"/>
+Two filters for logos and pressed shapes. Shipped as part of each logo SVG's `<defs>`. Not a shared stylesheet asset — SVG filters only resolve within the same SVG when loaded via `<img src=>`.
+
+**#press — dark inner shadow, for colored scales on paper or paper-deep:**
+
+```xml
+<filter id="press" x="-10%" y="-10%" width="120%" height="120%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+  <feOffset dx="0" dy="2"/>
+  <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"/>
+  <feFlood flood-color="#28201e" flood-opacity="0.7"/>
+  <feComposite in2="shadowDiff" operator="in" result="innerShadow"/>
+  <feMerge>
+    <feMergeNode in="SourceGraphic"/>
+    <feMergeNode in="innerShadow"/>
+  </feMerge>
 </filter>
 ```
+
+**#press-light — light inner highlight, for paper-colored scales on ink:**
+
+```xml
+<filter id="press-light" x="-10%" y="-10%" width="120%" height="120%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+  <feOffset dx="0" dy="2"/>
+  <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadowDiff"/>
+  <feFlood flood-color="#ffffff" flood-opacity="0.35"/>
+  <feComposite in2="shadowDiff" operator="in" result="innerShadow"/>
+  <feMerge>
+    <feMergeNode in="SourceGraphic"/>
+    <feMergeNode in="innerShadow"/>
+  </feMerge>
+</filter>
+```
+
+These filters create a matte "pressed into the paper" illusion matching the .emboss-deboss CSS treatment. They are NOT glossy; do not substitute with specular lighting filters.
 
 ### Kanji watermark
 
