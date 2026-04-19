@@ -141,3 +141,290 @@
  * variants the parent is Mono. No explicit .num styling is
  * required — default inheritance handles it.
  * ----------------------------------------------------------- */
+
+
+/* ============================================================
+ * CARD
+ * Eight variants: four colors × two states (raised / sunken).
+ * Separate recipes (Architecture B). Shared size modifiers
+ * .is-sm / .is-md (default, no class) / .is-lg compose across
+ * all variants. Cards are STATIC — no hover states.
+ *
+ * Cards belong only on --paper, --paper-deep, or --paper-coal
+ * surfaces. On --ink backgrounds, cast shadows vanish.
+ *
+ * See STYLE.md /components Cards for composition rules.
+ * ============================================================ */
+
+/* ---------- raised cards (letterpress) ---------- */
+
+/* .card-paper — baseline letterpress verbatim from textures.css.
+   This card is the reference; every other raised variant's shadow
+   is tuned against it. */
+.card-paper {
+  background: #F4EFE6;
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.7),
+    0 1px 0 rgba(255,251,240,0.5),
+    0 4px 12px rgba(40,30,18,0.06),
+    0 16px 40px rgba(40,30,18,0.06);
+}
+
+/* .card-coal — letterpress tuned for dark surface. Top highlight
+   dropped 0.70→0.18 (hot paper-white bleaches the coal body);
+   below-edge paper highlight removed (reads wrong on dark); warm
+   cast rgba(40,30,18,0.06) replaced with rgba(0,0,0,0.30) both
+   layers — the cast needs to be darker + more opaque to separate
+   a dark card from the paper body. */
+.card-coal {
+  background: var(--paper-coal);
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.18),
+    0 4px 12px rgba(0,0,0,0.30),
+    0 16px 40px rgba(0,0,0,0.30);
+}
+
+/* .card-oxblood — letterpress tuned for warm-red surface. Top
+   highlight softened 0.70→0.35 (0.70 reads as a hot bleached
+   stripe on red-deep); cast deepened 0.06→0.18 both layers so
+   the warm-brown cast separates from the warm red body;
+   below-edge paper highlight removed. */
+.card-oxblood {
+  background: var(--red-deep);
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.35),
+    0 4px 12px rgba(40,30,18,0.18),
+    0 16px 40px rgba(40,30,18,0.18);
+}
+
+/* .card-gold — letterpress tuned for ochre surface. Top highlight
+   dropped 0.70→0.40 (hot highlight bleaches the gold tone);
+   cast deepened 0.06→0.14 both layers so the ceremonial card
+   sits visibly proud; below-edge highlight softened 0.50→0.25. */
+.card-gold {
+  background: var(--gold);
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.40),
+    0 1px 0 rgba(255,251,240,0.25),
+    0 4px 12px rgba(40,30,18,0.14),
+    0 16px 40px rgba(40,30,18,0.14);
+}
+
+/* ---------- sunken cards (deboss) ---------- */
+
+/* .card-paper-sunken — baseline deboss verbatim from textures.css.
+   Reference for all sunken variants. */
+.card-paper-sunken {
+  background: var(--paper-deep);
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--ink);
+  box-shadow:
+    inset 0 2px 4px rgba(40,30,18,0.10),
+    inset 0 -1px 0 rgba(255,251,240,0.7),
+    0 1px 0 rgba(255,251,240,0.7);
+}
+
+/* .card-coal-sunken — deboss tuned for dark surface. Top inset
+   raised rgba(40,30,18,0.10)→rgba(0,0,0,0.55) (paper-tone cast
+   is invisible on coal; needs black-ish for press-in to carry);
+   bottom paper-tone highlights softened to 0.05 and 0.08 — they
+   should barely whisper against the dark body.
+
+   Sunken-coal surface: #2E2824 (~20% deeper than --paper-coal
+   #3E362F, preserves warm-brown family). Literal (not a token)
+   because this is a per-recipe depth, not a standalone palette
+   value. */
+.card-coal-sunken {
+  background: #2E2824;
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--paper);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.55),
+    inset 0 -1px 0 rgba(255,251,240,0.08),
+    0 1px 0 rgba(255,251,240,0.05);
+}
+
+/* .card-oxblood-sunken — deboss tuned for warm-red surface. Top
+   inset deepened 0.10→0.40 (needs more bite against the warm-dark
+   body); bottom highlights kept but softened to 0.22 and 0.15 —
+   full-strength paper highlight reads as a hot lip on red.
+
+   Sunken-oxblood surface: #6B1C12 (~22% deeper than --red-deep,
+   stays in crimson family). Literal (not a token) because this
+   is a per-recipe depth, not a standalone palette value. */
+.card-oxblood-sunken {
+  background: #6B1C12;
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--paper);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.40),
+    inset 0 -1px 0 rgba(255,251,240,0.22),
+    0 1px 0 rgba(255,251,240,0.15);
+}
+
+/* .card-gold-sunken — deboss tuned for ochre surface. Top inset
+   deepened 0.10→0.24 to read against the warm body; paper-tone
+   highlights preserved at 0.55 and 0.40 — they read as clean lit
+   lips on deep gold.
+
+   Sunken-gold surface: #8F7128 (~22% deeper than --gold, stays
+   in ochre family). Literal (not a token) because this is a
+   per-recipe depth, not a standalone palette value.
+
+   Note: gold-sunken illusion is the weakest of the eight card
+   variants. Strongest when nested inside a .card-gold parent
+   (same-hue deboss). See STYLE.md /components Cards. */
+.card-gold-sunken {
+  background: #8F7128;
+  border-radius: 6px;
+  padding: 32px 40px;
+  color: var(--ink);
+  box-shadow:
+    inset 0 2px 4px rgba(40,30,18,0.24),
+    inset 0 -1px 0 rgba(255,251,240,0.55),
+    0 1px 0 rgba(255,251,240,0.40);
+}
+
+/* ---------- size modifiers (compose with any card variant) ---------- */
+
+.is-sm { padding: 20px 24px; }
+/* .is-md is the default; no class required */
+.is-lg { padding: 48px 56px; }
+
+/* ---------- internal layout helpers (optional, for card content) ---------- */
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+}
+.card-body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+.card-data {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.card-delta {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 4px 0 0;
+}
+
+
+/* ============================================================
+ * EYEBROW · DARK
+ * Companion to .eyebrow for use on dark card surfaces
+ * (.card-coal, .card-oxblood, .card-gold and their sunken
+ * variants). The base .eyebrow recipe uses --ink-mid text and
+ * --red JP gloss, both unreadable on dark surfaces; this family
+ * swaps in paper-family colors with gold accent as default.
+ *
+ * Modifier system mirrors .eyebrow exactly:
+ *   Color:      (default) / .is-paper / .is-gold / .is-ink
+ *   Alignment:  (default left) / .is-center / .is-right
+ *   Numbered:   .is-numbered adds ordinal prefix via .num span
+ *
+ * See STYLE.md /components Eyebrow · Dark for usage rules.
+ * ============================================================ */
+
+/* ---------- base ---------- */
+.eyebrow-dark {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.eyebrow-dark .jp {
+  font-family: var(--font-jp);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  color: var(--gold);
+}
+.eyebrow-dark::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255, 251, 240, 0.25);
+}
+
+/* ---------- color modifiers ---------- */
+
+/* .is-paper: monochromatic paper — use when the card carries a
+   gold accent elsewhere and the eyebrow should not compete. */
+.eyebrow-dark.is-paper { color: var(--paper); }
+.eyebrow-dark.is-paper .jp { color: var(--paper); }
+
+/* .is-gold: gold label, paper JP — reverses the default accent. */
+.eyebrow-dark.is-gold { color: var(--gold); }
+.eyebrow-dark.is-gold .jp { color: var(--paper); }
+
+/* .is-ink: ink text, ink JP — ONLY for use on .card-gold where
+   ink is the legible color. */
+.eyebrow-dark.is-ink { color: var(--ink); }
+.eyebrow-dark.is-ink .jp { color: var(--ink); }
+
+/* ---------- alignment modifiers ---------- */
+
+.eyebrow-dark.is-center { justify-content: center; }
+.eyebrow-dark.is-center::before {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255, 251, 240, 0.25);
+}
+
+.eyebrow-dark.is-right { justify-content: flex-end; }
+.eyebrow-dark.is-right::after { display: none; }
+.eyebrow-dark.is-right::before {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(255, 251, 240, 0.25);
+}
+
+/* ---------- numbered modifier ---------- */
+
+.eyebrow-dark.is-numbered .num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: inherit;
+}

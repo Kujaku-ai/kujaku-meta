@@ -218,28 +218,6 @@
     box-shadow: inset 0 1px 0 var(--highlight);
   }
 
-  /* CARDS */
-  .data-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 24px; }
-  .data-card {
-    background: var(--paper-warm); border-radius: 4px; padding: 28px;
-    box-shadow: inset 0 1px 0 var(--highlight), 0 1px 2px var(--shadow-1), 0 8px 24px var(--shadow-1);
-    position: relative;
-  }
-  .data-card .seal {
-    position: absolute; top: 16px; right: 16px;
-    width: 22px; height: 22px; background: var(--red); border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-jp); font-size: 12px; color: var(--paper); line-height: 1; font-weight: 700;
-  }
-  .data-card .sector-name { font-family: var(--font-display); font-weight: 400; font-size: 22px; color: var(--ink); margin-bottom: 4px; }
-  .data-card .sector-jp { font-family: var(--font-jp); font-size: 12px; color: var(--ink-mid); letter-spacing: 0.05em; margin-bottom: 24px; }
-  .data-card .data-row { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--ink-faint); padding: 12px 0 0; margin-top: 12px; }
-  .data-card .data-row:first-of-type { border-top: none; padding-top: 0; }
-  .data-card .data-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mid); }
-  .data-card .data-value { font-family: var(--font-mono); font-weight: 500; font-size: 18px; color: var(--ink); letter-spacing: -0.01em; }
-  .data-card .data-value.pos { color: var(--red); }
-  .data-card .data-value.neg { color: var(--ink-mid); }
-
   /* CHART */
   .chart-card { background: var(--paper-warm); border-radius: 6px; padding: 40px; box-shadow: inset 0 1px 0 var(--highlight), 0 4px 12px var(--shadow-1), 0 24px 48px var(--shadow-1); }
   .chart-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; border-bottom: 1px solid var(--ink-faint); padding-bottom: 24px; }
@@ -558,44 +536,6 @@
 
 <hr class="section-rule">
 
-<!-- CARDS -->
-<section>
-  <div class="wrap">
-    <div class="eyebrow">Cards <span class="jp">指標 · shihyō</span></div>
-    <h2 class="section-title">Sector intelligence cards.</h2>
-    <p class="section-lead">Embossed paper, monospace numerals, hanko seals. Each card is an indicator at a glance.</p>
-
-    <div class="data-grid">
-      <div class="data-card">
-        <div class="seal">エ</div>
-        <div class="sector-name">Energy</div>
-        <div class="sector-jp">エネルギー · enerugī</div>
-        <div class="data-row"><span class="data-label">4w trend</span><span class="data-value pos">+4.2%</span></div>
-        <div class="data-row"><span class="data-label">Breadth</span><span class="data-value">68 / 100</span></div>
-        <div class="data-row"><span class="data-label">Custom σ</span><span class="data-value">1.84</span></div>
-      </div>
-      <div class="data-card">
-        <div class="seal">半</div>
-        <div class="sector-name">Semis</div>
-        <div class="sector-jp">半導体 · handōtai</div>
-        <div class="data-row"><span class="data-label">4w trend</span><span class="data-value neg">−1.8%</span></div>
-        <div class="data-row"><span class="data-label">Breadth</span><span class="data-value">42 / 100</span></div>
-        <div class="data-row"><span class="data-label">Custom σ</span><span class="data-value">2.31</span></div>
-      </div>
-      <div class="data-card">
-        <div class="seal">金</div>
-        <div class="sector-name">Financials</div>
-        <div class="sector-jp">金融 · kinyū</div>
-        <div class="data-row"><span class="data-label">4w trend</span><span class="data-value pos">+2.7%</span></div>
-        <div class="data-row"><span class="data-label">Breadth</span><span class="data-value">71 / 100</span></div>
-        <div class="data-row"><span class="data-label">Custom σ</span><span class="data-value">0.92</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="section-rule">
-
 <!-- CHART -->
 <section>
   <div class="wrap">
@@ -801,6 +741,110 @@
       </div>
 
     </div>
+  </div>
+</section>
+
+<hr class="section-rule">
+
+<!-- CARDS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Cards <span class="jp">紋 &middot; mon</span></div>
+    <h2 class="section-title">Eight surfaces, two states.</h2>
+    <p class="section-lead">Eight card variants across four paper surfaces — each in a raised (letterpress) and a sunken (deboss) state. See STYLE.md /components Cards for composition rules. Use <em style="font-style:normal;font-weight:500;border-bottom:1px solid var(--red);padding-bottom:1px;">.eyebrow-dark</em> on any dark variant.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;">
+
+      <!-- A · .card-paper -->
+      <div>
+        <div class="card-paper">
+          <div class="eyebrow">
+            Sector positioning
+            <span class="jp">指標 &middot; shihyō</span>
+          </div>
+          <h3 class="card-title">Calm observation</h3>
+          <p class="card-body" style="color:var(--ink-soft);">Energy held a four-week base above its median range. Breadth narrowed without breaking.</p>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-paper</div>
+      </div>
+
+      <!-- B · .card-paper-sunken -->
+      <div>
+        <div class="card-paper-sunken">
+          <div class="eyebrow is-ink">
+            Field notes
+            <span class="jp">見本 &middot; mihon</span>
+          </div>
+          <h3 class="card-title">A pressed quote</h3>
+          <p class="card-body" style="color:var(--ink-soft);">Semis printed lower highs into deteriorating breadth. The base is the message.</p>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-paper-sunken</div>
+      </div>
+
+      <!-- C · .card-coal -->
+      <div>
+        <div class="card-coal">
+          <div class="eyebrow-dark">
+            Observation
+            <span class="jp">観 &middot; kan</span>
+          </div>
+          <h3 class="card-title" style="color:var(--paper);">Held, not chased</h3>
+          <p class="card-body" style="color:var(--paper-deep);">The position was opened at the median and has not moved off its base. Nothing to add, nothing to trim.</p>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-coal &middot; eyebrow-dark</div>
+      </div>
+
+      <!-- D · .card-oxblood -->
+      <div>
+        <div class="card-oxblood">
+          <div class="eyebrow-dark">
+            Announcement
+            <span class="jp">静観 &middot; seikan</span>
+          </div>
+          <h3 class="card-title" style="color:var(--paper);">Calm observation.</h3>
+          <p class="card-body" style="color:var(--paper-deep);">The peacock does not chase. It waits until the light moves.</p>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-oxblood &middot; eyebrow-dark</div>
+      </div>
+
+    </div>
+
+    <!-- E · .card-gold.is-lg (solo, full-width) -->
+    <div style="margin-top:24px;">
+      <div class="card-gold is-lg">
+        <div class="eyebrow-dark is-ink">
+          Anniversary
+          <span class="jp">孔雀 &middot; kujaku</span>
+        </div>
+        <h3 style="font-family:var(--font-display);font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-0.02em;color:var(--ink);margin:0 0 14px;">A quiet mark, once.</h3>
+        <p class="card-body" style="color:var(--ink-soft);max-width:640px;">Gold is an occasion, not a color. The annual report cover, the flagship figure, the tenth-year mark — and nothing else on the same page.</p>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+      <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-gold.is-lg &middot; eyebrow-dark.is-ink</div>
+    </div>
+
+    <!-- F · four sunken variants row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px;">
+      <div class="card-paper-sunken is-sm" style="display:flex;align-items:center;justify-content:center;min-height:88px;">
+        <div style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-mid);">.card-paper-sunken</div>
+      </div>
+      <div class="card-coal-sunken is-sm" style="display:flex;align-items:center;justify-content:center;min-height:88px;">
+        <div style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--paper);opacity:0.75;">.card-coal-sunken</div>
+      </div>
+      <div class="card-oxblood-sunken is-sm" style="display:flex;align-items:center;justify-content:center;min-height:88px;">
+        <div style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--paper-deep);">.card-oxblood-sunken</div>
+      </div>
+      <div class="card-gold-sunken is-sm" style="display:flex;align-items:center;justify-content:center;min-height:88px;">
+        <div style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-soft);">.card-gold-sunken</div>
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
+    <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">The four sunken variants at .is-sm — for visual reference.</div>
+
   </div>
 </section>
 

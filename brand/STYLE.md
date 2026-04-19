@@ -60,12 +60,13 @@ A reference doc and folder map. Pair this with `specimen.html` (the visual speci
 
 **What lives here:** CSS custom properties file, JSON tokens for build tools, optional color-system docs.
 
-**Six palette colors. No more.**
+**Seven palette colors.** Extensions require a design-rationale proposal; see /components Cards for the precedent that earned `--paper-coal`.
 
 | Token | Hex | Japanese | Role |
 |---|---|---|---|
 | `--paper` | `#F1ECE0` | 卵殻 rankaku | Default background |
 | `--paper-deep` | `#E8E1D1` | 厚紙 atsugami | Sunken sections, alt background |
+| `--paper-coal` | `#3E362F` | 墨紙 sumigami | Dark paper surface |
 | `--red` | `#C8331E` | 朱 shu | Primary accent, CTAs, signal |
 | `--red-deep` | `#8A2418` | 古血 kokketsu | Strokes, hover states, seal backdrops |
 | `--ink` | `#1A1815` | 墨 sumi | Body text, dark surfaces |
@@ -80,6 +81,17 @@ A reference doc and folder map. Pair this with `specimen.html` (the visual speci
 | `--ink-pale` | `#B5AE9F` | Disabled, hints |
 | `--ink-faint` | `#D8D2C2` | Hairline borders |
 
+**Paper surface family** (four tones for card and surface use):
+
+| Token | Hex | Use |
+|---|---|---|
+| `--paper` | `#F1ECE0` | Default body background, primary surface |
+| `--paper-deep` | `#E8E1D1` | Sunken sections, alt background, cardstock |
+| `--paper-coal` | `#3E362F` | Dark editorial surface, coal cards |
+| `--red-deep` | `#8A2418` | Oxblood surface for ceremonial red cards |
+
+Paper surfaces are what content sits on. They are never text colors. The gold token (`--gold` `#B8923A`) serves as a ceremonial fourth paper surface when used for `.card-gold`, but it is governed by the gold rules below and is not part of the paper family.
+
 **Pairing rules:**
 - Default trio: paper + ink + red. Anything builds on this.
 - Red never touches pure white or pure black — only paper and ink.
@@ -91,6 +103,8 @@ A reference doc and folder map. Pair this with `specimen.html` (the visual speci
 - Approved uses: annual report covers, anniversary marks, the single most important figure on a flagship page.
 - Forbidden: body text, UI chrome (buttons, inputs, borders, icons), decorative accents, anything paired with red in the same element.
 - Default answer to "should this be gold?" is no.
+
+**Gold cards are permitted.** `.card-gold` and `.card-gold-sunken` are ceremonial content blocks subject to the one-gold-per-page rule. The rule applies collectively: one gold card OR one gold eyebrow OR one gold figure, not one of each. Gold card interiors must contain no `--red` anywhere (the two-reds prohibition stands). For eyebrow labels inside gold cards, use `.eyebrow-dark.is-ink`.
 
 ---
 
@@ -274,6 +288,63 @@ Classes compose freely. Examples:
 - Apply `.is-gold` to more than one eyebrow per page.
 - Pair gold with red elsewhere on the same line or element.
 - Use JP characters outside the /voice approved vocabulary table.
+
+### Eyebrow · Dark
+
+Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `.card-gold` and their sunken variants). The base `.eyebrow` recipe's `--ink-mid` text and `--red` JP gloss are unreadable on dark surfaces; `.eyebrow-dark` swaps in paper-family colors with a gold JP accent as default.
+
+**Default:** paper-colored label, gold JP gloss, paper-toned hairline (`rgba(255,251,240,0.25)`). Use on `.card-coal`, `.card-oxblood`, and their sunken variants.
+
+**Color modifiers:**
+
+| Class | Effect |
+|---|---|
+| _(default)_ | Paper label, gold JP gloss. Default for dark cards. |
+| `.is-paper` | Paper label, paper JP gloss. Monochromatic on dark. Use when the card already contains a gold element (eyebrow cannot claim gold if another element has). |
+| `.is-gold` | Gold label, paper JP gloss. Reverses the accent pairing. Use for emphasis on coal or oxblood, never on gold. |
+| `.is-ink` | Ink label, ink JP gloss. Only usable on `.card-gold` (where ink reads against warm gold); do NOT use on coal or oxblood (ink invisible on warm-dark). |
+
+**Alignment + numbered modifiers:** `.is-center`, `.is-right`, and `.is-numbered` compose exactly as with `.eyebrow`. See that section for details.
+
+**Don't:**
+- Use `.eyebrow-dark.is-gold` on `.card-gold` (two gold elements; breaks one-per-page rule).
+- Use `.eyebrow-dark.is-ink` on `.card-coal` or `.card-oxblood` (ink invisible on warm-dark).
+- Use the base `.eyebrow` on any dark card surface (the gray and red disappear).
+
+### Cards
+
+Eight card recipes in four colors × two states. Cards frame content: text, data, charts, images, titles, any block-level content. Static — no hover states.
+
+**Variants:**
+
+| Class | Surface | State | Use |
+|---|---|---|---|
+| `.card-paper` | `#F4EFE6` | raised | Default editorial card. Lifts off body paper. |
+| `.card-paper-sunken` | `var(--paper-deep)` | sunken | Pressed-in regions: inputs, pulled quotes, inset panels. |
+| `.card-coal` | `var(--paper-coal)` | raised | Dark editorial card. High-contrast sections. |
+| `.card-coal-sunken` | `#2E2824` | sunken | Dark pressed-in region. |
+| `.card-oxblood` | `var(--red-deep)` | raised | Ceremonial red card. Announcements, chapter breaks, pull quotes. |
+| `.card-oxblood-sunken` | `#6B1C12` | sunken | Sunken oxblood for deep-red moments. |
+| `.card-gold` | `var(--gold)` | raised | Ceremonial gold card. One-per-page rule. |
+| `.card-gold-sunken` | `#8F7128` | sunken | Sunken gold. Illusion weakest of the eight — strongest when nested inside a `.card-gold` parent. |
+
+**Size modifiers (compose with any variant):**
+
+| Class | Padding |
+|---|---|
+| `.is-sm` | 20px 24px |
+| _(default)_ | 32px 40px |
+| `.is-lg` | 48px 56px |
+
+**Internal layout helpers (optional):** `.card-title` (Sentient 28px), `.card-body` (Satoshi 16px), `.card-data` (JetBrains Mono 44px for stat numerals), `.card-delta` (JetBrains Mono 13px for deltas and change labels). Use when useful; compose freely.
+
+**Rules:**
+
+- Cards only on `--paper`, `--paper-deep`, or `--paper-coal` backgrounds. Cards on `--ink` lose their cast shadows and should use a different pattern (e.g. a bordered block).
+- No red interior content on `.card-oxblood` or its sunken variant — red on red-deep is invisible; the two-reds rule permits red + red-deep as the only red pair.
+- No red or gold interior content on `.card-gold` or its sunken variant (the one-gold-per-page rule and two-reds rule both apply). Use `.eyebrow-dark.is-ink` for eyebrow labels inside gold cards.
+- Nesting: same-variant nesting works (e.g. `.card-paper` inside `.card-paper`). Cross-variant nesting works (e.g. `.card-paper.is-sm` inside `.card-coal.is-lg` for dashboard composition). No hard rule — use judgment; if the illusion fails visually, reconsider the composition.
+- Use `.eyebrow-dark` (NOT `.eyebrow`) on any dark card.
 
 **Hanko stamp recipe (28px size):**
 ```css

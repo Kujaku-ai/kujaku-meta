@@ -2,6 +2,9 @@
   /* COLORS */
   --paper: #F1ECE0;
   --paper-deep: #E8E1D1;
+  /* Warm-dark paper surface — for coal cards and dark editorial moments.
+     Not a text color; never use for type. */
+  --paper-coal: #3E362F;
   --red: #C8331E;
   --red-deep: #8A2418;
   --ink: #1A1815;

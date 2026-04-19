@@ -3,3 +3,6 @@ bot-kalshi15min-btc/
 sandbox/
 .env
 *.pem
+
+# Sibling projects (own repos, own lifecycles)
+charting-calculations/
