@@ -1,0 +1,46 @@
+:root {
+  /* COLORS */
+  --paper: #F1ECE0;
+  --paper-deep: #E8E1D1;
+  --red: #C8331E;
+  --red-deep: #8A2418;
+  --ink: #1A1815;
+  --gold: #B8923A;
+
+  --ink-soft: #4A453E;
+  --ink-mid: #7A736A;
+  --ink-pale: #B5AE9F;
+  --ink-faint: #D8D2C2;
+
+  --silver-dark: #6F6F6E;
+  --silver-light: #B0B4B1;
+
+  /* FONTS */
+  --font-display: 'Sentient', Georgia, serif;
+  --font-body: 'Satoshi', -apple-system, sans-serif;
+  --font-jp: 'Shippori Mincho', 'Noto Serif JP', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* TYPE SCALE */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 4rem;
+  --text-6xl: 5.5rem;
+  --text-7xl: 8rem;
+
+  /* EASINGS */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-emphasis: cubic-bezier(0.2, 0.9, 0.2, 1);
+
+  /* DURATIONS */
+  --duration-fast: 240ms;
+  --duration-default: 600ms;
+  --duration-slow: 700ms;
+}

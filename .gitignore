@@ -1,4 +1,5 @@
 data/
 bot-kalshi15min-btc/
+sandbox/
 .env
 *.pem
