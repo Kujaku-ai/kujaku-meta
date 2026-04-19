@@ -11,6 +11,10 @@
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=sentient@300,400,500,700&f[]=satoshi@300,400,500,700&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&family=Shippori+Mincho:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
+<link rel="stylesheet" href="dist/fonts.css">
+<link rel="stylesheet" href="dist/tokens.css">
+<link rel="stylesheet" href="dist/textures.css">
+
 <style>
   :root {
     --paper:           #F1ECE0;
@@ -646,6 +650,43 @@
           <text x="920" y="310" text-anchor="end">JUN</text>
         </g>
       </svg>
+    </div>
+  </div>
+</section>
+
+<hr class="section-rule">
+
+<!-- TEXTURES -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Textures</div>
+    <h2 class="section-title">Paper, pressed and printed.</h2>
+    <p class="section-lead">The page itself is eggshell cardstock. Three reusable emboss utilities build raised, pressed-in, and hovering panels. A kanji watermark sits inside a staged territory, never beneath body text.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:24px;">
+      <div class="emboss-letterpress" style="background:var(--paper-warm);border-radius:6px;padding:32px;">
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:16px;">Letterpress</div>
+        <div style="font-family:var(--font-display);font-weight:400;font-size:22px;color:var(--ink);margin-bottom:8px;">Raised panel.</div>
+        <p style="font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--ink-soft);">Cards, swatches, primary surfaces.</p>
+      </div>
+      <div class="emboss-deboss" style="background:var(--paper-deep);border-radius:6px;padding:32px;">
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:16px;">Deboss</div>
+        <div style="font-family:var(--font-display);font-weight:400;font-size:22px;color:var(--ink);margin-bottom:8px;">Pressed in.</div>
+        <p style="font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--ink-soft);">Input fields, sunken regions.</p>
+      </div>
+      <div class="emboss-subtle" style="background:var(--paper-warm);border-radius:6px;padding:32px;">
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:16px;">Subtle</div>
+        <div style="font-family:var(--font-display);font-weight:400;font-size:22px;color:var(--ink);margin-bottom:8px;">Hovering.</div>
+        <p style="font-family:var(--font-body);font-size:13px;line-height:1.5;color:var(--ink-soft);">Secondary cards, tiles.</p>
+      </div>
+    </div>
+
+    <div class="watermark-stage emboss-subtle" style="background:var(--paper-warm);border-radius:6px;padding:64px;margin-top:48px;height:320px;">
+      <span class="watermark">観</span>
+      <div style="position:relative;z-index:1;max-width:520px;">
+        <div style="font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:16px;">.watermark inside .watermark-stage</div>
+        <p style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:22px;line-height:1.5;color:var(--ink);">The watermark sits at very low opacity behind content. It is present but never competes with body text. The <em style="font-style:normal;font-weight:500;border-bottom:1px solid var(--red);padding-bottom:1px;">.watermark-stage</em> wrapper defines the protected territory and clips the oversized character.</p>
+      </div>
     </div>
   </div>
 </section>

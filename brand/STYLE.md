@@ -402,6 +402,11 @@ body {
 
 ### Embossing — three states
 
+**Surface color is part of the recipe.** Each emboss state requires a specific surface color relative to the body paper background to read correctly:
+- Letterpress and Subtle: surface LIGHTER than `--paper` (use `#F4EFE6` or apply to a `--paper` surface). The shadow lifts off the page.
+- Deboss: surface DARKER than `--paper` (use `var(--paper-deep)`). The inset shadow presses into the page.
+Applying deboss shadows to a lighter surface inverts the illusion and reads as raised.
+
 **Letterpress (raised) — for cards, swatches, primary surfaces**
 ```css
 box-shadow:
@@ -444,7 +449,7 @@ box-shadow:
 
 ### Kanji watermark
 
-A single character at huge size, very low opacity (4–6%), positioned at edge or center of section. Pointer-events none, user-select none. Never under body text.
+A single character at huge size, very low opacity (4–6%), positioned at edge or center of section. Pointer-events none, user-select none. The .watermark utility ONLY lives inside a .watermark-stage container — the stage defines the protected territory and ensures body text never overlaps the watermark.
 
 ```css
 .watermark {
@@ -454,6 +459,15 @@ A single character at huge size, very low opacity (4–6%), positioned at edge o
   font-size: 720px; line-height: 1;
   color: var(--ink); opacity: 0.04;
   pointer-events: none; user-select: none;
+}
+```
+
+Required wrapper. Any element containing a .watermark must be a .watermark-stage. Body text inside the stage uses position:relative and z-index:1.
+
+```css
+.watermark-stage {
+  position: relative;
+  overflow: hidden;
 }
 ```
 
