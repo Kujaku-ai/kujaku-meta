@@ -229,25 +229,51 @@ When using illustrations (koi, brushwork, sumi-e):
 }
 ```
 
-**Eyebrow recipe:**
-```css
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-mid);
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 24px;
-}
-.eyebrow::before {
-  content: ''; width: 24px; height: 1px; background: var(--ink-mid);
-}
-.eyebrow .jp {
-  font-family: var(--font-jp); font-size: 14px;
-  letter-spacing: 0.05em; text-transform: none;
-  color: var(--red); font-weight: 400;
-}
-```
+### Eyebrow
+
+Three variants share a composable modifier system. Use these above section headings to label content and carry the brand's editorial voice.
+
+**Variants:**
+
+| Class | Usage |
+|---|---|
+| `.eyebrow` | Default. Column-spanning hairline with mono label and JP gloss. The signature Kujaku eyebrow — use it unless you have a reason not to. |
+| `.eyebrow-quiet` | No stroke, no mark — voice-only mono label with JP gloss. For running section headers inside long-form content where a hairline would feel too loud. |
+| `.eyebrow-gloss` | JP character with italic mono reading, no Latin label. For chapter breaks, thematic dividers, or typographic punctuation. |
+
+**Color modifiers (apply to any variant):**
+
+| Class | Accent color | Usage |
+|---|---|---|
+| _none_ | `--red` | Default. Brand color on the JP character (`.eyebrow`, `.eyebrow-quiet`) or on the full JP element (`.eyebrow-gloss`). |
+| `.is-ink` | `--ink` | Neutral variant for sections that don't need brand accent. Preserves base weight. |
+| `.is-gold` | `--gold` | Ceremonial — important notices, flagship figures, annual marks. **One gold eyebrow per page maximum.** Weight steps up one (mono 500→700, Mincho 400→500). Gold and red never mix; applying `.is-gold` replaces red fully. |
+
+**Alignment modifiers (apply to any variant):**
+
+| Class | Effect |
+|---|---|
+| _none_ | Left-aligned. Default. |
+| `.is-center` | Center-aligned. For hero sections and flagship pages. |
+| `.is-right` | Right-aligned. For sidebar captions or asymmetric layouts. Note: `.eyebrow-gloss.is-right` inverts the natural hierarchy (JP character floats into margin) — use deliberately or prefer left/center for gloss. |
+
+**Numbered modifier:**
+
+| Class | Effect |
+|---|---|
+| `.is-numbered` | Prepends "01 · " ordinal in the eyebrow's own type family. For ordered section lists, methodology steps, chapter breaks. |
+
+**Composing:**
+
+Classes compose freely. Examples:
+- `<p class="eyebrow">INDICATORS · <span class="jp">指標 · shihyō</span></p>` — default
+- `<p class="eyebrow-quiet is-ink is-center">FIELD NOTES · <span class="jp">見本 · mihon</span></p>` — quiet, neutral, centered
+- `<p class="eyebrow is-gold is-center is-numbered"><span class="num">01 · </span>IMPORTANT · <span class="jp">観 · kan</span></p>` — gold hero with ordinal
+
+**Don't:**
+- Apply `.is-gold` to more than one eyebrow per page.
+- Pair gold with red elsewhere on the same line or element.
+- Use JP characters outside the /voice approved vocabulary table.
 
 **Hanko stamp recipe (28px size):**
 ```css

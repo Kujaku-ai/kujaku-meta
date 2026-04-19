@@ -1,0 +1,143 @@
+/* recipes.css — reusable component patterns
+ *
+ * Depends on tokens.css and fonts.css. Each recipe works by
+ * applying its class to a single element. See brand/STYLE.md
+ * /components for the usage rules that govern these recipes.
+ */
+
+/* ============================================================
+ * EYEBROW
+ * Small label above a section heading. Three variants share a
+ * modifier system for colour (.is-ink, .is-gold), alignment
+ * (.is-center, .is-right), and a numbered ordinal prefix
+ * (.is-numbered). See STYLE.md /components for full usage.
+ * ============================================================ */
+
+/* ---------- Default: column-spanning hairline, mono + JP ---- */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.eyebrow .jp {
+  font-family: var(--font-jp);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  color: var(--red);
+}
+.eyebrow::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ink-faint);
+}
+
+/* .eyebrow · alignment */
+.eyebrow.is-center { text-align: center; }
+.eyebrow.is-center::before {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ink-faint);
+}
+.eyebrow.is-right { text-align: right; }
+.eyebrow.is-right::after { display: none; }
+.eyebrow.is-right::before {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ink-faint);
+}
+
+/* .eyebrow · colour */
+.eyebrow.is-ink .jp { color: var(--ink); }
+.eyebrow.is-gold { font-weight: 700; }
+.eyebrow.is-gold .jp {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ---------- Quiet: voice-only, no stroke, no mark ---------- */
+.eyebrow-quiet {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.eyebrow-quiet .jp {
+  font-family: var(--font-jp);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  color: var(--red);
+}
+
+/* .eyebrow-quiet · alignment */
+.eyebrow-quiet.is-center { justify-content: center; text-align: center; }
+.eyebrow-quiet.is-right  { justify-content: flex-end; text-align: right; }
+
+/* .eyebrow-quiet · colour */
+.eyebrow-quiet.is-ink .jp { color: var(--ink); }
+.eyebrow-quiet.is-gold { font-weight: 700; }
+.eyebrow-quiet.is-gold .jp {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ---------- Gloss: JP character with italic reading -------- */
+.eyebrow-gloss {
+  font-family: var(--font-jp);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--red);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.eyebrow-gloss .reading {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.14em;
+  text-transform: lowercase;
+  color: var(--ink-mid);
+}
+
+/* .eyebrow-gloss · alignment */
+.eyebrow-gloss.is-center { justify-content: center; text-align: center; }
+.eyebrow-gloss.is-right  { justify-content: flex-end; text-align: right; }
+
+/* .eyebrow-gloss · colour */
+.eyebrow-gloss.is-ink  { color: var(--ink); }
+.eyebrow-gloss.is-gold {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ---------- Numbered ordinal ---------------------------------
+ * The ordinal lives in <span class="num">01 · </span> inside the
+ * eyebrow. The span inherits the parent's type family, size,
+ * weight, and colour so the ordinal matches the eyebrow style.
+ * For .eyebrow-gloss the parent is Mincho; for the other two
+ * variants the parent is Mono. No explicit .num styling is
+ * required — default inheritance handles it.
+ * ----------------------------------------------------------- */
