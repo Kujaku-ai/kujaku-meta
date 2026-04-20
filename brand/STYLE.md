@@ -380,7 +380,7 @@ Two-piece brutalist navigation: a left rail that expands on hover, and a top mas
 |---|---|
 | `.nav-composition` | Optional flex-row wrapper holding rail + main column. Default `min-height: 0` (embeddable). For page shells, consumer sets its own min-height. |
 | `.nav-rail` | Left rail. Collapsed 64px default. Expands to 180px on `:hover` OR when `.is-expanded` applied. |
-| `.nav-rail .mark` | Top of rail. Holds logo mark (visible in collapsed state) and wordmark (visible in expanded state). Children: `.mark .svg` + `.mark .wordmark`. Crossfades between the two on state change. |
+| `.nav-rail .mark` | Top of rail. Height 48px to match `.nav-masthead` (forms the crisp "+" corner intersection at the rail-masthead boundary). Holds logo mark (visible in collapsed state) and wordmark (visible in expanded state). Children: `.mark .svg` + `.mark .wordmark`. Crossfades between the two on state change. |
 | `.nav-rail .items` | Vertical stack containing `.nav-section` and `.nav-item` children. |
 | `.nav-rail .footer` | Build-info footer at rail bottom. Three lines of mono 9px `--ink-pale`. Only visible when rail is expanded. Scoped selector — consumers should not use `.footer` inside the rail for unrelated content. |
 | `.nav-section` | Section heading group (SYSTEM, LOG, STATIC). Contains `.nav-section .label` + nested `.nav-item` children. |
@@ -402,7 +402,7 @@ Two-piece brutalist navigation: a left rail that expands on hover, and a top mas
 
 **Corner alignment:**
 
-The rail's right-edge border and the masthead's bottom-edge border must meet at a single intersection point. This is achieved by placing the masthead INSIDE the main content column (not above the rail). Canonical markup:
+The rail's right-edge border and the masthead's bottom-edge border must meet at a single intersection point. This is achieved by placing the masthead INSIDE the main content column (not above the rail), and by sizing `.nav-rail .mark` to 48px — the same height as `.nav-masthead` — so their two bottom-edge hairlines share a single Y coordinate. Canonical markup:
 
 ```html
 <div class="nav-composition">

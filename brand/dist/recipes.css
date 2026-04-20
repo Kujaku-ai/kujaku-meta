@@ -592,9 +592,16 @@
          <span class="tag">Investments</span>
        </span>
      </div>                                                      */
+/* .mark is 48px tall to match .nav-masthead height.
+   The two bottom-edge borders meet at a single Y coordinate,
+   creating the crisp "+" corner intersection. */
 .nav-rail .mark {
   position: relative;
-  height: 56px;
+  height: 48px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-bottom: 1px solid var(--ink-faint);
   flex-shrink: 0;
 }
@@ -620,8 +627,10 @@
 .nav-rail.is-drawer .mark .wordmark { opacity: 1; }
 
 .nav-rail .mark .svg img {
-  width: 30px;
-  height: 30px;
+  /* 28px fits inside the 48px .mark slot with 10px of breathing
+     room top and bottom. Was 30px when .mark was 56px. */
+  width: 28px;
+  height: 28px;
   display: block;
 }
 .nav-rail .mark .wordmark .name {
