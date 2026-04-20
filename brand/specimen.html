@@ -215,6 +215,42 @@
   #indicators .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 760px; }
   #indicators .section-end code { color: var(--ink); }
 
+  /* BUTTONS section-local helpers. Scoped under #buttons so
+     nothing leaks. Real button recipes live in dist/recipes.css;
+     only demo scaffolding here. */
+  #buttons .sub-title { font-family: var(--font-display); font-weight: 400; font-size: 28px; letter-spacing: -0.01em; color: var(--ink); margin: 48px 0 16px; }
+  #buttons .sub-lede { font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink-soft); max-width: 60ch; margin: 0 0 24px; }
+  #buttons .demo-block { margin-bottom: 36px; }
+  #buttons .demo-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mid); margin: 0 0 10px; }
+  #buttons .demo-label strong { color: var(--ink); font-weight: 500; margin-right: 10px; }
+  #buttons .demo-frame { padding: 24px 28px; background: var(--paper); border: 1px solid var(--ink-faint); border-radius: 6px; }
+  #buttons .demo-caption { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ink-faint); line-height: 1.6; }
+  #buttons .demo-caption code { background: transparent; color: var(--ink); }
+
+  #buttons .btn-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 16px 20px; justify-content: start; align-items: center; }
+  #buttons .btn-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  #buttons .btn-row.is-baseline { align-items: baseline; }
+  #buttons .btn-row .sep { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-pale); }
+
+  /* dark-card inline frames for the on-dark subsection */
+  #buttons .dark-card { padding: 24px 28px; border-radius: 6px; display: flex; flex-direction: column; gap: 14px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.16), 0 4px 12px rgba(40,30,18,0.10); }
+  #buttons .dark-card.is-coal { background: var(--paper-coal); }
+  #buttons .dark-card.is-oxblood { background: var(--red-deep); }
+  #buttons .dark-card .eyebrow-dark { margin: 0; }
+  #buttons .dark-card p.copy { font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: rgba(241,236,224,0.78); margin: 0; }
+  #buttons .dark-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* form-footer composition */
+  #buttons .form-footer { display: flex; flex-direction: column; gap: 20px; max-width: 460px; }
+  #buttons .form-footer .field { display: flex; flex-direction: column; gap: 4px; }
+  #buttons .form-footer .field label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mid); }
+  #buttons .form-footer .field input { padding: 10px 12px; background: var(--paper-deep); border: none; border-radius: 2px; font-family: var(--font-mono); font-size: 13px; color: var(--ink); box-shadow: inset 0 2px 4px rgba(40,30,18,0.08), inset 0 -1px 0 rgba(255,251,240,0.5); outline: none; }
+  #buttons .form-footer .field input:focus { box-shadow: inset 0 2px 4px rgba(40,30,18,0.12), inset 0 -1px 0 rgba(255,251,240,0.6), 0 0 0 2px var(--red); }
+  #buttons .form-footer .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 4px; }
+
+  #buttons .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 760px; }
+  #buttons .section-end code { color: var(--ink); }
+
   /* COLOPHON */
   .colophon { background: var(--ink); color: var(--paper); padding: 80px 0 64px; margin-top: 0; position: relative; overflow: hidden; }
   .colophon::before { content: '孔雀'; position: absolute; right: -40px; bottom: -120px; font-family: var(--font-jp); font-weight: 300; font-size: 420px; line-height: 1; color: var(--paper); opacity: 0.04; pointer-events: none; }
@@ -294,6 +330,7 @@
         <a class="nav-item" href="#hanko"><span class="slash">/</span><span class="label">hanko</span></a>
         <a class="nav-item" href="#nav"><span class="slash">/</span><span class="label">nav</span></a>
         <a class="nav-item" href="#indicators"><span class="slash">/</span><span class="label">indicators</span></a>
+        <a class="nav-item" href="#buttons"><span class="slash">/</span><span class="label">buttons</span></a>
       </div>
     </nav>
     <div class="footer">
@@ -1112,6 +1149,146 @@
           </div>
 
           <p class="section-end">All four recipes. Size ladder (<code>.is-sm</code> / default / <code>.is-lg</code>). State modifiers (<code>.is-dark</code> for coal and oxblood; <code>.is-stacked</code> on <code>.indicator-row</code> for narrow KPI cells). Sparklines 1px <code>--ink</code> polyline + filled <code>--red</code> end-dot r=2. Delta color always <code>--ink-mid</code>.</p>
+        </div>
+      </section>
+
+      <hr class="section-rule">
+
+      <!-- BUTTONS -->
+      <section id="buttons" class="specimen-section">
+        <div class="wrap">
+          <div class="eyebrow">Buttons <span class="jp">紋 &middot; mon</span></div>
+          <h2 style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:48px;letter-spacing:-0.02em;line-height:1.05;color:var(--ink);margin:0 0 24px;">Button.</h2>
+          <p style="font-family:var(--font-body);font-size:16px;line-height:1.7;color:var(--ink-soft);max-width:65ch;margin:0 0 40px;">Pressed, not clicked. Every button raises at rest and debosses on hover &mdash; a tactile echo of the paper brand. Slash-prefix indicates route navigation; plain labels indicate action. The deboss is the affordance.</p>
+
+          <!-- Surface modifiers -->
+          <h3 class="sub-title">Surface modifiers</h3>
+          <p class="sub-lede">Six treatments. Default paper, primary red, ink coal, oxblood ceremonial, outline ghost, and on-dark for nested placement.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Six surfaces</strong>hover each to feel the press</p>
+            <div class="demo-frame">
+              <div class="btn-grid">
+                <button type="button" class="btn">Learn More</button>
+                <button type="button" class="btn is-primary">Subscribe</button>
+                <button type="button" class="btn is-ink">Schedule a Call</button>
+                <button type="button" class="btn is-oxblood"><span class="jp">観</span>Open Position</button>
+                <button type="button" class="btn is-outline">View Details</button>
+                <div class="dark-card is-coal">
+                  <p class="eyebrow-dark is-paper">Nested &middot; <span class="jp">指標 &middot; shihyō</span></p>
+                  <a class="btn is-on-dark is-route" href="#methodology">methodology</a>
+                </div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.btn</code> &middot; <code>.btn.is-primary</code> &middot; <code>.btn.is-ink</code> &middot; <code>.btn.is-oxblood</code> with <code>&lt;span class="jp"&gt;観&lt;/span&gt;</code> &middot; <code>.btn.is-outline</code> &middot; <code>.btn.is-on-dark</code> inside <code>.card-coal</code>.</p>
+          </div>
+
+          <!-- Size ladder -->
+          <h3 class="sub-title">Size ladder</h3>
+          <p class="sub-lede">Three scales. Padding, font-size, and shadow offsets step together. The press mechanic scales with them.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>.is-sm &middot; default &middot; .is-lg</strong>same surface across three sizes</p>
+            <div class="demo-frame">
+              <div class="btn-row is-baseline">
+                <button type="button" class="btn is-primary is-sm">Copy</button>
+                <button type="button" class="btn is-primary">Subscribe</button>
+                <button type="button" class="btn is-primary is-lg">Schedule a Call</button>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.btn.is-primary.is-sm</code> (10px / 8&middot;18 padding) &middot; default (11px / 12&middot;26) &middot; <code>.btn.is-primary.is-lg</code> (13px / 16&middot;34).</p>
+          </div>
+
+          <!-- Route semantics -->
+          <h3 class="sub-title">Route semantics</h3>
+          <p class="sub-lede">Slash prefix means the button navigates. No slash means the button acts. The <code>::before</code> pseudo supplies the slash; the label text does not include it.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Action vs route</strong>side-by-side</p>
+            <div class="demo-frame">
+              <div class="btn-row">
+                <button type="button" class="btn">Submit</button>
+                <span class="sep">vs</span>
+                <a class="btn is-route" href="#subscribe">subscribe</a>
+              </div>
+            </div>
+            <p class="demo-caption">Left: <code>.btn</code> performs. Right: <code>.btn.is-route</code> navigates. Markup text for the right button is <code>subscribe</code> &mdash; the slash is drawn by the pseudo-element.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Route variants</strong>across surfaces and sizes</p>
+            <div class="demo-frame">
+              <div class="btn-row">
+                <a class="btn is-route is-primary" href="#open-position">open-position</a>
+                <a class="btn is-route is-outline" href="#about">about</a>
+                <a class="btn is-route is-sm" href="#btc">btc</a>
+                <a class="btn is-route is-sm" href="#methodology">methodology</a>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.btn.is-route</code> composes with any surface modifier (primary, outline) and any size modifier (<code>.is-sm</code>). Slash colour tunes per surface.</p>
+          </div>
+
+          <!-- Disabled state -->
+          <h3 class="sub-title">Disabled state</h3>
+          <p class="sub-lede">Brand's disabled vocabulary. <code>--ink-pale</code> text, flat shadow, <code>cursor: not-allowed</code>. No red-X, no strikethrough. Applies to every button surface; future cycles may extend to other primitives.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Enabled vs disabled</strong><code>.btn.is-primary</code></p>
+            <div class="demo-frame">
+              <div class="btn-row">
+                <button type="button" class="btn is-primary">Submit</button>
+                <button type="button" class="btn is-primary" disabled>Submit</button>
+                <button type="button" class="btn is-primary" aria-disabled="true">Submit</button>
+              </div>
+            </div>
+            <p class="demo-caption">Left: enabled. Middle: <code>disabled</code> attribute. Right: <code>[aria-disabled="true"]</code>. Both states render identically &mdash; ARIA path is for anchor-based buttons.</p>
+          </div>
+
+          <!-- On-dark context -->
+          <h3 class="sub-title">On-dark context</h3>
+          <p class="sub-lede">Inside dark cards, <code>.is-on-dark</code> replaces surface-filled variants. Press grammar moves from shadow-stack to border + translucent fill &mdash; the light-on-light letterpress illusion cannot reach across warm-dark paper.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Coal and oxblood</strong>editorial nest + dismiss</p>
+            <div class="demo-frame">
+              <div class="dark-pair">
+                <div class="dark-card is-coal">
+                  <p class="eyebrow-dark is-paper">Appendix &middot; <span class="jp">図表 &middot; zuhyō</span></p>
+                  <p class="copy">Positioning data and full methodology sit in the appendix. Hand-computed, hand-audited.</p>
+                  <a class="btn is-on-dark is-route" href="#methodology">methodology</a>
+                </div>
+                <div class="dark-card is-oxblood">
+                  <p class="eyebrow-dark is-paper">Ceremonial &middot; <span class="jp">紋 &middot; mon</span></p>
+                  <p class="copy">A red-deep panel reserves itself for moments that earn it. Dismiss to return to the quieter page.</p>
+                  <button type="button" class="btn is-on-dark">Dismiss</button>
+                </div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.btn.is-on-dark</code> inside <code>.card-coal</code> and <code>.card-oxblood</code>. Transparent fill, paper border, paper text. Hover: border-brightens + translucent paper fill.</p>
+          </div>
+
+          <!-- Form footer -->
+          <h3 class="sub-title">Form footer</h3>
+          <p class="sub-lede">Canonical two-button pattern. Cancel on the left in <code>.is-outline</code>; Save on the right in <code>.is-primary</code>. Forward action convention &mdash; primary sits where the eye finishes reading.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Input + actions</strong>Cancel &middot; Save</p>
+            <div class="demo-frame">
+              <form class="form-footer" onsubmit="return false;">
+                <div class="field">
+                  <label for="specimen-btn-email">Email address</label>
+                  <input id="specimen-btn-email" type="email" placeholder="you@kujaku.ai" />
+                </div>
+                <div class="actions">
+                  <button type="button" class="btn is-outline">Cancel</button>
+                  <button type="submit" class="btn is-primary">Save</button>
+                </div>
+              </form>
+            </div>
+            <p class="demo-caption">CLASSES <code>.btn.is-outline</code> (dismiss) + <code>.btn.is-primary</code> (commit). 12px gap. Input chrome is specimen-local &mdash; brand ships the buttons, not the form layout.</p>
+          </div>
+
+          <p class="section-end">Six surface modifiers (default, <code>.is-primary</code>, <code>.is-ink</code>, <code>.is-oxblood</code>, <code>.is-outline</code>, <code>.is-on-dark</code>). Three sizes (<code>.is-sm</code>, default, <code>.is-lg</code>). <code>.is-route</code> for navigation. <code>:disabled</code> / <code>[aria-disabled]</code>. Every button REST&rarr;HOVER&rarr;ACTIVE = raised&rarr;deboss&rarr;deboss.</p>
         </div>
       </section>
 

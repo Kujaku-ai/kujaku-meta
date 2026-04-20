@@ -103,6 +103,7 @@ Paper surfaces are what content sits on. They are never text colors. The gold to
 - Approved uses: annual report covers, anniversary marks, the single most important figure on a flagship page.
 - Forbidden: body text, UI chrome (buttons, inputs, borders, icons), decorative accents, anything paired with red in the same element.
 - Default answer to "should this be gold?" is no.
+- **Gold primitives — chain:** `.eyebrow.is-gold`, `.eyebrow-dark` (default gold JP), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`. Any ONE per page; never two together. Each primitive's subsection cross-references this rule.
 
 **Gold cards are permitted.** `.card-gold` and `.card-gold-sunken` are ceremonial content blocks subject to the one-gold-per-page rule. The rule applies collectively: one gold card OR one gold eyebrow OR one gold figure, not one of each. Gold card interiors must contain no `--red` anywhere (the two-reds prohibition stands). For eyebrow labels inside gold cards, use `.eyebrow-dark.is-ink`.
 
@@ -284,6 +285,10 @@ Classes compose freely. Examples:
 - `<p class="eyebrow-quiet is-ink is-center">FIELD NOTES · <span class="jp">見本 · mihon</span></p>` — quiet, neutral, centered
 - `<p class="eyebrow is-gold is-center is-numbered"><span class="num">01 · </span>IMPORTANT · <span class="jp">観 · kan</span></p>` — gold hero with ordinal
 
+**Gold-budget chain:**
+
+`.eyebrow.is-gold` CLAIMS the page's one-gold budget. Cross-refers to `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+
 **Don't:**
 - Apply `.is-gold` to more than one eyebrow per page.
 - Pair gold with red elsewhere on the same line or element.
@@ -305,6 +310,10 @@ Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `
 | `.is-ink` | Ink label, ink JP gloss. Only usable on `.card-gold` (where ink reads against warm gold); do NOT use on coal or oxblood (ink invisible on warm-dark). |
 
 **Alignment + numbered modifiers:** `.is-center`, `.is-right`, and `.is-numbered` compose exactly as with `.eyebrow`. See that section for details.
+
+**Gold-budget chain:**
+
+Default `.eyebrow-dark` uses `--gold` for the JP gloss. This CLAIMS the page's one-gold budget. For a dark-card page that needs gold elsewhere (a gold eyebrow, a gold indicator-gloss, a gold button kanji), use `.eyebrow-dark.is-paper` (no-gold variant) instead. Chains with `.eyebrow.is-gold`, `.indicator-gloss.is-dark`, and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
 
 **Don't:**
 - Use `.eyebrow-dark.is-gold` on `.card-gold` (two gold elements; breaks one-per-page rule).
@@ -625,7 +634,7 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
 - Delta color is ALWAYS `--ink-mid`. NEVER color-code direction (no green for positive, no red for negative). Direction is encoded by the `+/-` sign. Matches the `/graphs` and `.nav-masthead` conventions. A site that genuinely needs direction coding must do it locally — it's not a brand primitive.
 - Width defaults to content-sized. Consumers add `width: 100%` in their scene CSS where fill is wanted (ledgers, single-column stacks, card-bound rows).
 - The sparkline stroke (1px `--ink`) and end-dot (filled `--red` r=2) are canonical. Do NOT override stroke color to red or widen the polyline to create a bar-like effect — that's a chart, not a sparkline.
-- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. No other gold element may appear on a page that uses `.indicator-gloss.is-dark`.
+- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
 - `.is-stacked` is for narrow KPI cells. Don't use it in wide dashboards where horizontal would read cleaner.
 - When composing `.indicator-row` with a sparkline next to it (positions list with trajectories), the pattern is scene-local, not a promoted recipe. Use a custom grid at the consuming site. Brand may promote an `.indicator-list` primitive in a future cycle.
 
@@ -634,6 +643,128 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
 Indicators compose inside `.card-paper`, `.card-paper-sunken`, `.card-coal`, and `.card-oxblood`. Dark cards require `.is-dark` on the indicator. Light cards do not.
 
 Indicators work inline inside `.nav-composition` content columns, inside editorial article bodies (max-width constrained), and in grid dashboards.
+
+### Button
+
+Press-mechanic primitives for CTAs, actions, and route navigation. Every button uses the same core mechanic:
+
+- **REST** — raised (letterpress shadow, button sits slightly proud of the paper).
+- **HOVER** — deboss (inset shadow, button visibly presses IN).
+- **ACTIVE** — identical to HOVER. Touch users see the press animation briefly on tap; desktop users hold pressed-in while hovering.
+
+Shadow transitions are `--duration-fast` `--ease-out`. No scale transforms, no rotations, no color-flipping on hover — the press IS the interaction.
+
+**Surface modifiers:**
+
+| Modifier | Surface |
+|---|---|
+| (default) `.btn` | Paper. Subtle letterpress. The common case. |
+| `.is-primary` | Red fill. Main CTA. The loud voice. |
+| `.is-ink` | Paper-coal fill with paper text. Rare use (dark standalone surface). |
+| `.is-oxblood` | Red-deep ceremonial. Optional `.jp` kanji slot renders in gold. |
+| `.is-outline` | Transparent fill with 1px `--ink` border. Ghost / secondary. |
+| `.is-on-dark` | For buttons placed INSIDE `.card-coal`, `.card-oxblood`, or `.card-ink`. Transparent fill, paper border, paper text. Different press grammar: border-darkens on hover instead of deboss shadow. |
+
+**Semantic modifier — `.is-route`:**
+
+`.is-route` indicates the button NAVIGATES somewhere (to another page, to a position detail, to a route). It ADDS a `/` prefix via a `::before` pseudo-element — consumers DO NOT include the literal slash in the button's text content.
+
+| With `.is-route` | Without `.is-route` |
+|---|---|
+| Button navigates: `/subscribe`, `/btc`, `/about` | Button performs: Submit, Cancel, Confirm, Close |
+| Label: tight letter-spacing, mixed case | Label: mono uppercase, tracked 0.16em |
+
+The `/` prefix is semantic, not decorative. Matches the `.nav-rail .nav-item .slash` and `.nav-masthead .ticker-block .symbol::before` conventions already established in brand.
+
+**Size modifiers:**
+
+| Modifier | Use case |
+|---|---|
+| `.is-sm` | Inline-in-prose, tertiary actions, dense UI rows. |
+| (default) | Standard CTAs, form buttons, standard nav. |
+| `.is-lg` | Hero CTAs, marketing flagship, feature callouts. |
+
+Each size modifier steps padding, font-size, and shadow offset proportionally. The press mechanic stays legible across all three sizes — though `.is-sm` raise is subtle-by-design at inline-prose scale (correct behavior: a tiny button shouldn't dominate a paragraph).
+
+**Disabled state:**
+
+Any button can be disabled via the `disabled` attribute or `[aria-disabled="true"]`. Disabled vocabulary:
+
+- Text: `--ink-pale`
+- Background: unchanged (keeps surface context)
+- Shadow: flat (no raise, no press response)
+- `cursor: not-allowed`
+- `pointer-events: none` (hover/active states don't fire)
+
+This is brand's DISABLED CONVENTION. A future cycle may apply this convention across other primitives (form fields, nav items, indicators) — for now it's established in Button.
+
+**Canonical markup:**
+
+```html
+<!-- Default action button (no slash) -->
+<button class="btn">Submit</button>
+
+<!-- Primary CTA -->
+<button class="btn is-primary">Subscribe</button>
+
+<!-- Route button (navigates; slash added by ::before) -->
+<a class="btn is-route" href="/subscribe">subscribe</a>
+<!-- Consumer writes "subscribe" — the "/" renders automatically. -->
+
+<!-- Primary route CTA -->
+<a class="btn is-primary is-route" href="/open-position">open-position</a>
+
+<!-- Outline secondary -->
+<button class="btn is-outline">Learn More</button>
+
+<!-- Size variants -->
+<button class="btn is-sm">Copy</button>
+<button class="btn is-primary is-lg">Schedule a Call</button>
+
+<!-- Oxblood ceremonial with optional gold kanji -->
+<button class="btn is-oxblood">
+  <span class="jp">観</span>
+  Open Position
+</button>
+<!-- The .jp kanji claims the page's one-gold budget. -->
+
+<!-- Button inside a dark card -->
+<div class="card card-oxblood">
+  <a class="btn is-on-dark is-route" href="/methodology">methodology</a>
+</div>
+
+<!-- Disabled button -->
+<button class="btn is-primary" disabled>Submit</button>
+<button class="btn is-primary" aria-disabled="true">Submit</button>
+```
+
+**Rules:**
+
+- Press mechanic is non-negotiable. Every on-brand button uses REST→HOVER→ACTIVE as raised→deboss→deboss. No alternative hover behaviors (no fade, no slide, no scale).
+- `.is-primary` and `.is-oxblood` are mutually exclusive. Red on red-deep is unreadable. A page's flagship CTA is EITHER primary OR oxblood, never both.
+- `.is-primary` inside `.card-oxblood` is forbidden — same readability failure. Use `.is-on-dark` for buttons nested inside dark cards.
+- `.is-route` indicates the button navigates. NEVER use it for buttons that perform an action (Submit, Cancel, etc.). The slash semantic must mean "there is a route here."
+- Button text for `.is-route` does NOT include a literal `/` — the slash is supplied by a `::before` pseudo-element. Consumers write `href="/subscribe"` and label text `subscribe` — the pseudo-element adds the visible prefix.
+- Gold kanji slot (`.btn.is-oxblood .jp`) CLAIMS the page's one-gold budget. Cross-refers /colors one-gold rule and chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), and `.indicator-gloss.is-dark` — no two of these may appear on the same page.
+- Sentient italic is NEVER used for button labels. Sentient is editorial display typography; UI chrome uses mono or Satoshi.
+- Disabled state is `--ink-pale` text + flat shadow + cursor not-allowed. No red-X, no strikethrough, no tooltip chrome.
+- `.is-masthead`-style buttons (mono-caps, no press, color-shift-only) are NOT a button variant. The masthead-action pattern lives at `.nav-masthead .actions a` — it's a nav concern, not a button concern.
+
+**Composition:**
+
+Buttons compose inside forms, card footers, nav rails, editorial article bodies, ticker mastheads (as form actions, not as masthead-action links), and inline within Satoshi prose.
+
+Inside dark cards (`.card-coal`, `.card-oxblood`, `.card-ink`), ALWAYS use `.btn.is-on-dark` — NEVER `.is-primary` or other filled variants. The `.is-on-dark` modifier exists specifically for this composition.
+
+A form footer typically pairs one `.is-outline` or default button (Cancel) with one `.is-primary` button (Save, Submit). Primary sits on the right (forward action convention).
+
+**Naming note — `.is-on-dark` vs `.is-dark`:**
+
+Button uses `.is-on-dark` (not `.is-dark`) because the modifier describes a button's POSITION — it sits ON a dark surface — not its own identity. The press mechanic actually changes in this context (border-darken instead of deboss shadow).
+
+Eyebrow uses `.eyebrow-dark` (compound class, legacy from earlier promotion). Indicator uses `.is-dark` (modifier, matches the indicator's own identity when placed on dark). The three conventions differ by intent.
+
+A future cycle may harmonize these into one convention. For now, each primitive's dark-surface treatment uses its own established pattern.
 
 ---
 

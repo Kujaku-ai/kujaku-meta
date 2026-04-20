@@ -1270,3 +1270,339 @@
    per the Scene 13 dark-surface test). */
 .indicator-trend.is-dark .spark { stroke: var(--paper); }
 .indicator-trend.is-dark .spark .endpoint { fill: var(--red); }
+
+
+/* ============================================================
+ * BUTTONS — press-mechanic primitives.
+ *
+ * Every button uses the same core mechanic:
+ *   REST   → raised (letterpress shadow)
+ *   HOVER  → deboss (pressed IN via inset shadow)
+ *   ACTIVE → identical to HOVER deepened
+ * Touch users see the press animation on tap. Desktop users
+ * hold pressed-in while hovering. No scale, no rotation.
+ *
+ * Shadow stacks are ~50% of .emboss-letterpress offsets
+ * (textures.css) — sized for button scale rather than card
+ * scale. Alpha-literal shadows (rgba inline) encode the
+ * highlight (rgba(255,251,240, X)) + inset-shadow (rgba(40,30,18, X))
+ * pair; CSS can't express alpha-on-var(). Same precedent as
+ * .hanko and .nav-rail.
+ *
+ * Surface modifiers:
+ *   (default)  .btn — paper-warm surface (#F4EFE6, matches .card-paper)
+ *   .is-primary — red CTA
+ *   .is-ink — paper-coal (rare "dark CTA" treatment)
+ *   .is-oxblood — red-deep ceremonial (+ optional .jp gold slot)
+ *   .is-outline — bordered ghost (1px --ink border)
+ *   .is-on-dark — for buttons INSIDE dark cards (transparent
+ *                 fill, paper border; press lives in border +
+ *                 background-fill, not shadow stack).
+ *
+ * Semantic modifier:
+ *   .is-route — button navigates somewhere. Rendered with a
+ *               leading "/" via ::before, plus lowercase +
+ *               tighter tracking to read as a path. No slash
+ *               in the markup text — the pseudo supplies it.
+ *               NO .is-route = button performs an action
+ *               (Submit, Cancel, Confirm, Save).
+ *               Slash vernacular matches .nav-item .slash and
+ *               .nav-masthead .ticker-block .symbol::before.
+ *
+ * Size modifiers: .is-sm / default / .is-lg — compose with
+ * any surface modifier.
+ *
+ * State: :disabled or [aria-disabled="true"] → --ink-pale text,
+ * flat shadow, cursor: not-allowed.
+ *
+ * Forbidden composition: .is-primary + .is-oxblood (red on
+ * red-deep unreadable). .is-primary inside .card-oxblood or
+ * .card-coal also fails — use .is-on-dark instead.
+ *
+ * See STYLE.md /components Button for the full spec.
+ * ============================================================ */
+
+/* ---------- .btn base (paper-warm surface) ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 12px 26px;
+  background: #F4EFE6; /* paper-warm, same literal as .card-paper */
+  color: var(--ink);
+  border-radius: 3px;
+  line-height: 1;
+  user-select: none;
+  text-decoration: none;
+  /* REST — raised letterpress */
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.7),
+    0 1px 0 rgba(255,251,240,0.5),
+    0 2px 6px rgba(40,30,18,0.06),
+    0 8px 20px rgba(40,30,18,0.06);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+/* HOVER — pressed in (deboss) */
+.btn:hover {
+  background: var(--paper-deep);
+  box-shadow:
+    inset 0 2px 4px rgba(40,30,18,0.12),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+/* ACTIVE — same direction as hover, deeper inset */
+.btn:active {
+  background: var(--paper-deep);
+  box-shadow:
+    inset 0 3px 5px rgba(40,30,18,0.16),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  background: var(--paper);
+  color: var(--ink-pale);
+  cursor: not-allowed;
+  box-shadow: 0 1px 0 rgba(255,251,240,0.5);
+}
+
+
+/* ---------- .btn.is-primary — red pressed CTA ---------- */
+.btn.is-primary {
+  background: var(--red);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.25),
+    0 2px 6px rgba(138,36,24,0.25),
+    0 8px 20px rgba(138,36,24,0.12);
+  /* rgba(138,36,24) encodes alpha against --red-deep;
+     CSS can't express alpha-on-var(). */
+}
+.btn.is-primary:hover {
+  background: var(--red-deep);
+  box-shadow:
+    inset 0 2px 4px rgba(40,20,12,0.30),
+    inset 0 -1px 0 rgba(255,251,240,0.14);
+  /* rgba(40,20,12) — warm-dark inset for depth on red surface */
+}
+.btn.is-primary:active {
+  background: var(--red-deep);
+  box-shadow:
+    inset 0 3px 5px rgba(40,20,12,0.38),
+    inset 0 -1px 0 rgba(255,251,240,0.12);
+}
+.btn.is-primary:disabled,
+.btn.is-primary[aria-disabled="true"] {
+  background: var(--ink-pale);
+  color: var(--paper);
+  box-shadow: 0 1px 0 rgba(255,251,240,0.3);
+}
+
+
+/* ---------- .btn.is-ink — paper-coal dark CTA ---------- */
+.btn.is-ink {
+  background: var(--paper-coal);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.14),
+    0 2px 6px rgba(0,0,0,0.18),
+    0 8px 20px rgba(0,0,0,0.10);
+}
+.btn.is-ink:hover {
+  background: var(--ink);
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.30),
+    inset 0 -1px 0 rgba(255,251,240,0.08);
+}
+.btn.is-ink:active {
+  background: var(--ink);
+  box-shadow:
+    inset 0 3px 5px rgba(0,0,0,0.40),
+    inset 0 -1px 0 rgba(255,251,240,0.08);
+}
+
+
+/* ---------- .btn.is-oxblood — red-deep ceremonial ---------- */
+/* Optional .jp slot claims the page's one-gold budget
+   (STYLE.md /colors one-gold rule). Use sparingly. */
+.btn.is-oxblood {
+  background: var(--red-deep);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.14),
+    0 2px 6px rgba(40,10,8,0.28),
+    0 10px 24px rgba(40,10,8,0.14);
+  /* rgba(40,10,8) — warmer-dark inset for oxblood depth */
+}
+.btn.is-oxblood:hover {
+  background: #6B1C12; /* literal — one step deeper than --red-deep;
+                          matches .card-oxblood sunken precedent */
+  box-shadow:
+    inset 0 2px 4px rgba(20,6,4,0.40),
+    inset 0 -1px 0 rgba(255,251,240,0.10);
+}
+.btn.is-oxblood:active {
+  background: #6B1C12;
+  box-shadow:
+    inset 0 3px 5px rgba(20,6,4,0.50),
+    inset 0 -1px 0 rgba(255,251,240,0.10);
+}
+.btn.is-oxblood .jp {
+  font-family: var(--font-jp);
+  font-weight: 400;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  margin-right: 10px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+
+/* ---------- .btn.is-outline — bordered ghost ---------- */
+.btn.is-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 11px 25px; /* -1px per side to account for border */
+  box-shadow:
+    0 1px 0 rgba(255,251,240,0.4),
+    0 2px 4px rgba(40,30,18,0.04);
+}
+.btn.is-outline:hover {
+  background: var(--paper-deep);
+  box-shadow:
+    inset 0 2px 4px rgba(40,30,18,0.10),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn.is-outline:active {
+  background: var(--paper-deep);
+  box-shadow:
+    inset 0 3px 5px rgba(40,30,18,0.14),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+
+
+/* ---------- .btn.is-on-dark — for buttons nested INSIDE
+ * .card-coal / .card-oxblood / .card-ink or any --paper-coal /
+ * --red-deep / --ink surface. Light-on-light shadow vocabulary
+ * can't contrast on dark paper, so press mechanic moves to
+ * border + background-fill. Different grammar, consistent with
+ * .eyebrow-dark and .indicator.is-dark precedents. */
+.btn.is-on-dark {
+  background: transparent;
+  color: var(--paper);
+  border: 1px solid rgba(241,236,224,0.4);
+  padding: 11px 25px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.08),
+    0 1px 2px rgba(0,0,0,0.12);
+  /* rgba(241,236,224) encodes alpha against --paper;
+     CSS can't express alpha-on-var(). */
+}
+.btn.is-on-dark:hover {
+  border-color: var(--paper);
+  background: rgba(241,236,224,0.08);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.20);
+}
+.btn.is-on-dark:active {
+  background: rgba(241,236,224,0.14);
+  box-shadow: inset 0 3px 5px rgba(0,0,0,0.28);
+}
+
+
+/* ---------- .btn.is-route — slash-prefix route semantic ----------
+ * The button navigates. Text switches to lowercase + tight
+ * tracking so it reads as a path. Slash via ::before mirrors
+ * .nav-item .slash and .nav-masthead .ticker-block .symbol::before
+ * conventions — consistency across every nav primitive.
+ * DO NOT include a literal "/" in the markup text; the pseudo
+ * supplies the slash. */
+.btn.is-route {
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.btn.is-route::before {
+  content: "/";
+  color: var(--ink-pale);
+  margin-right: 4px;
+  font-weight: 400;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.btn.is-route:hover::before { color: var(--red); }
+
+/* Route slash colors on filled surfaces — paper-family dim
+   that pops on hover. rgba(241,236,224) = --paper with alpha. */
+.btn.is-route.is-primary::before { color: rgba(241,236,224,0.55); }
+.btn.is-route.is-primary:hover::before { color: var(--paper); }
+
+.btn.is-route.is-ink::before { color: rgba(241,236,224,0.45); }
+.btn.is-route.is-ink:hover::before { color: var(--paper); }
+
+.btn.is-route.is-oxblood::before { color: rgba(241,236,224,0.5); }
+.btn.is-route.is-oxblood:hover::before { color: var(--gold); }
+
+.btn.is-route.is-outline::before { color: var(--ink-pale); }
+.btn.is-route.is-outline:hover::before { color: var(--red); }
+
+
+/* ---------- .btn.is-sm — small (composes with any surface) ---------- */
+.btn.is-sm {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  padding: 8px 18px;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.7),
+    0 1px 0 rgba(255,251,240,0.4),
+    0 1px 3px rgba(40,30,18,0.06),
+    0 4px 10px rgba(40,30,18,0.06);
+}
+.btn.is-sm:hover {
+  box-shadow:
+    inset 0 1px 3px rgba(40,30,18,0.10),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn.is-sm:active {
+  box-shadow:
+    inset 0 2px 4px rgba(40,30,18,0.14),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn.is-sm.is-outline { padding: 7px 17px; }
+
+
+/* ---------- .btn.is-lg — hero scale ---------- */
+.btn.is-lg {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  padding: 16px 34px;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,251,240,0.7),
+    0 1px 0 rgba(255,251,240,0.5),
+    0 4px 12px rgba(40,30,18,0.08),
+    0 16px 40px rgba(40,30,18,0.08);
+}
+.btn.is-lg:hover {
+  box-shadow:
+    inset 0 3px 6px rgba(40,30,18,0.14),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn.is-lg:active {
+  box-shadow:
+    inset 0 4px 8px rgba(40,30,18,0.18),
+    inset 0 -1px 0 rgba(255,251,240,0.6);
+}
+.btn.is-lg.is-outline { padding: 15px 33px; }
