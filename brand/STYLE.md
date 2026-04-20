@@ -507,6 +507,134 @@ This snippet is a reference, not a shipped helper. Consuming apps own their scro
 - Page shell: set `min-height: 100vh` on a page container OR on `.nav-composition` itself.
 - Embedded widget: default `min-height: 0` on `.nav-composition` means the nav fits inside its container's height naturally.
 
+### Indicator
+
+Stat / numeral / delta primitives for the observational voice. Four recipes, each for a distinct job. All share the `.indicator` base class + `.label` / `.num` / `.delta` children, plus `.is-sm` / default / `.is-lg` size modifiers and `.is-dark` for coal / oxblood surfaces.
+
+Indicators are content-sized by default. Consumers add `width: 100%` at their site when a column wants fill.
+
+**The four recipes:**
+
+| Class | Job |
+|---|---|
+| `.indicator-row` | Dashboard atom. Label / numeral / delta on one grid line. Default layout: `auto 1fr auto` grid. Ships with `.is-stacked` for narrow KPI cells (flex-column layout, delta left-aligned). |
+| `.indicator-tabular` | Period-column comparison. Outer label + N rows of `.period / .val / .d`. Uses `font-variant-numeric: tabular-nums` for digit alignment. Canonical use: 1M / 3M / YTD performance. |
+| `.indicator-gloss` | Editorial callout. JP kanji bookend (`.jp`) + Latin label + numeral + delta. Follows the `.eyebrow-gloss` convention. The JP character glosses the metric. |
+| `.indicator-trend` | Sparkline + numeral. Tight cluster: numeral left, sparkline right of it with 10px gap. Sparkline is 1px `--ink` polyline with filled `--red` end-dot r=2. See `/graphs` sparkline micro-chart for the stroke + end-point convention. |
+
+**Shared children (all four recipes):**
+
+| Child | Role |
+|---|---|
+| `.label` | Metric name. Mono-caps, letterspaced. `--ink-mid` default, dimmed on dark surfaces via `.is-dark`. |
+| `.num` | The primary numeric value. Mono tabular-nums. `--ink` default. Size steps per `.is-sm` / default / `.is-lg`. |
+| `.delta` | The change value. Mono tabular-nums, `--ink-mid`. Direction encoded by `+/-` sign — NEVER color-coded. See Rules below. |
+
+**Recipe-specific children:**
+
+| Child | Recipe | Role |
+|---|---|---|
+| `.row` | `.indicator-tabular` | One period-row inside a tabular. Contains `.period`, `.val`, `.d`. |
+| `.period`, `.val`, `.d` | `.indicator-tabular .row` | Period label (mono caps), numeric value, delta. Tabular-aligned. |
+| `.label-row` | `.indicator-gloss` | Flex row containing `.jp` bookend + `.label`. |
+| `.jp` | `.indicator-gloss` | The JP kanji gloss. `--red` on light surfaces, `--gold` via `.is-dark`. |
+| `.main-row` | `.indicator-trend` | Flex row containing `.num` + `.spark`. Tight 10px gap; no space-between. |
+| `.spark` | `.indicator-trend` | Inline SVG sparkline. 1px `--ink` stroke. Width/height steps per size modifier. |
+| `.spark .endpoint` | `.indicator-trend .spark` | Filled `--red` circle at the polyline's last coordinate. r=2 default, r=3 at `.is-lg`. |
+
+**Size modifiers:**
+
+| Modifier | Use case |
+|---|---|
+| `.is-sm` | Peripheral / dense grids, KPI strips, inline-in-prose. |
+| (default) | Dashboards, article embeds, standard cards. |
+| `.is-lg` | Hero figures, ceremonial section anchors, chapter breaks. |
+
+Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-size, delta font-size, and the outer / inner gap appropriate to the recipe. Sparkline dimensions in `.indicator-trend` also step (52 / 84 / 220 px width).
+
+**State modifiers:**
+
+| Modifier | Applied to | Effect |
+|---|---|---|
+| `.is-dark` | Any `.indicator-*` | Flips foreground colors for use on `--paper-coal`, `--red-deep`, or `--ink` surfaces. On `.indicator-gloss`, also flips the JP character from `--red` to `--gold`. |
+| `.is-stacked` | `.indicator-row` | Switches to a flex-column layout (label / num / delta stacked, delta left-aligned). Use in narrow KPI cells where the default horizontal grid would compress unreadably. |
+
+**Canonical markup:**
+
+```html
+<!-- .indicator-row (default horizontal) -->
+<div class="indicator indicator-row">
+  <span class="label">PORTFOLIO</span>
+  <span class="num">$847,230</span>
+  <span class="delta">+2.3%</span>
+</div>
+
+<!-- .indicator-row.is-stacked for narrow KPI cells -->
+<div class="indicator indicator-row is-stacked is-sm">
+  <span class="label">EXPOSURE</span>
+  <span class="num">72%</span>
+  <span class="delta">+3.1%</span>
+</div>
+
+<!-- .indicator-tabular -->
+<div class="indicator indicator-tabular">
+  <span class="label">PORTFOLIO</span>
+  <div class="row">
+    <span class="period">1M</span>
+    <span class="val">$847,230</span>
+    <span class="d">+2.3%</span>
+  </div>
+  <div class="row">
+    <span class="period">3M</span>
+    <span class="val">$823,100</span>
+    <span class="d">+5.2%</span>
+  </div>
+  <div class="row">
+    <span class="period">YTD</span>
+    <span class="val">$798,450</span>
+    <span class="d">+8.4%</span>
+  </div>
+</div>
+
+<!-- .indicator-gloss -->
+<div class="indicator indicator-gloss">
+  <div class="label-row">
+    <span class="jp">指標</span>
+    <span class="label">ALPHA · Q4</span>
+  </div>
+  <span class="num">+12.4%</span>
+  <span class="delta">vs sector · S&P 500</span>
+</div>
+
+<!-- .indicator-trend -->
+<div class="indicator indicator-trend">
+  <span class="label">BTC</span>
+  <div class="main-row">
+    <span class="num">67,420</span>
+    <svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none">
+      <polyline points="0,18 12,16 24,17 36,13 48,11 60,9 72,7 84,5"/>
+      <circle class="endpoint" cx="84" cy="5" r="2"/>
+    </svg>
+  </div>
+  <span class="delta">+0.82% today</span>
+</div>
+```
+
+**Rules:**
+
+- Delta color is ALWAYS `--ink-mid`. NEVER color-code direction (no green for positive, no red for negative). Direction is encoded by the `+/-` sign. Matches the `/graphs` and `.nav-masthead` conventions. A site that genuinely needs direction coding must do it locally — it's not a brand primitive.
+- Width defaults to content-sized. Consumers add `width: 100%` in their scene CSS where fill is wanted (ledgers, single-column stacks, card-bound rows).
+- The sparkline stroke (1px `--ink`) and end-dot (filled `--red` r=2) are canonical. Do NOT override stroke color to red or widen the polyline to create a bar-like effect — that's a chart, not a sparkline.
+- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. No other gold element may appear on a page that uses `.indicator-gloss.is-dark`.
+- `.is-stacked` is for narrow KPI cells. Don't use it in wide dashboards where horizontal would read cleaner.
+- When composing `.indicator-row` with a sparkline next to it (positions list with trajectories), the pattern is scene-local, not a promoted recipe. Use a custom grid at the consuming site. Brand may promote an `.indicator-list` primitive in a future cycle.
+
+**Composition:**
+
+Indicators compose inside `.card-paper`, `.card-paper-sunken`, `.card-coal`, and `.card-oxblood`. Dark cards require `.is-dark` on the indicator. Light cards do not.
+
+Indicators work inline inside `.nav-composition` content columns, inside editorial article bodies (max-width constrained), and in grid dashboards.
+
 ---
 
 ## /graphs
@@ -549,6 +677,53 @@ Wrap every chart in the card recipe (letterpress emboss). Internal padding 40px.
 - Show more than ~6 months of data without explicit pagination or zoom.
 
 **Visual reference:** `specimen.html` → "A line on paper" section.
+
+### Sparkline micro-chart
+
+The `.indicator-trend` recipe renders a sparkline: a miniature line chart co-located with a numeral. Sparklines follow the same stroke + end-point convention as full `/graphs` charts, just scaled down.
+
+**Canonical treatment:**
+
+- Stroke: `polyline`, 1px, `--ink` color. At `.is-lg`, stroke-width steps to 1.25 for the hero figure.
+- Fill: none (no filled area under the curve).
+- End-point marker: filled `--red` circle at the polyline's final coordinate. r=2 default (`.is-sm` and default sizes), r=3 at `.is-lg`.
+- No axis lines, no tick marks, no gridlines, no axis labels. Sparkline communicates shape, not magnitude.
+- No baseline rule (no horizontal line at zero). The polyline and end-dot carry the full signal.
+
+**Rationale:**
+
+A sparkline is the chart language at miniature scale. The line carries trajectory. The filled red end-dot is the same signal-carrier as the r=3.5 red dot on a full chart — it marks the most recent observation. The reader's eye collects shape before parsing the numeral.
+
+**Dimensions:**
+
+| Size modifier | Width | Height |
+|---|---|---|
+| `.indicator-trend.is-sm .spark` | 52 px | 14 px |
+| `.indicator-trend .spark` (default) | 84 px | 24 px |
+| `.indicator-trend.is-lg .spark` | 220 px | 44 px |
+
+All widths and heights are literals tuned to the size ladder — not tokens.
+
+**Rules:**
+
+- Stroke color is `--ink` (dark ink on paper surfaces). On dark surfaces via `.is-dark`, stroke flips to `--paper`. End-dot stays `--red` across all surfaces — it is the brand signal.
+- Never widen the stroke to create a bar-like effect. A sparkline is a line, not a chart.
+- Never use a second color on the polyline. Only `--ink` or (dark surfaces) `--paper`. The red dot is the ONLY color.
+- Polyline data points: 6-10 is ideal. Too few (3-4) reads as a fragment; too many (20+) becomes noise at miniature scale.
+- `preserveAspectRatio="none"` on the SVG: the polyline stretches to fill the cell exactly. Intended — sparklines are about relative shape, not absolute proportion.
+
+**Forbidden:**
+
+- Bar-chart micro-charts. Brand has no bar primitive at any scale.
+- Area-filled sparklines. Fill under the curve violates the "signal in line + dot" contract.
+- Second end-dot, tick marks, or gridlines.
+- Axis labels inside the sparkline SVG. Context is provided by the surrounding `.indicator-trend` label and delta.
+
+**Composition:**
+
+The sparkline lives exclusively inside `.indicator-trend`. It is not a standalone primitive. Consumers do not render `<svg class="spark">` outside the `.indicator-trend` markup.
+
+For full-size charts (anything larger than `.indicator-trend.is-lg` at 220×44), use the main `/graphs` conventions at the top of this section — not the sparkline spec.
 
 ---
 

@@ -176,6 +176,45 @@
   .underline-demo .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mid); margin-bottom: 20px; }
   .underline-demo .demo-line { font-family: var(--font-display); font-size: 32px; font-weight: 400; color: var(--ink); line-height: 1.4; }
 
+  /* INDICATORS — specimen-local chrome for the demo blocks.
+     Scoped under #indicators so nothing leaks. Real recipe CSS
+     lives in dist/recipes.css; only demo scaffolding here. */
+  #indicators .sub-title { font-family: var(--font-display); font-weight: 400; font-size: 28px; letter-spacing: -0.01em; color: var(--ink); margin: 48px 0 16px; }
+  #indicators .sub-lede { font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink-soft); max-width: 60ch; margin: 0 0 24px; }
+  #indicators .demo-block { margin-bottom: 36px; }
+  #indicators .demo-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mid); margin: 0 0 10px; }
+  #indicators .demo-label strong { color: var(--ink); font-weight: 500; margin-right: 10px; }
+  #indicators .demo-frame { padding: 24px 28px; background: var(--paper); border: 1px solid var(--ink-faint); border-radius: 6px; }
+  #indicators .demo-frame.is-flush { padding: 0; }
+  #indicators .demo-caption { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ink-faint); line-height: 1.6; }
+  #indicators .demo-caption code { background: transparent; color: var(--ink); }
+
+  /* row-subsection helpers */
+  #indicators .row-ladder { display: flex; flex-direction: column; gap: 16px; }
+  #indicators .row-ladder > .indicator-row { width: 100%; }
+  #indicators .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); padding: 20px 0; }
+  #indicators .kpi-strip > .indicator-row { padding: 0 20px; border-right: 1px solid var(--ink-faint); }
+  #indicators .kpi-strip > .indicator-row:last-child { border-right: none; }
+
+  /* tabular-subsection helpers */
+  #indicators .tabular-solo { max-width: 380px; }
+  #indicators .tabular-solo > .indicator-tabular { width: 100%; }
+  #indicators .tabular-ladder { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+  #indicators .tabular-ladder > .indicator-tabular { width: 100%; }
+
+  /* gloss-subsection helpers */
+  #indicators .gloss-prose { max-width: 68ch; font-family: var(--font-body); font-size: 16px; line-height: 1.7; color: var(--ink); }
+  #indicators .gloss-prose p { margin: 0 0 18px; }
+  #indicators .gloss-prose > .indicator-gloss { margin: 20px 0; padding: 14px 0 14px 20px; border-left: 2px solid var(--ink); }
+  #indicators .gloss-dark { padding: 36px 40px; background: var(--red-deep); border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.2), 0 2px 6px rgba(40,30,18,0.10); }
+
+  /* trend-subsection helpers */
+  #indicators .trend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px 32px; }
+  #indicators .trend-sm-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px 24px; }
+
+  #indicators .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 760px; }
+  #indicators .section-end code { color: var(--ink); }
+
   /* COLOPHON */
   .colophon { background: var(--ink); color: var(--paper); padding: 80px 0 64px; margin-top: 0; position: relative; overflow: hidden; }
   .colophon::before { content: '孔雀'; position: absolute; right: -40px; bottom: -120px; font-family: var(--font-jp); font-weight: 300; font-size: 420px; line-height: 1; color: var(--paper); opacity: 0.04; pointer-events: none; }
@@ -254,6 +293,7 @@
         <a class="nav-item" href="#cards"><span class="slash">/</span><span class="label">cards</span></a>
         <a class="nav-item" href="#hanko"><span class="slash">/</span><span class="label">hanko</span></a>
         <a class="nav-item" href="#nav"><span class="slash">/</span><span class="label">nav</span></a>
+        <a class="nav-item" href="#indicators"><span class="slash">/</span><span class="label">indicators</span></a>
       </div>
     </nav>
     <div class="footer">
@@ -830,6 +870,248 @@
 
           <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
           <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .nav-composition, .nav-rail, .nav-rail .mark, .nav-rail .items, .nav-section, .nav-item (.is-active), .nav-rail .footer, .nav-masthead, .ticker-viewport, .ticker-track, .ticker-block (.symbol, .delta, .price), .actions &middot; Hover the rail to expand; hover a ticker block to reveal price.</div>
+        </div>
+      </section>
+
+      <hr class="section-rule">
+
+      <!-- INDICATORS -->
+      <section id="indicators" class="specimen-section">
+        <div class="wrap">
+          <div class="eyebrow">Indicators <span class="jp">指標 &middot; shihyō</span></div>
+          <h2 style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:48px;letter-spacing:-0.02em;line-height:1.05;color:var(--ink);margin:0 0 24px;">Indicator.</h2>
+          <p style="font-family:var(--font-body);font-size:16px;line-height:1.7;color:var(--ink-soft);max-width:65ch;margin:0 0 40px;">Four stat primitives for the observational voice. Each does one job the others can't &mdash; row for dashboards, tabular for comparisons, gloss for editorial, trend for trajectory. All share a size ladder and dark surface treatment. Delta signs always in mono <code>--ink-mid</code> &mdash; direction is the numeral's job, not the color's.</p>
+
+          <!-- .indicator-row -->
+          <h3 class="sub-title">.indicator-row</h3>
+          <p class="sub-lede">The dashboard-row atom. Label / numeral / delta on one grid line. Ships with <code>.is-stacked</code> for narrow KPI cells.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Solo &middot; default size</strong>label / num / delta</p>
+            <div class="demo-frame">
+              <div class="indicator indicator-row" style="width:100%;">
+                <span class="label">Portfolio</span>
+                <span class="num">$847,230</span>
+                <span class="delta">+2.3% &middot; 5D</span>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator .indicator-row</code> &middot; scene-local <code>width: 100%</code> so delta right-aligns.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Size ladder</strong>.is-sm &middot; default &middot; .is-lg</p>
+            <div class="demo-frame">
+              <div class="row-ladder">
+                <div class="indicator indicator-row is-sm">
+                  <span class="label">BTC &middot; Bitcoin</span>
+                  <span class="num">67,420</span>
+                  <span class="delta">+0.82% &middot; today</span>
+                </div>
+                <div class="indicator indicator-row">
+                  <span class="label">NVDA &middot; NVIDIA</span>
+                  <span class="num">932.14</span>
+                  <span class="delta">-0.42% &middot; today</span>
+                </div>
+                <div class="indicator indicator-row is-lg">
+                  <span class="label">SPX &middot; S&amp;P 500</span>
+                  <span class="num">5,248.30</span>
+                  <span class="delta">+0.18% &middot; today</span>
+                </div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.is-sm</code> (num 11px) &middot; default (14px) &middot; <code>.is-lg</code> (22px). All three steps visibly distinct.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>KPI strip</strong>.is-stacked.is-sm &middot; 5 cells</p>
+            <div class="demo-frame is-flush">
+              <div class="kpi-strip">
+                <div class="indicator indicator-row is-stacked is-sm">
+                  <span class="label">Portfolio</span>
+                  <span class="num">$847,230</span>
+                  <span class="delta">+2.3% &middot; 5D</span>
+                </div>
+                <div class="indicator indicator-row is-stacked is-sm">
+                  <span class="label">Daily P&amp;L</span>
+                  <span class="num">+$19,472</span>
+                  <span class="delta">+0.82% &middot; today</span>
+                </div>
+                <div class="indicator indicator-row is-stacked is-sm">
+                  <span class="label">Positions</span>
+                  <span class="num">12</span>
+                  <span class="delta">+3 &middot; 1M</span>
+                </div>
+                <div class="indicator indicator-row is-stacked is-sm">
+                  <span class="label">Exposure</span>
+                  <span class="num">68.4%</span>
+                  <span class="delta">gross &middot; long</span>
+                </div>
+                <div class="indicator indicator-row is-stacked is-sm">
+                  <span class="label">Cash</span>
+                  <span class="num">$267,340</span>
+                  <span class="delta">31.6% &middot; reserve</span>
+                </div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-row.is-stacked.is-sm</code> &middot; flex-column variant for narrow cells &middot; vertical dividers scene-local (<code>.kpi-strip</code>).</p>
+          </div>
+
+          <!-- .indicator-tabular -->
+          <h3 class="sub-title">.indicator-tabular</h3>
+          <p class="sub-lede">Period-column comparison. Outer label plus N rows. Tabular-nums does the digit alignment.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Solo &middot; default size</strong>Portfolio &middot; 1M / 3M / YTD</p>
+            <div class="demo-frame tabular-solo">
+              <div class="indicator indicator-tabular">
+                <span class="label">Portfolio</span>
+                <div class="row"><span class="period">1M</span><span class="val">$847,230</span><span class="d">+2.3%</span></div>
+                <div class="row"><span class="period">3M</span><span class="val">$823,100</span><span class="d">+5.2%</span></div>
+                <div class="row"><span class="period">YTD</span><span class="val">$798,450</span><span class="d">+8.4%</span></div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator .indicator-tabular</code> &middot; one label, three period rows, tabular-nums.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Size ladder</strong>.is-sm &middot; default &middot; .is-lg</p>
+            <div class="demo-frame">
+              <div class="tabular-ladder">
+                <div class="indicator indicator-tabular is-sm">
+                  <span class="label">Equities</span>
+                  <div class="row"><span class="period">1M</span><span class="val">$412,480</span><span class="d">+1.8%</span></div>
+                  <div class="row"><span class="period">3M</span><span class="val">$398,210</span><span class="d">+4.6%</span></div>
+                  <div class="row"><span class="period">YTD</span><span class="val">$372,050</span><span class="d">+7.2%</span></div>
+                </div>
+                <div class="indicator indicator-tabular">
+                  <span class="label">Crypto</span>
+                  <div class="row"><span class="period">1M</span><span class="val">$167,410</span><span class="d">+5.8%</span></div>
+                  <div class="row"><span class="period">3M</span><span class="val">$151,300</span><span class="d">+10.1%</span></div>
+                  <div class="row"><span class="period">YTD</span><span class="val">$118,200</span><span class="d">+41.6%</span></div>
+                </div>
+                <div class="indicator indicator-tabular is-lg">
+                  <span class="label">Cash</span>
+                  <div class="row"><span class="period">1M</span><span class="val">$267,340</span><span class="d">reserve</span></div>
+                  <div class="row"><span class="period">3M</span><span class="val">$273,590</span><span class="d">reserve</span></div>
+                  <div class="row"><span class="period">YTD</span><span class="val">$308,200</span><span class="d">deployed</span></div>
+                </div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.is-sm</code> (period col 28px, val 12px) &middot; default (36px, 15px) &middot; <code>.is-lg</code> (48px, 24px). Period column widens across the ladder so digit alignment survives larger val sizes.</p>
+          </div>
+
+          <!-- .indicator-gloss -->
+          <h3 class="sub-title">.indicator-gloss</h3>
+          <p class="sub-lede">JP kanji bookend plus label plus numeral plus delta. Editorial callout. Follows the <code>.eyebrow-gloss</code> convention.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Inline with prose</strong>pull-quote treatment</p>
+            <div class="demo-frame gloss-prose">
+              <p>Through March, semiconductors made lower highs while the tape made higher ones. The bot noticed the divergence ten sessions before breadth confirmed.</p>
+              <div class="indicator indicator-gloss">
+                <div class="label-row"><span class="jp">指標</span><span class="label">Alpha &middot; Q4</span></div>
+                <span class="num">+12.4%</span>
+                <span class="delta">vs sector &middot; S&amp;P 500</span>
+              </div>
+              <p>The positions were on the book by the time the chart confirmed what the bot had already acted on.</p>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-gloss</code> &middot; scene-local left border for pull-quote &middot; JP <code>指標</code> (shihyō).</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Ceremonial anchor</strong>.is-lg &middot; section opener</p>
+            <div class="demo-frame" style="padding:36px 32px;">
+              <div class="indicator indicator-gloss is-lg">
+                <div class="label-row"><span class="jp">観</span><span class="label">Observation &middot; Q2 2026</span></div>
+                <span class="num">The floor held.</span>
+                <span class="delta">90 days &middot; no drawdown</span>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-gloss.is-lg</code> &middot; 44px numeral, 24px JP &middot; declarative section anchor.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>.is-dark on oxblood</strong>JP flips red &rarr; gold</p>
+            <div class="gloss-dark">
+              <div class="indicator indicator-gloss is-dark is-lg">
+                <div class="label-row"><span class="jp">観</span><span class="label">Calm observation</span></div>
+                <span class="num">90 days</span>
+                <span class="delta">Q2 2026 &middot; no drawdown</span>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-gloss.is-dark.is-lg</code> on <code>--red-deep</code> surface &middot; JP becomes <code>--gold</code> &middot; <strong>CLAIMS the page's one-gold budget</strong>.</p>
+          </div>
+
+          <!-- .indicator-trend -->
+          <h3 class="sub-title">.indicator-trend</h3>
+          <p class="sub-lede">Sparkline plus numeral. Tight cluster &mdash; 10px gap between numeral and inline SVG. Sparkline is 1px <code>--ink</code> polyline plus filled <code>--red</code> end-dot r=2.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Solo &middot; default size</strong>BTC + sparkline + delta</p>
+            <div class="demo-frame">
+              <div class="indicator indicator-trend">
+                <span class="label">BTC</span>
+                <div class="main-row">
+                  <span class="num">67,420</span>
+                  <svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none">
+                    <polyline points="0,18 7,17 14,18 21,15 28,16 35,13 42,14 49,11 56,12 63,10 70,9 77,11 84,7" />
+                    <circle class="endpoint" cx="84" cy="7" r="2" />
+                  </svg>
+                </div>
+                <span class="delta">+0.82% &middot; today</span>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-trend</code> &middot; 84&times;24 sparkline &middot; filled red end-dot r=2.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Market dashboard</strong>3&times;2 grid &middot; varied shapes</p>
+            <div class="demo-frame">
+              <div class="trend-grid">
+                <div class="indicator indicator-trend"><span class="label">SPX &middot; S&amp;P 500</span><div class="main-row"><span class="num">5,248.30</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,18 7,17 14,18 21,15 28,16 35,13 42,14 49,11 56,12 63,10 70,9 77,11 84,7" /><circle class="endpoint" cx="84" cy="7" r="2" /></svg></div><span class="delta">+0.18% &middot; today</span></div>
+                <div class="indicator indicator-trend"><span class="label">NVDA &middot; NVIDIA</span><div class="main-row"><span class="num">932.14</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,7 7,9 14,8 21,11 28,10 35,13 42,12 49,15 56,14 63,17 70,16 77,18 84,19" /><circle class="endpoint" cx="84" cy="19" r="2" /></svg></div><span class="delta">-0.42% &middot; today</span></div>
+                <div class="indicator indicator-trend"><span class="label">BTC &middot; Bitcoin</span><div class="main-row"><span class="num">67,420</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,21 7,20 14,19 21,17 28,18 35,15 42,14 49,11 56,10 63,8 70,6 77,5 84,3" /><circle class="endpoint" cx="84" cy="3" r="2" /></svg></div><span class="delta">+2.30% &middot; today</span></div>
+                <div class="indicator indicator-trend"><span class="label">AAPL &middot; Apple</span><div class="main-row"><span class="num">184.92</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,14 7,12 14,15 21,12 28,14 35,11 42,13 49,10 56,12 63,9 70,10 77,8 84,9" /><circle class="endpoint" cx="84" cy="9" r="2" /></svg></div><span class="delta">+0.70% &middot; today</span></div>
+                <div class="indicator indicator-trend"><span class="label">TSLA &middot; Tesla</span><div class="main-row"><span class="num">171.05</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,9 7,11 14,13 21,14 28,16 35,17 42,18 49,18 56,18 63,19 70,19 77,19 84,19" /><circle class="endpoint" cx="84" cy="19" r="2" /></svg></div><span class="delta">-1.80% &middot; today</span></div>
+                <div class="indicator indicator-trend"><span class="label">GOOG &middot; Alphabet</span><div class="main-row"><span class="num">154.60</span><svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none"><polyline points="0,13 7,13 14,12 21,12 28,11 35,11 42,11 49,10 56,10 63,9 70,9 77,8 84,8" /><circle class="endpoint" cx="84" cy="8" r="2" /></svg></div><span class="delta">+0.33% &middot; today</span></div>
+              </div>
+            </div>
+            <p class="demo-caption">Six trends in 3&times;2 &middot; shapes read pre-attentively (three up, one choppy, one down, one flat-up). The sparkline does semantic work no other recipe does.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Hero figure</strong>.is-lg &middot; 220&times;44 sparkline</p>
+            <div class="demo-frame" style="padding:36px 32px;">
+              <div class="indicator indicator-trend is-lg">
+                <span class="label">Portfolio &middot; YTD</span>
+                <div class="main-row">
+                  <span class="num">$847,230</span>
+                  <svg class="spark" viewBox="0 0 220 44" preserveAspectRatio="none">
+                    <polyline points="0,40 12,38 24,39 36,35 48,37 60,32 72,34 84,28 96,30 108,24 120,26 132,20 144,22 156,16 168,18 180,12 192,14 204,8 212,5 220,3" />
+                    <circle class="endpoint" cx="220" cy="3" r="3" />
+                  </svg>
+                </div>
+                <span class="delta">+8.4% YTD &middot; Jan 2026 &rarr; Apr 2026</span>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-trend.is-lg</code> &middot; 44px numeral &middot; 220&times;44 sparkline &middot; stroke-width 1.25 &middot; endpoint r=3.</p>
+          </div>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>At-a-glance row</strong>.is-sm &middot; 5 trends</p>
+            <div class="demo-frame">
+              <div class="trend-sm-row">
+                <div class="indicator indicator-trend is-sm"><span class="label">SPX</span><div class="main-row"><span class="num">5,248.30</span><svg class="spark" viewBox="0 0 52 14" preserveAspectRatio="none"><polyline points="0,11 10,10 20,11 30,8 40,7 52,5" /><circle class="endpoint" cx="52" cy="5" r="2"/></svg></div><span class="delta">+0.18%</span></div>
+                <div class="indicator indicator-trend is-sm"><span class="label">NVDA</span><div class="main-row"><span class="num">932.14</span><svg class="spark" viewBox="0 0 52 14" preserveAspectRatio="none"><polyline points="0,5 10,6 20,7 30,9 40,10 52,11" /><circle class="endpoint" cx="52" cy="11" r="2"/></svg></div><span class="delta">-0.42%</span></div>
+                <div class="indicator indicator-trend is-sm"><span class="label">BTC</span><div class="main-row"><span class="num">67,420</span><svg class="spark" viewBox="0 0 52 14" preserveAspectRatio="none"><polyline points="0,12 10,10 20,8 30,6 40,4 52,2" /><circle class="endpoint" cx="52" cy="2" r="2"/></svg></div><span class="delta">+2.30%</span></div>
+                <div class="indicator indicator-trend is-sm"><span class="label">AAPL</span><div class="main-row"><span class="num">184.92</span><svg class="spark" viewBox="0 0 52 14" preserveAspectRatio="none"><polyline points="0,8 10,7 20,9 30,6 40,7 52,5" /><circle class="endpoint" cx="52" cy="5" r="2"/></svg></div><span class="delta">+0.70%</span></div>
+                <div class="indicator indicator-trend is-sm"><span class="label">TSLA</span><div class="main-row"><span class="num">171.05</span><svg class="spark" viewBox="0 0 52 14" preserveAspectRatio="none"><polyline points="0,5 10,7 20,9 30,10 40,11 52,11" /><circle class="endpoint" cx="52" cy="11" r="2"/></svg></div><span class="delta">-1.80%</span></div>
+              </div>
+            </div>
+            <p class="demo-caption">CLASSES <code>.indicator-trend.is-sm</code> &middot; 52&times;14 sparklines &middot; peripheral-vision footer pattern.</p>
+          </div>
+
+          <p class="section-end">All four recipes. Size ladder (<code>.is-sm</code> / default / <code>.is-lg</code>). State modifiers (<code>.is-dark</code> for coal and oxblood; <code>.is-stacked</code> on <code>.indicator-row</code> for narrow KPI cells). Sparklines 1px <code>--ink</code> polyline + filled <code>--red</code> end-dot r=2. Delta color always <code>--ink-mid</code>.</p>
         </div>
       </section>
 

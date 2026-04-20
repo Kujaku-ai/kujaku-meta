@@ -965,3 +965,308 @@
 .nav-masthead.is-hidden {
   transform: translateY(-100%);
 }
+
+
+/* ============================================================
+ * INDICATORS — stat / numeral / delta primitives.
+ *
+ * Four recipes for Kujaku's observational-finance voice:
+ *   .indicator-row      — dashboard atom (label / num / delta
+ *                         on one grid line). Ships with
+ *                         .is-stacked for narrow KPI cells.
+ *   .indicator-tabular  — period-column comparison (1M/3M/YTD).
+ *                         Uses tabular-nums for digit alignment.
+ *   .indicator-gloss    — JP kanji bookend + label + num + delta.
+ *                         Editorial callout. .is-dark flips the
+ *                         JP red → gold.
+ *   .indicator-trend    — numeral + 1px --ink sparkline with
+ *                         filled --red end-dot r=2. Echoes
+ *                         /graphs rule 4 at miniature scale.
+ *
+ * Shared: .is-sm, default, .is-lg size modifiers on all four.
+ * .is-dark modifier on all four for coal/oxblood surfaces.
+ *
+ * Width: indicators are content-sized by default. Consumers
+ * add `width: 100%` at their site when they want fill (e.g. a
+ * dashboard stack where deltas should right-align across rows).
+ *
+ * See STYLE.md /components Indicator for full spec.
+ * See STYLE.md /graphs sparkline micro-chart for the sparkline
+ * stroke + end-dot convention.
+ * ============================================================ */
+
+
+/* ---------- shared base ---------- */
+
+/* Core tokens for label / num / delta. Recipes override on top
+   of these; .is-dark flips to paper-family on all three. */
+.indicator {
+  display: block;
+  font-family: var(--font-mono);
+}
+.indicator .label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  line-height: 1.2;
+}
+.indicator .num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.indicator .delta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-mid);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared .is-dark — applies on --paper-coal, --red-deep, --ink
+   surfaces. rgba literals encode alpha against paper tones
+   because CSS can't express alpha against a var() reference. */
+.indicator.is-dark .label { color: rgba(241,236,224,0.55); }
+.indicator.is-dark .num   { color: var(--paper); }
+.indicator.is-dark .delta { color: rgba(241,236,224,0.7); }
+
+
+/* ---------- .indicator-row — dashboard atom ---------- */
+
+/* Single-period label / numeral / delta on one grid line. The
+   `1fr` on the middle column resolves to remaining space when a
+   consumer gives the row a width; collapses to 0 when it doesn't,
+   so the row reads compact in narrow cells. .is-stacked flips
+   the layout to a flex-column for KPI strips or any cell that
+   can't hold three horizontal columns. */
+.indicator-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 14px;
+}
+.indicator-row .num   { font-size: 14px; }
+.indicator-row .delta { text-align: right; }
+
+/* Size ladder — horizontal form */
+.indicator-row.is-sm { gap: 10px; }
+.indicator-row.is-sm .label { font-size: 9px; letter-spacing: 0.14em; }
+.indicator-row.is-sm .num   { font-size: 11px; }
+.indicator-row.is-sm .delta { font-size: 9px; }
+
+.indicator-row.is-lg { gap: 20px; }
+.indicator-row.is-lg .label { font-size: 11px; letter-spacing: 0.18em; }
+.indicator-row.is-lg .num   { font-size: 22px; }
+.indicator-row.is-lg .delta { font-size: 11px; }
+
+/* .is-stacked — flex-column variant. Composes with .is-sm /
+   .is-lg. Drops the horizontal-grid right-align on .delta
+   (a stacked form is all-left by convention). */
+.indicator-row.is-stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.indicator-row.is-stacked .delta { text-align: left; }
+.indicator-row.is-stacked.is-sm { gap: 3px; }
+.indicator-row.is-stacked.is-lg { gap: 6px; }
+
+
+/* ---------- .indicator-tabular — period comparison ---------- */
+
+/* Outer label + N rows. Each .row is a nested grid of
+   period / val / delta with tabular-nums locking digit
+   alignment across rows. The val column's `1fr` resolves
+   against the outer container width — scenes that want a
+   full-width ledger add `width: 100%` at the site. The period
+   column widens 28 → 36 → 48px across the size ladder so digit
+   alignment survives larger val font-sizes. */
+.indicator-tabular {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.indicator-tabular .label { margin-bottom: 4px; }
+.indicator-tabular .row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+.indicator-tabular .row .period {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-pale);
+}
+.indicator-tabular .row .val {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: right;
+}
+.indicator-tabular .row .d {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-mid);
+}
+
+/* Size ladder — steps period column width, outer gap, and all
+   three child font-sizes. */
+.indicator-tabular.is-sm { gap: 5px; }
+.indicator-tabular.is-sm .label { font-size: 9px; letter-spacing: 0.14em; }
+.indicator-tabular.is-sm .row { grid-template-columns: 28px 1fr auto; gap: 10px; }
+.indicator-tabular.is-sm .row .period { font-size: 8px; }
+.indicator-tabular.is-sm .row .val    { font-size: 12px; }
+.indicator-tabular.is-sm .row .d      { font-size: 9px; }
+
+.indicator-tabular.is-lg { gap: 12px; }
+.indicator-tabular.is-lg .label { font-size: 11px; letter-spacing: 0.18em; }
+.indicator-tabular.is-lg .row { grid-template-columns: 48px 1fr auto; gap: 20px; }
+.indicator-tabular.is-lg .row .period { font-size: 10px; }
+.indicator-tabular.is-lg .row .val    { font-size: 24px; }
+.indicator-tabular.is-lg .row .d      { font-size: 12px; }
+
+/* .is-dark — recipe-specific children override base .is-dark
+   because .row > .period / .val / .d aren't the shared
+   .label / .num / .delta. */
+.indicator-tabular.is-dark .row .period { color: rgba(241,236,224,0.45); }
+.indicator-tabular.is-dark .row .val    { color: var(--paper); }
+.indicator-tabular.is-dark .row .d      { color: rgba(241,236,224,0.7); }
+
+
+/* ---------- .indicator-gloss — editorial callout ---------- */
+
+/* JP kanji bookend + Latin label, then numeral, then delta.
+   Follows the .eyebrow-gloss convention established in the
+   eyebrow subsystem. align-items: flex-start keeps children at
+   their natural widths so the gloss reads as a pull-quote, not
+   a full-bleed block.
+
+   .is-dark flips the red JP character to --gold (matching the
+   .eyebrow-dark precedent). IMPORTANT: this flip CLAIMS the
+   page's one-gold-per-page budget — no other gold element may
+   appear on a page that uses .indicator-gloss.is-dark. */
+.indicator-gloss {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.indicator-gloss .label-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.indicator-gloss .jp {
+  font-family: var(--font-jp);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--red);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.indicator-gloss .num { font-size: 22px; }
+
+/* .is-sm — complete ladder: steps outer gap, label-row gap,
+   jp, label, num, delta. */
+.indicator-gloss.is-sm { gap: 6px; }
+.indicator-gloss.is-sm .label-row { gap: 8px; }
+.indicator-gloss.is-sm .jp    { font-size: 11px; }
+.indicator-gloss.is-sm .label { font-size: 9px; letter-spacing: 0.14em; }
+.indicator-gloss.is-sm .num   { font-size: 16px; }
+.indicator-gloss.is-sm .delta { font-size: 10px; }
+
+/* .is-lg — complete ladder for ceremonial / section-anchor
+   use. 44px numeral reads as a declarative headline. */
+.indicator-gloss.is-lg { gap: 12px; }
+.indicator-gloss.is-lg .label-row { gap: 14px; }
+.indicator-gloss.is-lg .jp    { font-size: 24px; }
+.indicator-gloss.is-lg .label { font-size: 11px; letter-spacing: 0.18em; }
+.indicator-gloss.is-lg .num   { font-size: 44px; }
+.indicator-gloss.is-lg .delta { font-size: 12px; }
+
+.indicator-gloss.is-dark .jp { color: var(--gold); }
+
+
+/* ---------- .indicator-trend — sparkline trend ---------- */
+
+/* Numeral + inline sparkline + delta. The .main-row is a TIGHT
+   CLUSTER: flex + 10px gap, NO `justify-content: space-between`,
+   NO forced width — otherwise the sparkline gets thrown to the
+   opposite edge of the container. align-items: flex-start on
+   the parent keeps the cluster from stretching full-width when
+   the recipe sits inside a flex or grid cell.
+
+   The sparkline is a 1px --ink polyline with a filled --red
+   end-dot (r=2 default, r=3 at .is-lg). The stroke / dot split
+   echoes /graphs rule 4 (filled red end-point marker) at
+   miniature scale — the line carries structure, the dot carries
+   the brand signal. See STYLE.md /graphs sparkline micro-chart
+   subsection.
+
+   Sparkline dimensions (52 / 84 / 220) are structural literals
+   tuned to the size ladder. Stroke-widths (1 / 1 / 1.25) and
+   endpoint radii (2 / 2 / 3) step one notch at .is-lg so the
+   hero figure reads at scale. */
+.indicator-trend {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.indicator-trend .main-row {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* literal: tight cluster between numeral and sparkline */
+}
+.indicator-trend .num { font-size: 22px; }
+.indicator-trend .spark {
+  display: inline-block;
+  width: 84px;
+  height: 24px;
+  flex-shrink: 0;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1;
+  overflow: visible;
+}
+.indicator-trend .spark .endpoint {
+  fill: var(--red);
+  stroke: none;
+}
+
+/* .is-sm — compact for peripheral ticker grids. Cluster gap
+   tightens to 6px; sparkline drops to 52×14. */
+.indicator-trend.is-sm { gap: 3px; }
+.indicator-trend.is-sm .main-row { gap: 6px; }
+.indicator-trend.is-sm .label { font-size: 9px; letter-spacing: 0.14em; }
+.indicator-trend.is-sm .num   { font-size: 13px; }
+.indicator-trend.is-sm .delta { font-size: 9px; }
+.indicator-trend.is-sm .spark { width: 52px; height: 14px; }
+
+/* .is-lg — hero single-instrument treatment. 44px numeral,
+   220×44 sparkline, stroke-width 1.25 for scale, endpoint r=3. */
+.indicator-trend.is-lg { gap: 10px; }
+.indicator-trend.is-lg .main-row { gap: 14px; }
+.indicator-trend.is-lg .label { font-size: 11px; letter-spacing: 0.18em; }
+.indicator-trend.is-lg .num   { font-size: 44px; }
+.indicator-trend.is-lg .delta { font-size: 12px; }
+.indicator-trend.is-lg .spark { width: 220px; height: 44px; stroke-width: 1.25; }
+.indicator-trend.is-lg .spark .endpoint { r: 3; }
+
+/* .is-dark — spark stroke flips to --paper; end-dot stays
+   --red (reads as a filled bead against both coal and oxblood
+   per the Scene 13 dark-surface test). */
+.indicator-trend.is-dark .spark { stroke: var(--paper); }
+.indicator-trend.is-dark .spark .endpoint { fill: var(--red); }
