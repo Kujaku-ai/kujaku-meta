@@ -434,7 +434,7 @@
  * HANKO
  * Red seal stamp — distinctive Japanese signature element.
  * Inline-flex box holding one or more JP characters in Mincho
- * 700, paper-on-red, slightly rotated, with a soft warm cast.
+ * 700, paper-on-red, axis-aligned, with a soft warm cast.
  *
  * Default size 28px. Size modifiers .is-22 (in cards), .is-28
  * (default inline, explicit class permitted), .is-48 (callouts),
@@ -456,7 +456,6 @@
   font-size: 14px;
   color: var(--paper);
   line-height: 1;
-  transform: rotate(-2deg);
   /* Warm red-ink drop shadow. rgba(138, 36, 24, ...) matches the
      hex of --red-deep (#8A2418); expressed as an rgba literal
      here because CSS can't take alpha against a token var. */

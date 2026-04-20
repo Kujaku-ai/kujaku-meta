@@ -348,7 +348,7 @@ Eight card recipes in four colors × two states. Cards frame content: text, data
 
 ### Hanko
 
-Red seal stamp — distinctive Japanese signature element. Inline-flex element holding one or more JP characters in Mincho 700, white-on-red, slightly rotated, with a soft cast.
+Red seal stamp — distinctive Japanese signature element. Inline-flex element holding one or more JP characters in Mincho 700, white-on-red, axis-aligned, with a soft cast.
 
 **Variants:**
 
@@ -362,7 +362,7 @@ Red seal stamp — distinctive Japanese signature element. Inline-flex element h
 **Rules:**
 - One hanko per content region. Multiple hanko in close proximity reads as decorative noise.
 - JP characters inside must come from the `/voice` approved vocabulary table.
-- Never recolor (red is the seal color); never remove the rotation; never add a border.
+- Never recolor (red is the seal color); never add a border; never apply a rotation (the hanko is axis-aligned by design).
 - The cast shadow uses an alpha of the red-deep family — preserved as a literal in the recipe (CSS cannot resolve alpha against `var()`).
 
 **Composes with:**
