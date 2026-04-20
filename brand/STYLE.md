@@ -380,7 +380,7 @@ Two-piece brutalist navigation: a left rail that expands on hover, and a top mas
 |---|---|
 | `.nav-composition` | Optional flex-row wrapper holding rail + main column. Default `min-height: 0` (embeddable). For page shells, consumer sets its own min-height. |
 | `.nav-rail` | Left rail. Collapsed 64px default. Expands to 180px on `:hover` OR when `.is-expanded` applied. |
-| `.nav-rail .mark` | Top of rail. Height 48px to match `.nav-masthead` (forms the crisp "+" corner intersection at the rail-masthead boundary). Holds logo mark (visible in collapsed state) and wordmark (visible in expanded state). Children: `.mark .svg` + `.mark .wordmark`. Crossfades between the two on state change. |
+| `.nav-rail .mark` | Top of rail. Height 48px to match `.nav-masthead` (forms the crisp "+" corner intersection at the rail-masthead boundary). Holds the mark logo (visible in collapsed state) and the full lockup logo (visible in expanded state) as two `<img>` children: `.mark .svg` (28×28 mark) + `.mark .lockup` (max-height 28px lockup). Crossfades between the two on state change. |
 | `.nav-rail .items` | Vertical stack containing `.nav-section` and `.nav-item` children. |
 | `.nav-rail .footer` | Build-info footer at rail bottom. Three lines of mono 9px `--ink-pale`. Only visible when rail is expanded. Scoped selector — consumers should not use `.footer` inside the rail for unrelated content. |
 | `.nav-section` | Section heading group (SYSTEM, LOG, STATIC). Contains `.nav-section .label` + nested `.nav-item` children. |
@@ -461,7 +461,7 @@ The rail's right-edge border and the masthead's bottom-edge border must meet at 
 - Ticker marquee: 60-second linear infinite loop on `.nav-masthead .ticker-track`. CSS-only. Consumers MUST duplicate the ticker block markup (each ticker listed twice in sequence) for the `translateX(-50%)` mechanic to seamlessly loop.
 - Ticker hover-swap: 200ms `--ease-out` opacity transition on `.delta` and `.price`. Triggered by `:hover` on `.ticker-block`.
 - Ticker pause on hover: `.ticker-track:hover` sets `animation-play-state: paused` so the whole marquee halts when user hovers anywhere in the viewport.
-- Rail width, hover background, chevron, mark/wordmark crossfade, masthead scroll-hide transform: unchanged from prior nav promotion.
+- Rail width, hover background, chevron, mark/lockup crossfade, masthead scroll-hide transform: unchanged from prior nav promotion.
 
 All animations are interaction-coupled (hover, class toggle). Per /animations: interaction-coupled opacity and transform transitions are permitted. The forbidden "fade-in on load" rule still applies — never fade any nav element in on page load.
 

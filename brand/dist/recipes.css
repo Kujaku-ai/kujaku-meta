@@ -580,16 +580,13 @@
 
 /* ---------- rail .mark (brand slot) ---------- */
 
-/* .nav-rail .mark — 56px-tall brand slot at the top of the rail.
-   Holds both the SVG logo (shown collapsed) and the text
-   wordmark (shown expanded); opacity crossfades on rail state
-   change. Consuming markup includes both children:
+/* .nav-rail .mark — 48px-tall brand slot at the top of the rail.
+   Holds both the mark SVG (shown collapsed) and the lockup SVG
+   (shown expanded); opacity crossfades on rail state change.
+   Consuming markup includes both children as <img> elements:
      <div class="mark">
-       <span class="svg"><img src="logo-mark-red-pressed.svg" /></span>
-       <span class="wordmark">
-         <span class="name">Kujaku</span>
-         <span class="tag">Investments</span>
-       </span>
+       <img class="svg" src="logo-mark-red-pressed.svg" alt="Kujaku" />
+       <img class="lockup" src="logo-lockup-red-pressed.svg" alt="Kujaku Investments" />
      </div>                                                      */
 /* .mark is 48px tall to match .nav-masthead height.
    The two bottom-edge borders meet at a single Y coordinate,
@@ -604,53 +601,49 @@
   border-bottom: 1px solid var(--ink-faint);
   flex-shrink: 0;
 }
-.nav-rail .mark .svg,
-.nav-rail .mark .wordmark {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 200ms var(--ease-out);
-  white-space: nowrap;
-}
-.nav-rail .mark .svg { opacity: 1; }
-.nav-rail .mark .wordmark { opacity: 0; padding: 0 14px; }
 
+/* Both logos absolutely positioned in the same slot, centered
+   via top/left/transform so each preserves its natural aspect
+   ratio. Crossfade runs at 200ms var(--ease-out) — same literal
+   as the rail's width/shadow reveal, for shared rhythm. */
+.nav-rail .mark .svg,
+.nav-rail .mark .lockup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  transition: opacity 200ms var(--ease-out);
+}
+
+/* Mark SVG (collapsed state) — 28px square fits the 48px .mark
+   slot with 10px breathing room top and bottom. Was 30px when
+   .mark was 56px. */
+.nav-rail .mark .svg {
+  opacity: 1;
+  width: 28px;
+  height: 28px;
+}
+
+/* Lockup SVG (expanded state) — max-height 28px preserves the
+   lockup's natural aspect ratio. max-width leaves 14px inset
+   on each side of the 180px expanded rail (calc keeps it in
+   sync with any future rail-width change). */
+.nav-rail .mark .lockup {
+  opacity: 0;
+  max-height: 28px;
+  width: auto;
+  max-width: calc(100% - 28px);
+}
+
+/* Crossfade triggers — rail :hover, .is-expanded, or .is-drawer
+   hides the mark and reveals the lockup. */
 .nav-rail:hover .mark .svg,
 .nav-rail.is-expanded .mark .svg,
 .nav-rail.is-drawer .mark .svg { opacity: 0; }
-.nav-rail:hover .mark .wordmark,
-.nav-rail.is-expanded .mark .wordmark,
-.nav-rail.is-drawer .mark .wordmark { opacity: 1; }
-
-.nav-rail .mark .svg img {
-  /* 28px fits inside the 48px .mark slot with 10px of breathing
-     room top and bottom. Was 30px when .mark was 56px. */
-  width: 28px;
-  height: 28px;
-  display: block;
-}
-.nav-rail .mark .wordmark .name {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 18px;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  line-height: 1;
-}
-.nav-rail .mark .wordmark .tag {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.36em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  margin-top: 4px;
-  line-height: 1;
-}
+.nav-rail:hover .mark .lockup,
+.nav-rail.is-expanded .mark .lockup,
+.nav-rail.is-drawer .mark .lockup { opacity: 1; }
 
 
 /* ---------- rail .items (nav sections container) ---------- */
