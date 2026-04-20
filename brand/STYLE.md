@@ -388,8 +388,15 @@ Two-piece brutalist navigation: a left rail that expands on hover, and a top mas
 | `.nav-item` | Single nav row. Mono 11px. Flex row with `.nav-item .slash` + `.nav-item .label` children. |
 | `.nav-item .slash` | The `/` prefix character. `--ink-pale` opacity by default. |
 | `.nav-item .label` | Route name. Hidden in collapsed state; fades in when rail expands. |
-| `.nav-masthead` | Top bar positioned inside the main content column (NOT above the rail). Height 48px. Mono 11px metadata content. |
-| `.nav-masthead .meta` | The metadata row. Uppercase, letterspaced 0.12em. |
+| `.nav-masthead` | Top bar positioned inside main content column (NOT above the rail). 48px tall (matches `.nav-rail .mark`). Flex row: `.ticker-viewport` (flex 1) + `.actions` (fixed width). Paper background, ink-faint border-bottom. |
+| `.nav-masthead .ticker-viewport` | Horizontally scrolling carousel container. `overflow: hidden`. Contains a single `.ticker-track`. |
+| `.nav-masthead .ticker-track` | Flex row holding ticker blocks. CSS `@keyframes translateX 0 → -50%` on a 60-second linear infinite loop. Consumers must duplicate the ticker block markup (each ticker appears twice in sequence) for seamless looping. `:hover` pauses the animation. |
+| `.nav-masthead .ticker-block` | Single ticker cell. Contains `.symbol`, `.delta`, `.price`. The `.delta` shows by default; on hover of the block, `.delta` fades to 0 opacity and `.price` fades to 1 opacity (200ms ease-out). |
+| `.nav-masthead .ticker-block .symbol` | Ticker symbol. Mono 11px, uppercase tracked. `/`-prefix via `::before` pseudo-element, borrowing the rail's route vernacular. |
+| `.nav-masthead .ticker-block .delta` | Percent change display. Mono 11px, `--ink-mid`. No color coding (direction encoded by +/- sign). Default visible. |
+| `.nav-masthead .ticker-block .price` | Absolute numeric price. Mono 11px, `--ink-mid`. Default hidden (opacity 0). Revealed on `.ticker-block:hover`. |
+| `.nav-masthead .actions` | Right-aligned navigation links (Login, About, Contact, etc.). Not animated. `a + a { margin-left: 24px }` for spacing between actions. |
+| `.nav-masthead .actions a` | Individual action link. Mono 11px uppercase tracked, `--ink-mid` color. `:hover` shifts to `--red`. |
 
 **State modifiers:**
 
@@ -423,7 +430,26 @@ The rail's right-edge border and the masthead's bottom-edge border must meet at 
   </aside>
   <main>
     <header class="nav-masthead">
-      <div class="meta">12:00:04 UTC · SESSION · 04.19 / MON · MODE · OBSERVATIONAL · BOT · ONLINE</div>
+      <div class="ticker-viewport">
+        <div class="ticker-track">
+          <!-- DUPLICATE THE TICKER LIST: -->
+          <div class="ticker-block">
+            <span class="symbol">SPX</span>
+            <span class="delta">+0.18%</span>
+            <span class="price">5,248.30</span>
+          </div>
+          <div class="ticker-block">
+            <span class="symbol">NVDA</span>
+            <span class="delta">-0.42%</span>
+            <span class="price">932.14</span>
+          </div>
+          <!-- ...repeat all tickers once, then REPEAT THE ENTIRE LIST A SECOND TIME for seamless loop... -->
+        </div>
+      </div>
+      <div class="actions">
+        <a href="/login">Login</a>
+        <a href="/about">About</a>
+      </div>
     </header>
     <!-- page content -->
   </main>
@@ -432,12 +458,10 @@ The rail's right-edge border and the masthead's bottom-edge border must meet at 
 
 **Animation behavior:**
 
-- Rail width transitions 200ms `--ease-out` between 64px and 180px. Note: 200ms is a nav-specific duration literal (not `--duration-fast` at 240ms) — tuned to match the approved interaction feel from sandbox Variant 1.
-- Rail shadow transitions 200ms `--ease-out` (subtle letterpress on expand; flat on collapse).
-- Label/section/footer opacity transitions 200ms `--ease-out`.
-- Mark → wordmark crossfade 200ms `--ease-out`.
-- Nav item color transitions 80ms on hover (fast feedback).
-- Masthead transform transitions `--duration-fast` `--ease-out` (token-aligned).
+- Ticker marquee: 60-second linear infinite loop on `.nav-masthead .ticker-track`. CSS-only. Consumers MUST duplicate the ticker block markup (each ticker listed twice in sequence) for the `translateX(-50%)` mechanic to seamlessly loop.
+- Ticker hover-swap: 200ms `--ease-out` opacity transition on `.delta` and `.price`. Triggered by `:hover` on `.ticker-block`.
+- Ticker pause on hover: `.ticker-track:hover` sets `animation-play-state: paused` so the whole marquee halts when user hovers anywhere in the viewport.
+- Rail width, hover background, chevron, mark/wordmark crossfade, masthead scroll-hide transform: unchanged from prior nav promotion.
 
 All animations are interaction-coupled (hover, class toggle). Per /animations: interaction-coupled opacity and transform transitions are permitted. The forbidden "fade-in on load" rule still applies — never fade any nav element in on page load.
 
@@ -474,6 +498,9 @@ This snippet is a reference, not a shipped helper. Consuming apps own their scro
 - Masthead sits inside the main content column, not above the rail. This makes the corner alignment automatic and lets the rail maintain a continuous top-to-bottom visual line.
 - Rail expands ONLY on mouseenter (or `.is-expanded` class). No click-to-expand behavior. The direct-hover model is the approved interaction.
 - Sections (SYSTEM, LOG, STATIC) are flat groupings — not expandable categories. Each route is a top-level `.nav-item` inside a `.nav-section`.
+- Ticker marquee requires duplicated markup. Each ticker block appears TWICE in sequence inside `.ticker-track`. Without duplication, the `translateX(-50%)` marquee mechanic shows blank space as the list ends.
+- Delta color is always `--ink-mid`. No color coding by direction (no green for positive, no red for negative). Direction is encoded by the `+/-` sign. Matches `/graphs` "never a second red, never green or amber" rule.
+- Ticker block count in the actual data is open to consumer apps. Brand ships the structure; consumers populate the data.
 
 **Usage:**
 

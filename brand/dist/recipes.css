@@ -771,68 +771,204 @@
 }
 
 
-/* ---------- masthead ---------- */
+/* ============================================================
+ * NAV MASTHEAD — ticker strip.
+ *
+ * 48px-tall masthead. Horizontally scrolling stock-ticker-style
+ * carousel with /-prefix symbols borrowed from the rail's route
+ * vernacular. Right-aligned nav actions (login, about, etc.).
+ *
+ * Marquee animation: CSS @keyframes translateX 0 → -50% on
+ * .ticker-track. Markup duplicates the ticker list for seamless
+ * loop. Animation pauses on hover (:hover on .ticker-track).
+ *
+ * Hover-swap reveal: each ticker block shows SYMBOL + delta%
+ * by default; on hover, delta fades out and price fades in
+ * using absolute-positioned siblings. No color coding on delta
+ * (ink-mid always); direction implied by +/- sign.
+ *
+ * Scroll-hide: .is-hidden class translates masthead up via
+ * transform: translateY(-100%). Consumer JS toggles the class
+ * based on scroll direction (~15 lines, see STYLE.md).
+ *
+ * Corner alignment: 48px height matches .nav-rail .mark for
+ * the crisp "+" intersection at the rail/masthead corner.
+ *
+ * MARKUP CONTRACT —
+ *   <div class="nav-masthead">
+ *     <div class="ticker-viewport">
+ *       <div class="ticker-track">
+ *         <span class="ticker-block">
+ *           <span class="symbol">SPX</span>
+ *           <span class="delta">+0.18%</span>
+ *           <span class="price">5,248.30</span>
+ *         </span>
+ *         ... block list, then DUPLICATED for seamless loop
+ *       </div>
+ *     </div>
+ *     <div class="actions">
+ *       <a href="...">Login</a><a href="...">About</a>
+ *     </div>
+ *   </div>
+ *
+ * See STYLE.md /components Nav for full system rules.
+ * ============================================================ */
 
-/* .nav-masthead — top bar inside the main content column (NOT
-   above the rail). 48px tall, 1px --ink-faint bottom border,
-   mono 11px metadata content via .meta inside. 48px is a
-   structural literal chosen to align with the rail's 56px
-   .mark slot so the rail-right-edge border and masthead-bottom
-   border form a single clean intersection at the corner.
-
-   Positioning is NOT forced. The consuming app applies
-   position: sticky (top: 0) OR position: fixed AS APPROPRIATE
-   for its page. The .is-hidden transform only has a visible
-   effect when the masthead is positioned — a static masthead
-   translating up vacates its slot without revealing content
-   beneath.
-
-   Scroll-hide logic REQUIRES JS. Brand ships only the
-   .is-hidden class; the direction-based scroll snippet lives
-   in STYLE.md /components Nav "Implementation notes".
-
-   ANIMATION — transform transition var(--duration-fast)
-   (240ms) for the .is-hidden slide-up. Slightly slower than
-   the rail's 200ms because vertical motion over the full 48px
-   reads farther than a width reveal. */
+/* Base masthead — 48px height + 1px --ink-faint bottom border
+   are the corner-alignment contract with .nav-rail .mark.
+   overflow: hidden confines the marquee to the viewport.
+   ANIMATION — transform transition var(--duration-fast) (240ms)
+   for the .is-hidden slide-up. Slightly slower than the rail's
+   200ms because vertical motion over the full 48px reads
+   farther than a width reveal. */
 .nav-masthead {
   height: 48px;
   display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--ink-faint);
+  align-items: stretch;
   background: var(--paper);
+  border-bottom: 1px solid var(--ink-faint);
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* Ticker region — expands to fill the masthead; the marquee
+   track slides inside its clipped bounds. */
+.nav-masthead .ticker-viewport {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Marquee track — holds the DOUBLED ticker-block list and runs
+   a 60-second linear loop. translateX(-50%) halts at the
+   midpoint so the second half renders seamlessly from
+   translateX(0); consumer markup must repeat the list twice to
+   match. 60s is a structural literal chosen for a slow, calm
+   scroll; no tokenized duration is long enough for marquee
+   work. The 24px gap and 24px side padding are structural
+   literals tuned for ticker-block density at 11px mono. */
+.nav-masthead .ticker-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 24px;
+  padding: 0 24px;
+  animation: ticker-marquee 60s linear infinite;
+}
+
+/* Hover pauses the marquee so a reader can hold the track
+   still — and so block-hover can reveal the price without
+   the target sliding out from under the pointer. */
+.nav-masthead .ticker-track:hover { animation-play-state: paused; }
+
+/* Ticker cell — column stack (symbol on top, delta below).
+   position: relative anchors .price for its absolute overlay.
+   min-width reserves horizontal space so neighbors don't shift
+   when price text (wider) swaps in for delta text (narrower).
+   80px is the structural literal — fits the longest ticker
+   triplet in the approved V10 dataset at 11px mono. */
+.nav-masthead .ticker-block {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  line-height: 1.15;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+}
+
+/* Symbol row — /-prefix in --ink-pale via ::before, echoing
+   the rail's nav-item /-slash vernacular so the masthead reads
+   as the same typographic system as the rail. */
+.nav-masthead .ticker-block .symbol {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.nav-masthead .ticker-block .symbol::before {
+  content: "/";
+  color: var(--ink-pale);
+  font-weight: 400;
+  margin-right: 3px;
+}
+
+/* Delta row (default visible) and price row (default hidden,
+   absolutely positioned over the delta slot). Both carry
+   identical typographic weight so the swap reads as a content
+   change, not a layout shift. Delta stays --ink-mid always —
+   no color coding; direction is implied by the +/- sign. */
+.nav-masthead .ticker-block .delta,
+.nav-masthead .ticker-block .price {
+  font-size: 11px;
+  color: var(--ink-mid);
+  white-space: nowrap;
+  transition: opacity 200ms var(--ease-out);
+}
+.nav-masthead .ticker-block .price {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+  color: var(--ink);
+}
+
+/* Hover swap — delta fades out, price fades in at the same
+   slot. 200ms literal matches the nav-rail's width/shadow
+   reveal timing so masthead and rail animate in the same
+   rhythm. No tokenized duration is 200ms; this is the same
+   sub-token literal the rail already carries. */
+.nav-masthead .ticker-block:hover .delta { opacity: 0; }
+.nav-masthead .ticker-block:hover .price { opacity: 1; }
+
+
+/* ---------- actions (right edge) ---------- */
+
+/* Right-aligned action links. 1px --ink-faint divider separates
+   the ticker region from actions. Actions stay static while the
+   ticker marquees beneath. */
+.nav-masthead .actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 20px;
+  border-left: 1px solid var(--ink-faint);
+}
+.nav-masthead .actions a {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-mid);
-  flex-wrap: nowrap;
-  overflow: hidden;
-  transition: transform var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
 }
-.nav-masthead.is-hidden {
-  transform: translateY(-100%);
+.nav-masthead .actions a:hover { color: var(--red); }
+.nav-masthead .actions a + a { margin-left: 24px; }
+
+
+/* ---------- marquee keyframes ---------- */
+
+/* translateX(0 → -50%) pairs with the doubled markup contract
+   above for a seamless loop. */
+@keyframes ticker-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
-/* .nav-masthead .meta — metadata content inside the masthead.
-   Children are <span> elements; use <strong> on values the
-   consumer wants to emphasize. Inherits the masthead's typo so
-   a consumer doesn't restate font/letter-spacing per child. */
-.nav-masthead .meta {
-  display: flex;
-  gap: 22px;
-  align-items: center;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  font-family: inherit;
-  font-size: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-}
-.nav-masthead .meta strong {
-  color: var(--ink);
-  font-weight: 500;
+
+/* ---------- modifier: hidden (scroll-down) ---------- */
+
+/* .is-hidden translates the masthead out of view. Transition
+   is defined on the base rule above (transform var(--duration-fast)). */
+.nav-masthead.is-hidden {
+  transform: translateY(-100%);
 }
