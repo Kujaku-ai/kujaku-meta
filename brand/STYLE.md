@@ -346,20 +346,139 @@ Eight card recipes in four colors × two states. Cards frame content: text, data
 - Nesting: same-variant nesting works (e.g. `.card-paper` inside `.card-paper`). Cross-variant nesting works (e.g. `.card-paper.is-sm` inside `.card-coal.is-lg` for dashboard composition). No hard rule — use judgment; if the illusion fails visually, reconsider the composition.
 - Use `.eyebrow-dark` (NOT `.eyebrow`) on any dark card.
 
-**Hanko stamp recipe (28px size):**
-```css
-.hanko {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px;
-  background: var(--red); border-radius: 2px;
-  font-family: var(--font-jp); font-weight: 700;
-  font-size: 14px; color: var(--paper); line-height: 1;
-  transform: rotate(-2deg);
-  box-shadow: 0 2px 6px rgba(138,36,24,0.25);
-}
+### Hanko
+
+Red seal stamp — distinctive Japanese signature element. Inline-flex element holding one or more JP characters in Mincho 700, white-on-red, slightly rotated, with a soft cast.
+
+**Variants:**
+
+| Class | Size | Use |
+|---|---|---|
+| `.hanko.is-22` | 22px | In-card or in-row contexts |
+| `.hanko.is-28` | 28px | Default inline use (no class needed; `.is-28` permitted for explicit clarity) |
+| `.hanko.is-48` | 48px | Section callouts, hero corners |
+| `.hanko.is-72` | 72px | Page-level hero corner, oversized brand moment |
+
+**Rules:**
+- One hanko per content region. Multiple hanko in close proximity reads as decorative noise.
+- JP characters inside must come from the `/voice` approved vocabulary table.
+- Never recolor (red is the seal color); never remove the rotation; never add a border.
+- The cast shadow uses an alpha of the red-deep family — preserved as a literal in the recipe (CSS cannot resolve alpha against `var()`).
+
+**Composes with:**
+- `.nav-rail` (may be placed at rail bottom via consumer markup — no canonical slot)
+- `.card-*` (placed in a corner via positioning)
+- Inline within body text (small variant)
+
+### Nav
+
+Two-piece brutalist navigation: a left rail that expands on hover, and a top masthead that hides on scroll-down and reappears on scroll-up. Terminal/mono aesthetic. Light paper surfaces. No chevrons, no expanding category submenus — routes are organized into SYSTEM / LOG / STATIC sections.
+
+**Structure:**
+
+| Class | Role |
+|---|---|
+| `.nav-composition` | Optional flex-row wrapper holding rail + main column. Default `min-height: 0` (embeddable). For page shells, consumer sets its own min-height. |
+| `.nav-rail` | Left rail. Collapsed 64px default. Expands to 180px on `:hover` OR when `.is-expanded` applied. |
+| `.nav-rail .mark` | Top of rail. Holds logo mark (visible in collapsed state) and wordmark (visible in expanded state). Children: `.mark .svg` + `.mark .wordmark`. Crossfades between the two on state change. |
+| `.nav-rail .items` | Vertical stack containing `.nav-section` and `.nav-item` children. |
+| `.nav-rail .footer` | Build-info footer at rail bottom. Three lines of mono 9px `--ink-pale`. Only visible when rail is expanded. Scoped selector — consumers should not use `.footer` inside the rail for unrelated content. |
+| `.nav-section` | Section heading group (SYSTEM, LOG, STATIC). Contains `.nav-section .label` + nested `.nav-item` children. |
+| `.nav-section .label` | Section name. Mono 9px letterspaced caps. Hidden in collapsed rail via opacity 0. |
+| `.nav-item` | Single nav row. Mono 11px. Flex row with `.nav-item .slash` + `.nav-item .label` children. |
+| `.nav-item .slash` | The `/` prefix character. `--ink-pale` opacity by default. |
+| `.nav-item .label` | Route name. Hidden in collapsed state; fades in when rail expands. |
+| `.nav-masthead` | Top bar positioned inside the main content column (NOT above the rail). Height 48px. Mono 11px metadata content. |
+| `.nav-masthead .meta` | The metadata row. Uppercase, letterspaced 0.12em. |
+
+**State modifiers:**
+
+| Class | Applied to | Effect |
+|---|---|---|
+| `.is-expanded` | `.nav-rail` | Forces 180px expanded state (overrides the :hover behavior). Useful for desktop "locked-open" preferences. |
+| `.is-active` | `.nav-item` | Current route indicator. Shows `>` prefix + `--red` text color. Single treatment; never combine with left-bar or background-fill active variants. |
+| `.is-hidden` | `.nav-masthead` | Translates the masthead up via `translateY(-100%)`. Consumer's JS toggles this class based on scroll direction. Only visible under `position: sticky` or `position: fixed` (a static masthead vacating its layout slot does nothing). |
+| `.is-drawer` | `.nav-rail` | Full-width mobile drawer state. Requires consumer JS to toggle based on viewport width + hamburger trigger. |
+
+**Corner alignment:**
+
+The rail's right-edge border and the masthead's bottom-edge border must meet at a single intersection point. This is achieved by placing the masthead INSIDE the main content column (not above the rail). Canonical markup:
+
+```html
+<div class="nav-composition">
+  <aside class="nav-rail">
+    <div class="mark">...</div>
+    <nav class="items">
+      <div class="nav-section">
+        <p class="label">System</p>
+        <a class="nav-item is-active" href="/overview">
+          <span class="slash">/</span>
+          <span class="label">overview</span>
+        </a>
+        ...
+      </div>
+      ...
+    </nav>
+    <div class="footer">...</div>
+  </aside>
+  <main>
+    <header class="nav-masthead">
+      <div class="meta">12:00:04 UTC · SESSION · 04.19 / MON · MODE · OBSERVATIONAL · BOT · ONLINE</div>
+    </header>
+    <!-- page content -->
+  </main>
+</div>
 ```
 
-**Sizes:** 22px (in cards), 28px (inline), 48px (callouts), 72px (hero corner).
+**Animation behavior:**
+
+- Rail width transitions 200ms `--ease-out` between 64px and 180px. Note: 200ms is a nav-specific duration literal (not `--duration-fast` at 240ms) — tuned to match the approved interaction feel from sandbox Variant 1.
+- Rail shadow transitions 200ms `--ease-out` (subtle letterpress on expand; flat on collapse).
+- Label/section/footer opacity transitions 200ms `--ease-out`.
+- Mark → wordmark crossfade 200ms `--ease-out`.
+- Nav item color transitions 80ms on hover (fast feedback).
+- Masthead transform transitions `--duration-fast` `--ease-out` (token-aligned).
+
+All animations are interaction-coupled (hover, class toggle). Per /animations: interaction-coupled opacity and transform transitions are permitted. The forbidden "fade-in on load" rule still applies — never fade any nav element in on page load.
+
+**JS contract (important — brand ships classes, not behavior):**
+
+Brand ships the CSS for `.nav-rail`, `.nav-masthead`, and their state classes. Brand does NOT ship the JavaScript for scroll-based hiding or drawer-based mobile toggling. The consuming app writes those ~15 lines.
+
+Minimal reference implementation for masthead scroll-hide:
+
+```js
+// Scroll-direction-based masthead hide. ~15 lines.
+// Toggles .is-hidden on .nav-masthead when user scrolls down;
+// removes it on scroll up.
+const masthead = document.querySelector('.nav-masthead');
+const scrollEl = /* the scrollable element or window */;
+let lastY = 0;
+scrollEl.addEventListener('scroll', () => {
+  const y = scrollEl.scrollTop ?? window.scrollY;
+  if (y > lastY && y > 40) {
+    masthead.classList.add('is-hidden');
+  } else if (y < lastY) {
+    masthead.classList.remove('is-hidden');
+  }
+  lastY = y;
+}, { passive: true });
+```
+
+This snippet is a reference, not a shipped helper. Consuming apps own their scroll-detection logic.
+
+**Rules:**
+
+- Rail uses `--paper` background at rest. Expands with a subtle letterpress shadow (~50% intensity of the `.emboss-letterpress` stack). Never use dark rail surfaces (`--paper-coal`, `--ink`).
+- Active state is exclusively `>` + `--red` text color. Never combine with a left border bar, background fill, or dot indicator.
+- Masthead sits inside the main content column, not above the rail. This makes the corner alignment automatic and lets the rail maintain a continuous top-to-bottom visual line.
+- Rail expands ONLY on mouseenter (or `.is-expanded` class). No click-to-expand behavior. The direct-hover model is the approved interaction.
+- Sections (SYSTEM, LOG, STATIC) are flat groupings — not expandable categories. Each route is a top-level `.nav-item` inside a `.nav-section`.
+
+**Usage:**
+
+- Page shell: set `min-height: 100vh` on a page container OR on `.nav-composition` itself.
+- Embedded widget: default `min-height: 0` on `.nav-composition` means the nav fits inside its container's height naturally.
 
 ---
 

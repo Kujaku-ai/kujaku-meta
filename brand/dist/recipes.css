@@ -428,3 +428,403 @@
   letter-spacing: 0.18em;
   color: inherit;
 }
+
+
+/* ============================================================
+ * HANKO
+ * Red seal stamp — distinctive Japanese signature element.
+ * Inline-flex box holding one or more JP characters in Mincho
+ * 700, paper-on-red, slightly rotated, with a soft warm cast.
+ *
+ * Default size 28px. Size modifiers .is-22 (in cards), .is-28
+ * (default inline, explicit class permitted), .is-48 (callouts),
+ * .is-72 (hero corner).
+ *
+ * See STYLE.md /components Hanko for usage rules.
+ * ============================================================ */
+
+.hanko {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--red);
+  border-radius: 2px;
+  font-family: var(--font-jp);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--paper);
+  line-height: 1;
+  transform: rotate(-2deg);
+  /* Warm red-ink drop shadow. rgba(138, 36, 24, ...) matches the
+     hex of --red-deep (#8A2418); expressed as an rgba literal
+     here because CSS can't take alpha against a token var. */
+  box-shadow: 0 2px 6px rgba(138, 36, 24, 0.25);
+}
+
+/* ---------- size modifiers ---------- */
+
+.hanko.is-22 { width: 22px; height: 22px; font-size: 11px; }
+.hanko.is-28 { width: 28px; height: 28px; font-size: 14px; }
+.hanko.is-48 { width: 48px; height: 48px; font-size: 24px; border-radius: 3px; }
+.hanko.is-72 {
+  width: 72px;
+  height: 72px;
+  font-size: 36px;
+  border-radius: 4px;
+  /* Hero scale carries a slightly heavier cast — 0.30 alpha,
+     10px blur at 3px offset. Same red-deep rgba family. */
+  box-shadow: 0 3px 10px rgba(138, 36, 24, 0.30);
+}
+
+
+/* ============================================================
+ * NAV — left rail + top masthead.
+ *
+ * Brutalist mono-terminal direction. Rail is 64px collapsed by
+ * default; expands to 180px on :hover OR when .is-expanded is
+ * applied. The expansion is CSS-only and does NOT require JS
+ * for the hover behavior.
+ *
+ * The top masthead's scroll-hide behavior REQUIRES JS in the
+ * consuming app — brand ships only the .is-hidden class. See
+ * STYLE.md /components Nav "Implementation notes" for the
+ * recommended scroll-detection snippet (direction-based,
+ * toggles .is-hidden on .nav-masthead).
+ *
+ * Corner alignment: the rail's right-edge border and the
+ * masthead's bottom-edge border meet at a single intersection
+ * point. The masthead sits inside the main content column, not
+ * above the rail. See STYLE.md /components Nav "Structure" for
+ * the canonical markup pattern.
+ *
+ * Active state: ">" prefix + --red color. No left bar, no
+ * background fill. Pick one treatment; never combine.
+ *
+ * Modifiers:
+ *   .is-expanded  on .nav-rail      — lock rail at 180px
+ *   .is-drawer    on .nav-rail      — full-width mobile drawer
+ *   .is-active    on .nav-item      — current page indicator
+ *   .is-hidden    on .nav-masthead  — translate up out of view
+ *
+ * See STYLE.md /components Nav for full rules.
+ * ============================================================ */
+
+/* ---------- composition wrapper (optional) ---------- */
+
+/* .nav-composition is a flex-row wrapper. min-height defaults to 0
+   so the composition can be embedded in widget contexts. For full-
+   page shell usage, consumers should set their own min-height
+   (commonly 100vh) on the page container or on .nav-composition.
+   Documented in STYLE.md /components Nav "Usage". */
+.nav-composition {
+  display: flex;
+  position: relative;
+  background: var(--paper);
+  min-height: 0;
+}
+
+
+/* ---------- rail ---------- */
+
+/* .nav-rail — 64px collapsed by default, expands to 180px on
+   :hover or when .is-expanded is applied. 100% in .is-drawer.
+   The 64px and 180px widths are structural literals — no token
+   equivalent. 64 is wide enough to center the 30px logo mark;
+   180 is wide enough for the longest mono route label in the
+   approved V1 sandbox without wrapping.
+
+   ANIMATION — width + shadow + background transitions all run
+   at 200ms var(--ease-out). The 200ms literal is retained from
+   the approved V1 interaction (sandbox/nav-gallery-v2.html).
+   --duration-fast (240ms) was considered but felt slightly long
+   for the lateral rail reveal. Documented as the recipe's sole
+   sub-token duration literal. */
+.nav-rail {
+  position: relative;
+  width: 64px;
+  flex-shrink: 0;
+  background: var(--paper);
+  border-right: 1px solid var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2;
+  transition:
+    width 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    background-color 200ms var(--ease-out);
+}
+
+.nav-rail:hover,
+.nav-rail.is-expanded {
+  width: 180px;
+  /* Subtle letterpress — ~50% of textures.css .emboss-letterpress
+     opacities. The rail whispers off the page rather than shouts;
+     louder presses (sandbox V4 at ~80%) read as "card on rail"
+     instead of "rail as chrome". rgba literals because CSS cannot
+     express alpha against a var() reference. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 251, 240, 0.35),
+    0 1px 0 rgba(255, 251, 240, 0.25),
+    0 2px 6px rgba(40, 30, 18, 0.03),
+    0 8px 20px rgba(40, 30, 18, 0.03);
+}
+
+/* .nav-rail.is-drawer — mobile full-width drawer. Consuming app
+   toggles this class via JS on a hamburger trigger. All other
+   rail mechanics (content visibility, nav items, hover) continue
+   to apply. */
+.nav-rail.is-drawer { width: 100%; }
+
+
+/* ---------- rail .mark (brand slot) ---------- */
+
+/* .nav-rail .mark — 56px-tall brand slot at the top of the rail.
+   Holds both the SVG logo (shown collapsed) and the text
+   wordmark (shown expanded); opacity crossfades on rail state
+   change. Consuming markup includes both children:
+     <div class="mark">
+       <span class="svg"><img src="logo-mark-red-pressed.svg" /></span>
+       <span class="wordmark">
+         <span class="name">Kujaku</span>
+         <span class="tag">Investments</span>
+       </span>
+     </div>                                                      */
+.nav-rail .mark {
+  position: relative;
+  height: 56px;
+  border-bottom: 1px solid var(--ink-faint);
+  flex-shrink: 0;
+}
+.nav-rail .mark .svg,
+.nav-rail .mark .wordmark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 200ms var(--ease-out);
+  white-space: nowrap;
+}
+.nav-rail .mark .svg { opacity: 1; }
+.nav-rail .mark .wordmark { opacity: 0; padding: 0 14px; }
+
+.nav-rail:hover .mark .svg,
+.nav-rail.is-expanded .mark .svg,
+.nav-rail.is-drawer .mark .svg { opacity: 0; }
+.nav-rail:hover .mark .wordmark,
+.nav-rail.is-expanded .mark .wordmark,
+.nav-rail.is-drawer .mark .wordmark { opacity: 1; }
+
+.nav-rail .mark .svg img {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+.nav-rail .mark .wordmark .name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1;
+}
+.nav-rail .mark .wordmark .tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  line-height: 1;
+}
+
+
+/* ---------- rail .items (nav sections container) ---------- */
+
+/* .nav-rail .items — flex column holding .nav-section blocks.
+   Hidden in collapsed state (opacity 0); fades in on expand.
+   ANIMATION — opacity transition 200ms var(--ease-out). */
+.nav-rail .items {
+  flex: 1;
+  padding: 14px 0 8px;
+  opacity: 0;
+  min-height: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.nav-rail:hover .items,
+.nav-rail.is-expanded .items,
+.nav-rail.is-drawer .items { opacity: 1; }
+
+
+/* ---------- rail .footer (build-info block) ---------- */
+
+/* .nav-rail .footer — optional 3-line mono-faint block at the
+   rail bottom. Build-info convention: SHA / layer / last tick.
+   Line content is consumer-defined. Hidden collapsed, fades in
+   on expand. Scoped under .nav-rail so the generic ".footer"
+   class is safe beside a consumer's page-level footer. */
+.nav-rail .footer {
+  flex-shrink: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--ink-pale);
+  line-height: 1.85;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.nav-rail:hover .footer,
+.nav-rail.is-expanded .footer,
+.nav-rail.is-drawer .footer { opacity: 1; }
+
+
+/* ---------- nav sections ---------- */
+
+/* .nav-section — group of a section label + its nav items. The
+   .label is the mono uppercase heading (e.g. "SYSTEM", "LOG",
+   "STATIC"). */
+.nav-section {
+  margin: 0 0 10px;
+}
+.nav-section .label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  padding: 0 18px;
+  margin: 0 0 6px;
+  white-space: nowrap;
+}
+
+
+/* ---------- nav items ---------- */
+
+/* .nav-item — single nav row. Mono 11px, --ink-mid default,
+   --ink on hover. Structure: a <span class="slash">/</span>
+   followed by the route label (bare text, or wrapped in
+   <span class="label"> for an additional styling hook). The
+   18px/28px horizontal paddings are structural literals tuned
+   so the "/" slash column aligns across items and the ">"
+   active prefix occupies the slash's column without layout
+   shift.
+
+   ANIMATION — color transition 80ms var(--ease-out). Fast on
+   purpose: hover feedback on dense mono nav rows should feel
+   immediate, not leisurely. No background fill on hover — the
+   color shift alone carries the affordance. */
+.nav-item {
+  position: relative;
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-mid);
+  text-decoration: none;
+  padding: 4px 14px 4px 28px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: color 80ms var(--ease-out);
+}
+.nav-item:hover { color: var(--ink); }
+
+.nav-item .slash {
+  color: var(--ink-mid);
+  transition: color 80ms var(--ease-out);
+}
+.nav-item:hover .slash { color: var(--ink); }
+
+/* .nav-item .label — optional wrapper for the route name; inline
+   text after the slash works equally well. The .label scope lets
+   a consumer add per-label styling (e.g. a numeric badge or a
+   truncation ellipsis) without touching the .nav-item row. */
+.nav-item .label { color: inherit; }
+
+/* Active state — single treatment: ">" prefix + --red color.
+   Slash hidden via visibility (not display) so the baseline
+   stays stable between active and inactive rows. */
+.nav-item.is-active { color: var(--red); }
+.nav-item.is-active .slash { visibility: hidden; }
+.nav-item.is-active::before {
+  content: '>';
+  position: absolute;
+  left: 18px;
+  color: var(--red);
+  font-weight: 500;
+}
+
+
+/* ---------- masthead ---------- */
+
+/* .nav-masthead — top bar inside the main content column (NOT
+   above the rail). 48px tall, 1px --ink-faint bottom border,
+   mono 11px metadata content via .meta inside. 48px is a
+   structural literal chosen to align with the rail's 56px
+   .mark slot so the rail-right-edge border and masthead-bottom
+   border form a single clean intersection at the corner.
+
+   Positioning is NOT forced. The consuming app applies
+   position: sticky (top: 0) OR position: fixed AS APPROPRIATE
+   for its page. The .is-hidden transform only has a visible
+   effect when the masthead is positioned — a static masthead
+   translating up vacates its slot without revealing content
+   beneath.
+
+   Scroll-hide logic REQUIRES JS. Brand ships only the
+   .is-hidden class; the direction-based scroll snippet lives
+   in STYLE.md /components Nav "Implementation notes".
+
+   ANIMATION — transform transition var(--duration-fast)
+   (240ms) for the .is-hidden slide-up. Slightly slower than
+   the rail's 200ms because vertical motion over the full 48px
+   reads farther than a width reveal. */
+.nav-masthead {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--ink-faint);
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  flex-wrap: nowrap;
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.nav-masthead.is-hidden {
+  transform: translateY(-100%);
+}
+
+/* .nav-masthead .meta — metadata content inside the masthead.
+   Children are <span> elements; use <strong> on values the
+   consumer wants to emphasize. Inherits the masthead's typo so
+   a consumer doesn't restate font/letter-spacing per child. */
+.nav-masthead .meta {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+.nav-masthead .meta strong {
+  color: var(--ink);
+  font-weight: 500;
+}
