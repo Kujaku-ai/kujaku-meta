@@ -564,7 +564,7 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
 <!-- .indicator-row (default horizontal) -->
 <div class="indicator indicator-row">
   <span class="label">PORTFOLIO</span>
-  <span class="num">$847,230</span>
+  <span class="num">$500,000</span>
   <span class="delta">+2.3%</span>
 </div>
 
@@ -580,17 +580,17 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
   <span class="label">PORTFOLIO</span>
   <div class="row">
     <span class="period">1M</span>
-    <span class="val">$847,230</span>
+    <span class="val">$500,000</span>
     <span class="d">+2.3%</span>
   </div>
   <div class="row">
     <span class="period">3M</span>
-    <span class="val">$823,100</span>
+    <span class="val">$475,000</span>
     <span class="d">+5.2%</span>
   </div>
   <div class="row">
     <span class="period">YTD</span>
-    <span class="val">$798,450</span>
+    <span class="val">$450,000</span>
     <span class="d">+8.4%</span>
   </div>
 </div>
@@ -840,9 +840,9 @@ See /components Button for the full disabled spec.
       <td class="sym">BTC</td>
       <td class="name">Bitcoin</td>
       <td class="num">0.5</td>
-      <td class="num">$63,200</td>
-      <td class="num">$67,420</td>
-      <td class="num">+$2,110</td>
+      <td class="num">$50,000</td>
+      <td class="num">$60,000</td>
+      <td class="num">+$5,000</td>
     </tr>
     <!-- ... more rows ... -->
   </tbody>
@@ -862,7 +862,7 @@ See /components Button for the full disabled spec.
       <td class="sym">BTC</td>
       <td class="name">Bitcoin</td>
       <td class="num">0.5</td>
-      <td class="num">$67,420</td>
+      <td class="num">$60,000</td>
       <td class="cell-trend">
         <svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none">
           <polyline points="..."/>
@@ -874,7 +874,7 @@ See /components Button for the full disabled spec.
   <tfoot class="totals">
     <tr>
       <td class="label" colspan="3">Total</td>
-      <td class="num">$247,230</td>
+      <td class="num">$500,000</td>
       <td></td>
     </tr>
   </tfoot>
@@ -892,8 +892,8 @@ See /components Button for the full disabled spec.
       <td>2025-04-18</td>
       <td class="name">Initial deposit</td>
       <td class="num"></td>
-      <td class="num">$50,000</td>
-      <td class="balance num">$50,000</td>
+      <td class="num">$100,000</td>
+      <td class="balance num">$100,000</td>
     </tr>
   </tbody>
 </table>

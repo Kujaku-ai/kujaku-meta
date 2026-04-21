@@ -317,7 +317,7 @@ Brief record of major architectural decisions and milestones. Append new entries
 - New endpoints `/api/ohlcv/latest` and `/api/ohlcv/recent`. `/health` gained `last_ohlcv_bar_age_s` (threshold <90s).
 - Existing 10s spot tick loop kept running in parallel — ticks are the real-time price product, OHLCV is the volume-aware analytical product.
 - Phase 15: dashboard reorganized ticker-centric. `app/tickers.py` declares each ticker's streams as a reusable config; template loops over it. Adding a future ticker (ETH, SPX, QC) becomes a one-file edit to `app/tickers.py` plus whatever polling/tables the ticker requires.
-- Three-actor collaboration protocol (Susie / architect / implementer) formalized in `kujaku-data-btc/CLAUDE.md` and mirrored into `kujaku-meta/CLAUDE.md`.
+- Three-actor collaboration protocol (operator / architect / implementer) formalized in `kujaku-data-btc/CLAUDE.md` and mirrored into `kujaku-meta/CLAUDE.md`.
 
 **2026-04-20 — Layer 2a matured; liquidity zones shipped.**
 - `charting-calculations` Phase 14 (liquidity zones) live end-to-end: detector, scheduler integration, `/api/liquidity` + `/health` counts, dashboard overlay.
