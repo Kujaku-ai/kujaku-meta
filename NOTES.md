@@ -9,31 +9,26 @@ specs.
 
 ---
 
-## Market technicals / ICT concepts (v3-ish)
+## Market technicals / ICT concepts (bot-side)
 
 The current bias functions in `kujaku-bot-kalshi15min-btc/app/analysis/biases.py`
 are intentionally simple (direction from % change, strength bucketed).
 The operator's real trading framework draws from ICT methodology.
-Concepts to eventually encode as richer bias inputs:
+A separate Layer 2a service, `charting-calculations`, now exists
+to compute these indicators deterministically (see next section).
+The open question is how the bot *consumes* those indicators:
 
-- **Fair value gaps (FVGs)** — unfilled price imbalances; expect
-  retracements to fill them
-- **Liquidity zones** — pools of stops above/below obvious levels
-  where price tends to sweep before reversing
-- **Liquidity sweeps** — the move that takes out those stops,
-  often the precursor to a reversal
-- **50% retracement / equilibrium** — assume markets retrace halfway
-  through a move before continuing
-- **Market structure breaks** — shifts in the trend's internal
-  high/low sequence
+- Fetch active FVGs / liquidity zones from `charting-calculations`
+  at decision time and feed them into the Claude prompt as
+  structured context
+- Or insert a downstream "ICT analyst" service between the
+  indicator engine and the bot that does the interpretation
+  (scoring, ranking, trade-setup classification) — keeps the
+  bot's prompt small and makes analyst changes testable
+  without touching the bot
 
-These apply across any market family (BTC, SPX, quantum computing
-basket) once data is collected, so the right home for them is
-probably an extracted analysis service (`kujaku-analysis-btc`,
-`kujaku-analysis-spx`) rather than duplicated in each bot.
-
-Don't build until v1 has produced enough paper-trading data to
-show which of these concepts actually explains losses. Evidence
+Don't build either until `charting-calculations` has enough
+history to show which indicators actually matter. Evidence
 first, implementation second.
 
 ---
@@ -60,20 +55,25 @@ ICT-analyst service + trading bots). See
 **Live deploy.**
 - URL: <https://charting-calculations-production.up.railway.app>
 - Repo: <https://github.com/Kujaku-ai/charting-calculations>
-- Last commit at time of this note: `740a7457` — `refactor:
-  dashboard restructure + mitigation cleanup` (Phase 13.5).
+- Phase 14 (liquidity zones) shipped end-to-end on 2026-04-20.
 
 **Indicators implemented.**
 - **FVG** (Fair Value Gap). Three-candle imbalance detection.
   v1 lifecycle is two-state (`open → filled`, first-touch-kills
   rule). Separate detector module per concern — `fvg.py` for
   detection, `lifecycle.py` for state transitions.
+- **LIQ** (liquidity zones — equal-high / equal-low pools).
+  Swing detection → clustering with merge tolerance →
+  `open → swept` lifecycle. `liquidity_zones` table,
+  `/api/liquidity` and `/api/liquidity/active` endpoints,
+  `liquidity_open` / `liquidity_swept` counts in `/health`,
+  dashboard overlay + "Liquidity" category in the Market
+  Indicators side panel.
 
 **Indicators planned.**
-- **LIQ** (liquidity zones — equal highs/lows pools). Next
-  phase.
-- **BOS / CHoCH** (market structure). Future.
-- **OB** (order blocks). Future.
+- **BOS / CHoCH** (market structure — break-of-structure and
+  change-of-character). Candidate for next phase.
+- **OB** (order blocks). Candidate for next phase.
 
 **Timeframes in v1.** `5m`, `15m`, `1h`, `4h`, `1d` — all
 detected in parallel. Per-timeframe ingest cadence scales with
@@ -91,23 +91,28 @@ external calls).
   $0.49 gap). Future indicator consumers may want this filter
   at either the engine or the analyst layer.
 - Provisional FVG preview (for the in-progress bar) was
-  originally scoped for Phase 14 but has been deferred in
-  favor of starting liquidity-zone work first. Revisit after
-  liquidity lands.
+  originally scoped for Phase 14 but was deferred to prioritize
+  liquidity zones. Revisit after the next indicator lands.
+- Single-swing-point liquidity zones (`price_top == price_bottom`,
+  `strength == 1`) rendered as zero-height rectangles in the
+  initial Phase 14E deploy. Fix: render single-strength zones as
+  thin horizontal lines rather than rectangles. Tracked as a
+  follow-up in the repo.
 
-**Next planned phase.** Phase 14 — liquidity zones detector
-(`app/detectors/liquidity.py`, new `liquidity` table, new
-`/api/liquidity` + `/api/liquidity/active` endpoints, new
-"Liquidity" category in the Market Indicators dashboard
-panel). See `ANALYSIS.md` "Indicators Catalog" for the
-catalog table and per-indicator blurbs.
+**Next planned phase.** TBD — candidates are BOS/CHoCH
+(market-structure breaks) and OB (order blocks). Pick based on
+which one the bot's paper-trading data suggests is missing most.
+Whichever it is, follow the standard indicator template: pure
+detector module → per-indicator storage table → scheduler
+extension → `/api/<name>` endpoint group → new collapsible
+category in the dashboard's Market Indicators panel → test
+coverage at every layer. See `charting-calculations/CLAUDE.md`
+under "Adding a new indicator" for the step-by-step.
 
 **How a fresh Claude conversation should approach this repo.**
 The service is designed to grow indicator-by-indicator. Every
-new indicator follows the FVG pattern: pure detector module →
-per-indicator storage table → scheduler extension →
-`/api/<name>` endpoint group → new collapsible category in the
-dashboard's Market Indicators panel → test coverage at every
-layer. The step-by-step template is documented in
-`charting-calculations/CLAUDE.md` under "Adding a new
-indicator."
+new indicator follows the FVG/LIQ pattern. Point the session at
+`SYSTEM.md` first for platform context, then at
+`charting-calculations/ANALYSIS.md` for the service spec, then
+at `charting-calculations/CLAUDE.md` for the add-an-indicator
+template.

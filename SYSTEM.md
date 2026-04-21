@@ -6,7 +6,7 @@
 
 ## What This System Is
 
-A platform for quantitative research and eventual agentic trading on Kalshi prediction markets, starting with 15-minute Bitcoin directional contracts (KXBTC15M). Designed from day one to expand across multiple asset classes (BTC, ETH, elections, etc.) as separate, isolated services.
+A platform for quantitative research and eventual agentic trading on Kalshi prediction markets, starting with 15-minute Bitcoin directional contracts (KXBTC15M). Designed from day one to expand across multiple asset classes (BTC, ETH, SPX, quantum computing basket, etc.) as separate, isolated services.
 
 The platform is built as **separate, independently-deployable services** that communicate through databases and JSON APIs. Each service has one job. No service knows or cares about the internals of another.
 
@@ -24,14 +24,21 @@ The platform is built as **separate, independently-deployable services** that co
                           ↑ HTTP GET /api/...
 ┌─────────────────────────────────────────────────────────────┐
 │  LAYER 2 — BACKEND LOGIC (runs on our servers)              │
-│  Thinks. Decides. Calls LLMs. Holds secrets.                │
+│  Thinks. Decides. Holds secrets.                            │
 │                                                             │
-│  • Bot services — read market data, call Claude API,       │
-│    generate trade plans, execute trades                    │
-│    (one bot service per market family)                     │
+│  Split into two sub-layers:                                 │
 │                                                             │
-│  • Public API service (if needed) — aggregates data from   │
-│    collectors, formats it for the frontend                 │
+│  • LAYER 2a — ANALYSIS SERVICES (deterministic, NO LLM)     │
+│    Pure-function detectors and analytics over Layer 1 data. │
+│    Expose signal/indicator data via JSON APIs.              │
+│    e.g. charting-calculations (ICT indicators engine)       │
+│                                                             │
+│  • LAYER 2b — TRADING BOTS (LLM-driven)                     │
+│    Read Layer 1 data + Layer 2a signals, call Claude to     │
+│    form trade decisions, execute paper/real trades.         │
+│    One bot service per market-family × strategy.            │
+│                                                             │
+│  LLM calls happen in Layer 2b ONLY.                         │
 └─────────────────────────────────────────────────────────────┘
                           ↑ reads / writes databases + JSON APIs
 ┌─────────────────────────────────────────────────────────────┐
@@ -43,16 +50,27 @@ The platform is built as **separate, independently-deployable services** that co
 │                                                             │
 │    - kujaku-data-btc    (LIVE on Railway)                  │
 │    - kujaku-data-eth    (future)                           │
-│    - kujaku-data-pol    (future, political markets)        │
-│    - etc.                                                  │
+│    - kujaku-data-spx    (future)                           │
+│    - kujaku-data-qc     (future, quantum computing basket) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Rules of thumb:**
-- Data flows upward (storage → logic → display)
+- Data flows upward (storage → analysis → decisions → display)
 - Secrets live downward (frontend holds none, backend holds all)
-- LLM calls happen in Layer 2 only, never Layer 1 or 3
+- LLM calls happen in Layer 2b only, never Layer 1, Layer 2a, or Layer 3
 - Each service can be rebuilt, redeployed, or replaced without the others caring
+
+---
+
+## Layer 2a vs Layer 2b — Why the Split
+
+Originally Layer 2 was a single "backend logic" layer. In practice, two genuinely different kinds of service emerged and the split is worth encoding:
+
+- **Layer 2a (analysis)** is deterministic. Same input → same output. No LLM, no randomness, no external decision-making. It turns raw Layer 1 data into structured signals (FVGs, liquidity zones, biases, regime classifications). It's cheap to run, easy to test, and many downstream services can consume the same outputs without duplication.
+- **Layer 2b (trading)** is where judgement lives. It consumes Layer 1 data + Layer 2a signals, calls Claude to form a plan, and acts on the plan. Each bot is narrow (one strategy on one market family) and expensive (LLM calls cost money and take time).
+
+The split prevents two failure modes: (1) indicator logic getting duplicated across every bot, and (2) LLM calls creeping into places they don't belong.
 
 ---
 
@@ -64,31 +82,41 @@ A vertical is a self-contained stack across all three layers for a single market
 
 ```
 Vertical: BTC
-├── Layer 1: kujaku-data-btc       (collector)
-├── Layer 2: kujaku-bot-btc-*      (trading bots, one per strategy)
-│            kujaku-analysis-btc   (future shared analysis service)
-└── Layer 3: reached via kujaku-web (shared frontend across verticals)
+├── Layer 1:  kujaku-data-btc               (collector)
+├── Layer 2a: charting-calculations         (ICT indicators engine;
+│                                            currently BTC-only,
+│                                            multi-vertical later)
+├── Layer 2b: kujaku-bot-kalshi15min-btc    (trading bots — one
+│                                            per strategy)
+└── Layer 3:  reached via kujaku-web        (shared frontend across
+                                             verticals)
+
 Vertical: SPX (future example)
-├── Layer 1: kujaku-data-spx
-├── Layer 2: kujaku-bot-spx-*, kujaku-analysis-spx
-└── Layer 3: reached via kujaku-web
+├── Layer 1:  kujaku-data-spx
+├── Layer 2a: (covered by charting-calculations or a per-vertical
+│              analysis service, TBD)
+├── Layer 2b: kujaku-bot-{strategy}-spx
+└── Layer 3:  reached via kujaku-web
+
 Vertical: QC — quantum computing sector (future example)
-├── Layer 1: kujaku-data-qc       (basket: IONQ, RGTI, QBTS, etc.)
-├── Layer 2: kujaku-bot-qc-*, kujaku-analysis-qc
-└── Layer 3: reached via kujaku-web
+├── Layer 1:  kujaku-data-qc  (basket: IONQ, RGTI, QBTS, etc.)
+├── Layer 2a: per-vertical analysis TBD
+├── Layer 2b: kujaku-bot-{strategy}-qc
+└── Layer 3:  reached via kujaku-web
 ```
 
 **Implications:**
 - Adding a new market family = creating a new vertical = copying the BTC pattern with asset-specific swaps
 - Verticals are independent; a bug or outage in one vertical does not affect another
 - Layer 3 (the public website) is the only service shared across verticals — it aggregates data from each vertical's public API surface
+- Layer 2a analysis services may start single-vertical (like `charting-calculations` is today) and generalize later, or be built per-vertical from day one. Decide per-indicator based on whether the logic is market-agnostic.
 - The BTC vertical is both the first deliverable AND the template for every future vertical. Build it well; copy it later.
 
 ---
 
 ## Layer 1 Convention: One Collector Per Market Family
 
-Every market family (BTC, ETH, elections, sports, etc.) gets its **own collector service**: own repo, own SQLite database, own Railway deploy, own subdomain, own failure mode.
+Every market family (BTC, ETH, SPX, quantum computing, etc.) gets its **own collector service**: own repo, own SQLite database, own Railway deploy, own subdomain, own failure mode.
 
 **Why this pattern:**
 - Isolation — a bug or deploy in one market can't take down others
@@ -113,19 +141,38 @@ When you add a new market, copy the structure from the BTC collector, adapt the 
 
 ---
 
-## Layer 2 Convention: One Bot Per Market Family
+## Layer 2a Convention: Analysis Services
 
-Same pattern as Layer 1. Each trading bot is its own service, its own repo, its own deploy. A BTC bot consumes `kujaku-data-btc`'s API; an ETH bot would consume `kujaku-data-eth`'s API. Bots never import each other's code.
+Analysis services are deterministic signal generators. They ingest from one or more Layer 1 collectors' APIs, compute indicators or features, and serve the results via JSON APIs. No LLM calls. No trading. No state beyond their own derived tables.
+
+Naming is less rigid than Layer 1 / Layer 2b because analysis services vary more in scope (some are per-vertical, some cross-vertical). Current live example:
+
+| Thing | Value |
+|-------|-------|
+| Service | ICT indicators engine |
+| GitHub repo | `Kujaku-ai/charting-calculations` |
+| Railway URL | `charting-calculations-production.up.railway.app` |
+| Spec doc | `ANALYSIS.md` (repo root) |
+| Adding indicators | template in that repo's `CLAUDE.md` |
+
+**Note the naming deviation:** `charting-calculations` doesn't use the `kujaku-` prefix. Kept for historical reasons; not a pattern to copy without discussion. Future analysis services should follow `kujaku-analysis-{vertical}` or `kujaku-{role}` unless there's a reason to deviate.
+
+---
+
+## Layer 2b Convention: One Bot Per Market-Family × Strategy
+
+Same per-service isolation as Layer 1. Each trading bot is its own service, its own repo, its own deploy. A BTC 15-min Kalshi bot consumes `kujaku-data-btc`'s API; an ETH bot would consume `kujaku-data-eth`'s API. Bots never import each other's code.
+
+The naming has evolved from the original `kujaku-bot-{market}` assumption because in practice a single market family supports multiple distinct trading strategies (different timeframes, different exchanges, different contract types). Each strategy gets its own bot, and the repo name encodes both strategy and market.
 
 | Thing | Pattern | Example |
 |-------|---------|---------|
-| GitHub repo | `kujaku-bot-{market}` | `kujaku-bot-btc` |
-| Railway service | same as repo name | `kujaku-bot-btc` |
+| GitHub repo | `kujaku-bot-{strategy}-{market}` | `kujaku-bot-kalshi15min-btc` |
+| Railway service | same as repo name | `kujaku-bot-kalshi15min-btc` |
+| Subdomain | `{strategy}-{market}.kujaku.ai` | `kalshi15min-btc.kujaku.ai` |
 | Spec doc | `BOT.md` | repo root |
 
 Bots hold the Anthropic API key and are the only place in the platform where LLM calls happen.
-
-*Future note:* Layer 2 may eventually split into **analysis services** (produce biases, signals, regime classifications; e.g. `kujaku-analysis-btc`) and **trading bots** (consume analysis + Layer 1 data to execute trades). The first bot will contain bias logic inline. Extraction into a separate analysis service happens only when a second bot needs to consume the same logic — not before.
 
 ---
 
@@ -134,10 +181,12 @@ Bots hold the Anthropic API key and are the only place in the platform where LLM
 | Service | Layer | Status | Repo | Railway URL |
 |---------|-------|--------|------|-------------|
 | BTC Collector | 1 | **LIVE** | `Kujaku-ai/kujaku-data-btc` | `data-btc.kujaku.ai` |
-| BTC Bot | 2 | Future | `kujaku-bot-btc` | — |
+| Charting Calculations (ICT) | 2a | **LIVE** | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
+| Kalshi 15-min BTC Bot | 2b | **LIVE (paper)** | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
+| Public Website | 3 | Next major project | `kujaku-web` | — |
 | ETH Collector | 1 | Future | `kujaku-data-eth` | — |
-| Public API | 2 | Future (possibly not needed) | `kujaku-api` | — |
-| Website | 3 | Future | `kujaku-web` | — |
+| SPX Collector | 1 | Future | `kujaku-data-spx` | — |
+| QC Collector | 1 | Future | `kujaku-data-qc` | — |
 
 All services deploy to Railway, each as its own service, each with its own env vars and lifecycle.
 
@@ -147,7 +196,7 @@ All services deploy to Railway, each as its own service, each with its own env v
 
 Services do not import each other's code. They communicate only via:
 
-1. **Per-service databases.** Each Layer 1 collector owns its own SQLite file. No shared database. Cross-market analysis happens in Layer 2 (bots) or Layer 3 (public API) by calling multiple collectors' JSON APIs.
+1. **Per-service databases.** Each Layer 1 collector and each Layer 2a/2b service owns its own SQLite file. No shared database. Cross-service analysis happens by calling the other service's JSON API, not by reaching into its DB.
 
 2. **JSON APIs over HTTP.** Each service exposes a small `/api/*` surface for other services (or the frontend) to consume. See each service's spec for its exact endpoints.
 
@@ -157,15 +206,16 @@ Services do not import each other's code. They communicate only via:
 
 ## Where LLM Calls Happen
 
-**Exclusively in Layer 2 bot services.** Never:
+**Exclusively in Layer 2b bot services.** Never:
 
 - In collectors (Layer 1) — collection is dumb by design
+- In analysis services (Layer 2a) — indicators are deterministic by design
 - In the website frontend (Layer 3) — API keys would leak; cost would be per-visitor
 - In any service not explicitly designed to call an LLM
 
 LLM calls are triggered by events (new market window opens, new data arrives, scheduled time), not by user visits. The output is written to the bot's database. The frontend reads the output — it never causes the LLM to run.
 
-This is a hard architectural rule. If a future service needs LLM capabilities, it becomes a new Layer 2 service, not a modification to Layers 1 or 3.
+This is a hard architectural rule. If a future service needs LLM capabilities, it becomes a new Layer 2b service, not a modification to Layers 1, 2a, or 3.
 
 ---
 
@@ -173,40 +223,59 @@ This is a hard architectural rule. If a future service needs LLM capabilities, i
 
 ```
 MASTER_KUJAKU/
-├── SYSTEM.md                   ← this file
-├── data/                       ← BTC Collector (repo: kujaku-data-btc)
+├── SYSTEM.md                       ← this file (repo: kujaku-meta)
+├── NOTES.md                        ← future-thinking scratchpad (repo: kujaku-meta)
+├── README.md                       ← repo: kujaku-meta
+├── data/                           ← BTC Collector (repo: kujaku-data-btc)
 │   ├── COLLECTOR.md
 │   ├── app/
-│   ├── tests/
-│   └── …
-├── (future) bot-btc/           ← BTC Bot (Layer 2)
-├── (future) data-eth/          ← ETH Collector (Layer 1)
-└── (future) web/               ← Website (Layer 3)
+│   └── tests/
+├── bot-kalshi15min-btc/            ← BTC Kalshi 15-min Bot (repo: kujaku-bot-kalshi15min-btc)
+│   ├── BOT.md
+│   ├── CLAUDE.md
+│   ├── app/
+│   └── tests/
+├── charting-calculations/          ← ICT indicators engine (repo: charting-calculations)
+│   ├── ANALYSIS.md
+│   ├── CLAUDE.md
+│   ├── app/
+│   └── tests/
+├── (future) web/                   ← Public website (Layer 3)
+└── (future) data-eth/              ← ETH Collector (Layer 1)
 ```
 
-Note: the BTC collector's local folder is named `data/` for historical reasons, even though its GitHub repo is `kujaku-data-btc`. Local folder names do not need to match repo names. New folders going forward should follow the pattern `{layer}-{market}/` (e.g. `data-eth/`, `bot-btc/`) for clarity.
+Note: the BTC collector's local folder is named `data/` for historical reasons, even though its GitHub repo is `kujaku-data-btc`. Local folder names do not need to match repo names. New folders going forward should follow a pattern that maps clearly to the repo name for clarity.
 
 ---
 
 ## Naming & Conventions
 
-- **GitHub repo names:** `kujaku-{layer}-{market}` for Layer 1 and 2 services; `kujaku-{role}` for shared services (e.g. `kujaku-web`, `kujaku-api`)
-- **Spec docs:** UPPERCASE role name, `.md` extension — `COLLECTOR.md`, `BOT.md`, `API.md`, `WEB.md` — lives at the repo root
-- **Subdomains:** match the service role and market (`data-btc.`, `data-eth.`, `api.`)
-- **Env var prefixes:** ALL_CAPS, prefixed by the external system they integrate with (e.g. `KALSHI_API_KEY`, `ANTHROPIC_API_KEY`)
+- **GitHub repo names:** `kujaku-{layer}-{market}` for Layer 1, `kujaku-bot-{strategy}-{market}` for Layer 2b, `kujaku-{role}` for cross-vertical services (e.g. `kujaku-web`). Layer 2a services: prefer `kujaku-analysis-{vertical}` or `kujaku-{role}` going forward; `charting-calculations` is a grandfathered exception.
+- **Spec docs:** UPPERCASE role name, `.md` extension — `COLLECTOR.md`, `BOT.md`, `ANALYSIS.md`, `WEB.md` — lives at the repo root.
+- **Subdomains:** match the service role and market (`data-btc.`, `kalshi15min-btc.`, `api.`).
+- **Env var prefixes:** ALL_CAPS, prefixed by the external system they integrate with (e.g. `KALSHI_API_KEY`, `ANTHROPIC_API_KEY`).
 - **Database tables:** singular-context, plural-entity (`price_ticks`, `kalshi_snapshots`, `trade_plans`). No per-service prefixes; the context is the database itself.
 
 ---
 
 ## Build Order
 
-**Current phase:** Layer 1 BTC. The collector is live. Let it accumulate data for several days while we observe reliability.
+**Shipped:**
+- Layer 1 BTC — `kujaku-data-btc` live, generic schema, ~5 days of clean data accumulating.
+- Layer 2b BTC (Kalshi 15-min) — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.0.0-paper`, first live paper trade confirmed, settlements processing.
+- Layer 2a ICT indicators — `charting-calculations` live, FVG (Phase 12) and liquidity zones (Phase 14) shipped. See NOTES.md for the indicator catalog and phase state.
 
-**Next phase:** Layer 2 BTC. Build `kujaku-bot-btc` — a service that reads from the BTC collector's JSON API, calls Claude at each 15-minute window, generates a watchlist, monitors conditions, executes paper trades against Kalshi, reflects on outcomes. Single-market (BTC) to start.
+**Current phase:**
+- Observation + iteration on the three live services. Let the bot accumulate paper-trading data; let charting-calculations accumulate indicator history; eyeball reliability.
 
-**After that:** Replicate the pattern. Add `kujaku-data-eth`, then `kujaku-bot-eth`, and so on. Each new service is a near-copy of the BTC version with the asset-specific bits swapped.
+**Next phase:**
+- **Layer 3** — `kujaku-web`, the public-facing frontend. Kickoff prompt is prepared; waiting for the green-light to start that conversation.
 
-**Final phase:** Layer 3. A public website that pulls from a read-only public API aggregating across markets.
+**After that:**
+- Additional Layer 2a indicators (BOS/CHoCH, order blocks) as they earn their place.
+- Additional Layer 2b strategies as the framework proves out.
+- Graduated risk ladder promotion on the existing bot (0.5% → 1% → 2% → 4% → 8%) with a defined manual promotion process.
+- Replicate the vertical pattern: `kujaku-data-eth`, `kujaku-data-spx`, `kujaku-data-qc`, and a bot each. Each new vertical is a near-copy of the BTC pattern with asset-specific swaps.
 
 **Do not skip layers.** A website without bots is a static page. A bot without reliable data is a random number generator. Each layer earns the next.
 
@@ -217,7 +286,7 @@ Note: the BTC collector's local folder is named `data/` for historical reasons, 
 Any new subproject must:
 
 1. Have its own spec doc with a clear DOES / DOES NOT list
-2. State which layer and which market family it belongs to
+2. State which layer (1, 2a, 2b, or 3) and which market family (or "cross-vertical") it belongs to
 3. Declare its inputs (what it reads) and outputs (what it writes)
 4. Not import code from any other service — all communication via API
 5. Not share a database with any other service — each service owns its storage
@@ -233,6 +302,7 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 
 - A service that genuinely needs shared state across markets (rare; must justify why a JSON API isn't enough)
 - A truly tiny shared helper (e.g. Kalshi auth logic) extracted as a library — acceptable, but the library must not import application code from any service
+- A service whose name pre-dates a naming convention (e.g. `charting-calculations` not using the `kujaku-` prefix); document the exception, don't propagate it
 
 **Code duplication is not a reason to deviate.** The architecture deliberately accepts duplication in exchange for isolation.
 
@@ -242,9 +312,22 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
 
-**2026-04-18 (afternoon) — Custom domain wired.**
+**2026-04-20 — Layer 2a matured; liquidity zones shipped.**
+- `charting-calculations` Phase 14 (liquidity zones) live end-to-end: detector, scheduler integration, `/api/liquidity` + `/health` counts, dashboard overlay.
+- Layer 2a concept formally recognized in this doc. Analysis services are deterministic and LLM-free; trading bots (Layer 2b) are the only place LLM calls happen.
+- Charter for `charting-calculations` is grow-by-indicator: FVG → LIQ → (next: BOS/CHoCH or OB, TBD).
+
+**2026-04-18 (evening) — BTC Kalshi 15-min Bot shipped.**
+- `kujaku-bot-kalshi15min-btc` deployed at `kalshi15min-btc.kujaku.ai`, tagged `v1.0.0-paper`.
+- 13 modules, 150 tests green, three deploy-blocker bugs fixed pre-ship (unaffordable-contract ValueError, cosmetic Anthropic startup ERROR, noisy Ctrl+C traceback).
+- First live paper trade: NO bet on KXBTC15M, confidence 0.62. Settlement pipeline verified.
+- Bot naming pattern evolved from the original `kujaku-bot-{market}` to `kujaku-bot-{strategy}-{market}` to allow multiple strategies per market family.
+- BOT.md and CLAUDE.md drafted and committed inside the bot repo.
+
+**2026-04-18 (afternoon) — Custom domain wired; kujaku-meta repo established.**
 - `data-btc.kujaku.ai` live with SSL via Let's Encrypt.
 - Railway-generated URL retained as debug fallback.
+- `kujaku-meta` repo created on GitHub; SYSTEM.md, README.md, and eventually NOTES.md pushed to it.
 - Known issue: Kalshi settled-markets endpoint hits 429 occasionally (~2x per 12 hours observed). No data loss — sweeper is idempotent and next poll recovers. Backoff fix deferred; tracked as GitHub issue in kujaku-data-btc repo.
 
 **2026-04-18 — System foundation laid.**
