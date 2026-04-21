@@ -1082,7 +1082,7 @@ All widths and heights are literals tuned to the size ladder — not tokens.
 
 **Forbidden:**
 
-- Bar-chart micro-charts. Brand has no bar primitive at any scale.
+- Bar-chart micro-charts. Brand has no bar primitive at sparkline scale; full-scale bars live in the Bar chart subsection below.
 - Area-filled sparklines. Fill under the curve violates the "signal in line + dot" contract.
 - Second end-dot, tick marks, or gridlines.
 - Axis labels inside the sparkline SVG. Context is provided by the surrounding `.indicator-trend` label and delta.

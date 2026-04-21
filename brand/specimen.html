@@ -161,15 +161,6 @@
   .type-numerals .pos { color: var(--red); }
   .type-numerals .small { font-size: 16px; letter-spacing: 0.1em; color: var(--ink-mid); margin-left: 8px; }
 
-  /* CHART */
-  .chart-card { background: var(--paper-warm); border-radius: 6px; padding: 40px; box-shadow: inset 0 1px 0 var(--highlight), 0 4px 12px var(--shadow-1), 0 24px 48px var(--shadow-1); }
-  .chart-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; border-bottom: 1px solid var(--ink-faint); padding-bottom: 24px; }
-  .chart-title { font-family: var(--font-display); font-size: 28px; font-weight: 400; color: var(--ink); }
-  .chart-title .jp { font-family: var(--font-jp); font-size: 14px; color: var(--ink-mid); margin-left: 12px; letter-spacing: 0.05em; }
-  .chart-stat { text-align: right; }
-  .chart-stat .num { font-family: var(--font-mono); font-weight: 500; font-size: 32px; color: var(--ink); letter-spacing: -0.02em; }
-  .chart-stat .delta { font-family: var(--font-mono); font-size: 13px; color: var(--red); letter-spacing: 0.04em; }
-
   /* UNDERLINE */
   .underline-lab { background: var(--paper-warm); box-shadow: inset 0 1px 0 var(--highlight), inset 0 -1px 0 var(--shadow-1); }
   .underline-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 48px; margin-top: 24px; }
@@ -550,51 +541,6 @@
             <div class="underline-demo"><div class="label">Hover · two lines, frame reveal</div><div class="demo-line"><span class="reveal-frame">Read the brief</span></div></div>
             <div class="underline-demo"><div class="label">Hover · cross-fade to red</div><div class="demo-line"><a class="reveal reveal-red">View positions</a></div></div>
             <div class="underline-demo"><div class="label">Static · permanent hairline</div><div class="demo-line"><span style="border-bottom:1px solid var(--red);padding-bottom:4px;">Q3 sector report</span></div></div>
-          </div>
-        </div>
-      </section>
-
-      <hr class="section-rule">
-
-      <!-- CHART -->
-      <section id="charts" class="specimen-section">
-        <div class="wrap">
-          <div class="eyebrow">Chart <span class="jp">図表 · zuhyō</span></div>
-          <h2 class="section-title">A line on paper.</h2>
-          <p class="section-lead">Hairline grid, sparse axis labels, one accent color. Every chart in the system follows this shape.</p>
-
-          <div class="chart-card">
-            <div class="chart-header">
-              <div class="chart-title">Energy composite<span class="jp">エネルギー指数</span></div>
-              <div class="chart-stat"><div class="num">2,847.32</div><div class="delta">+4.2% · 4w</div></div>
-            </div>
-
-            <svg viewBox="0 0 1000 320" style="width:100%;height:auto;">
-              <g stroke="#D8D2C2" stroke-width="0.5">
-                <line x1="0" y1="40"  x2="1000" y2="40"/>
-                <line x1="0" y1="120" x2="1000" y2="120"/>
-                <line x1="0" y1="200" x2="1000" y2="200"/>
-                <line x1="0" y1="280" x2="1000" y2="280"/>
-              </g>
-              <g font-family="JetBrains Mono, monospace" font-size="10" fill="#7A736A" letter-spacing="0.04em">
-                <text x="950" y="36">2900</text>
-                <text x="950" y="116">2800</text>
-                <text x="950" y="196">2700</text>
-                <text x="950" y="276">2600</text>
-              </g>
-              <path d="M 20,240 L 80,220 L 140,210 L 200,225 L 260,205 L 320,180 L 380,195 L 440,170 L 500,150 L 560,160 L 620,135 L 680,140 L 740,115 L 800,100 L 860,85 L 920,72 L 920,280 L 20,280 Z" fill="#C8331E" opacity="0.06"/>
-              <path d="M 20,240 L 80,220 L 140,210 L 200,225 L 260,205 L 320,180 L 380,195 L 440,170 L 500,150 L 560,160 L 620,135 L 680,140 L 740,115 L 800,100 L 860,85 L 920,72" fill="none" stroke="#C8331E" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-              <circle cx="920" cy="72" r="3.5" fill="#C8331E"/>
-              <circle cx="920" cy="72" r="7" fill="none" stroke="#C8331E" stroke-width="0.5" opacity="0.5"/>
-              <g font-family="JetBrains Mono, monospace" font-size="10" fill="#7A736A" letter-spacing="0.06em">
-                <text x="20"  y="310">JAN</text>
-                <text x="200" y="310">FEB</text>
-                <text x="380" y="310">MAR</text>
-                <text x="560" y="310">APR</text>
-                <text x="740" y="310">MAY</text>
-                <text x="920" y="310" text-anchor="end">JUN</text>
-              </g>
-            </svg>
           </div>
         </div>
       </section>
