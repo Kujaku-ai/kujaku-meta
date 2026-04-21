@@ -237,7 +237,7 @@
   #buttons .dark-card { padding: 24px 28px; border-radius: 6px; display: flex; flex-direction: column; gap: 14px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.16), 0 4px 12px rgba(40,30,18,0.10); }
   #buttons .dark-card.is-coal { background: var(--paper-coal); }
   #buttons .dark-card.is-oxblood { background: var(--red-deep); }
-  #buttons .dark-card .eyebrow-dark { margin: 0; }
+  #buttons .dark-card .eyebrow.is-dark { margin: 0; }
   #buttons .dark-card p.copy { font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: rgba(241,236,224,0.78); margin: 0; }
   #buttons .dark-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
@@ -272,8 +272,8 @@
 
   /* coal-card frame for dark-surface demo */
   #tables .card-coal-frame { background: var(--paper-coal); padding: 28px 32px 32px; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.16), 0 4px 12px rgba(40,30,18,0.10); }
-  #tables .card-coal-frame .eyebrow-dark { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(241,236,224,0.7); margin: 0 0 6px; }
-  #tables .card-coal-frame .eyebrow-dark .jp { font-family: var(--font-jp); font-size: 13px; color: var(--paper); margin-left: 6px; letter-spacing: 0.06em; }
+  #tables .card-coal-frame .eyebrow.is-dark { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(241,236,224,0.7); margin: 0 0 6px; }
+  #tables .card-coal-frame .eyebrow.is-dark .jp { font-family: var(--font-jp); font-size: 13px; color: var(--paper); margin-left: 6px; letter-spacing: 0.06em; }
   #tables .card-coal-frame h4 { font-family: var(--font-display); font-style: italic; font-weight: 300; font-size: 20px; color: var(--paper); letter-spacing: -0.01em; margin: 0 0 18px; }
 
   #tables .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 820px; }
@@ -315,8 +315,8 @@
 
   /* coal-card wrapper for Subsection 5 */
   #charts .card-coal-frame { background: var(--paper-coal); padding: 24px 28px; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.16), 0 4px 12px rgba(40,30,18,0.10); position: relative; }
-  #charts .card-coal-frame .eyebrow-dark { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(241,236,224,0.7); margin: 0 0 6px; }
-  #charts .card-coal-frame .eyebrow-dark .jp { font-family: var(--font-jp); font-size: 13px; color: var(--paper); margin-left: 6px; letter-spacing: 0.06em; }
+  #charts .card-coal-frame .eyebrow.is-dark { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(241,236,224,0.7); margin: 0 0 6px; }
+  #charts .card-coal-frame .eyebrow.is-dark .jp { font-family: var(--font-jp); font-size: 13px; color: var(--paper); margin-left: 6px; letter-spacing: 0.06em; }
   #charts .card-coal-frame h4 { font-family: var(--font-display); font-style: italic; font-weight: 300; font-size: 18px; color: var(--paper); letter-spacing: -0.01em; margin: 0 0 14px; }
 
   #charts .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 820px; }
@@ -460,7 +460,7 @@
             <div>textures &middot; cc61a40</div>
             <div>logos &middot; e820611</div>
             <div>eyebrows &middot; f361967</div>
-            <div>cards + eyebrow-dark &middot; 07bd05d</div>
+            <div>cards + dark eyebrows &middot; 07bd05d</div>
             <div>hanko + nav &middot; da85d5e</div>
           </div>
         </div>
@@ -771,7 +771,7 @@
         <div class="wrap">
           <div class="eyebrow">Cards <span class="jp">紋 &middot; mon</span></div>
           <h2 class="section-title">Eight surfaces, two states.</h2>
-          <p class="section-lead">Eight card variants across four paper surfaces — each in a raised (letterpress) and a sunken (deboss) state. See STYLE.md /components Cards for composition rules. Use <em style="font-style:normal;font-weight:500;border-bottom:1px solid var(--red);padding-bottom:1px;">.eyebrow-dark</em> on any dark variant.</p>
+          <p class="section-lead">Eight card variants across four paper surfaces — each in a raised (letterpress) and a sunken (deboss) state. See STYLE.md /components Cards for composition rules. Use <em style="font-style:normal;font-weight:500;border-bottom:1px solid var(--red);padding-bottom:1px;">.eyebrow.is-dark</em> on any dark variant.</p>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;">
 
@@ -806,7 +806,7 @@
             <!-- C · .card-coal -->
             <div>
               <div class="card-coal">
-                <div class="eyebrow-dark">
+                <div class="eyebrow is-dark">
                   Observation
                   <span class="jp">観 &middot; kan</span>
                 </div>
@@ -814,13 +814,13 @@
                 <p class="card-body" style="color:var(--paper-deep);">The position was opened at the median and has not moved off its base. Nothing to add, nothing to trim.</p>
               </div>
               <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
-              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-coal &middot; eyebrow-dark</div>
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-coal &middot; eyebrow.is-dark</div>
             </div>
 
             <!-- D · .card-oxblood -->
             <div>
               <div class="card-oxblood">
-                <div class="eyebrow-dark">
+                <div class="eyebrow is-dark">
                   Announcement
                   <span class="jp">静観 &middot; seikan</span>
                 </div>
@@ -828,7 +828,7 @@
                 <p class="card-body" style="color:var(--paper-deep);">The peacock does not chase. It waits until the light moves.</p>
               </div>
               <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
-              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-oxblood &middot; eyebrow-dark</div>
+              <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-oxblood &middot; eyebrow.is-dark</div>
             </div>
 
           </div>
@@ -836,7 +836,7 @@
           <!-- E · .card-gold.is-lg (solo, full-width) -->
           <div style="margin-top:24px;">
             <div class="card-gold is-lg">
-              <div class="eyebrow-dark is-ink">
+              <div class="eyebrow is-dark is-ink">
                 Anniversary
                 <span class="jp">孔雀 &middot; kujaku</span>
               </div>
@@ -844,7 +844,7 @@
               <p class="card-body" style="color:var(--ink-soft);max-width:640px;">Gold is an occasion, not a color. The annual report cover, the flagship figure, the tenth-year mark — and nothing else on the same page.</p>
             </div>
             <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
-            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-gold.is-lg &middot; eyebrow-dark.is-ink</div>
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .card-gold.is-lg &middot; eyebrow.is-dark.is-ink</div>
           </div>
 
           <!-- F · four sunken variants row -->
@@ -1249,12 +1249,12 @@
                 <button type="button" class="btn is-oxblood"><span class="jp">観</span>Open Position</button>
                 <button type="button" class="btn is-outline">View Details</button>
                 <div class="dark-card is-coal">
-                  <p class="eyebrow-dark is-paper">Nested &middot; <span class="jp">指標 &middot; shihyō</span></p>
-                  <a class="btn is-on-dark is-route" href="#methodology">methodology</a>
+                  <p class="eyebrow is-dark is-paper">Nested &middot; <span class="jp">指標 &middot; shihyō</span></p>
+                  <a class="btn is-dark is-route" href="#methodology">methodology</a>
                 </div>
               </div>
             </div>
-            <p class="demo-caption">CLASSES <code>.btn</code> &middot; <code>.btn.is-primary</code> &middot; <code>.btn.is-ink</code> &middot; <code>.btn.is-oxblood</code> with <code>&lt;span class="jp"&gt;観&lt;/span&gt;</code> &middot; <code>.btn.is-outline</code> &middot; <code>.btn.is-on-dark</code> inside <code>.card-coal</code>.</p>
+            <p class="demo-caption">CLASSES <code>.btn</code> &middot; <code>.btn.is-primary</code> &middot; <code>.btn.is-ink</code> &middot; <code>.btn.is-oxblood</code> with <code>&lt;span class="jp"&gt;観&lt;/span&gt;</code> &middot; <code>.btn.is-outline</code> &middot; <code>.btn.is-dark</code> inside <code>.card-coal</code>.</p>
           </div>
 
           <!-- Size ladder -->
@@ -1320,25 +1320,25 @@
 
           <!-- On-dark context -->
           <h3 class="sub-title">On-dark context</h3>
-          <p class="sub-lede">Inside dark cards, <code>.is-on-dark</code> replaces surface-filled variants. Press grammar moves from shadow-stack to border + translucent fill &mdash; the light-on-light letterpress illusion cannot reach across warm-dark paper.</p>
+          <p class="sub-lede">Inside dark cards, <code>.is-dark</code> replaces surface-filled variants. Press grammar moves from shadow-stack to border + translucent fill &mdash; the light-on-light letterpress illusion cannot reach across warm-dark paper.</p>
 
           <div class="demo-block">
             <p class="demo-label"><strong>Coal and oxblood</strong>editorial nest + dismiss</p>
             <div class="demo-frame">
               <div class="dark-pair">
                 <div class="dark-card is-coal">
-                  <p class="eyebrow-dark is-paper">Appendix &middot; <span class="jp">図表 &middot; zuhyō</span></p>
+                  <p class="eyebrow is-dark is-paper">Appendix &middot; <span class="jp">図表 &middot; zuhyō</span></p>
                   <p class="copy">Positioning data and full methodology sit in the appendix. Hand-computed, hand-audited.</p>
-                  <a class="btn is-on-dark is-route" href="#methodology">methodology</a>
+                  <a class="btn is-dark is-route" href="#methodology">methodology</a>
                 </div>
                 <div class="dark-card is-oxblood">
-                  <p class="eyebrow-dark is-paper">Ceremonial &middot; <span class="jp">紋 &middot; mon</span></p>
+                  <p class="eyebrow is-dark is-paper">Ceremonial &middot; <span class="jp">紋 &middot; mon</span></p>
                   <p class="copy">A red-deep panel reserves itself for moments that earn it. Dismiss to return to the quieter page.</p>
-                  <button type="button" class="btn is-on-dark">Dismiss</button>
+                  <button type="button" class="btn is-dark">Dismiss</button>
                 </div>
               </div>
             </div>
-            <p class="demo-caption">CLASSES <code>.btn.is-on-dark</code> inside <code>.card-coal</code> and <code>.card-oxblood</code>. Transparent fill, paper border, paper text. Hover: border-brightens + translucent paper fill.</p>
+            <p class="demo-caption">CLASSES <code>.btn.is-dark</code> inside <code>.card-coal</code> and <code>.card-oxblood</code>. Transparent fill, paper border, paper text. Hover: border-brightens + translucent paper fill.</p>
           </div>
 
           <!-- Form footer -->
@@ -1362,7 +1362,7 @@
             <p class="demo-caption">CLASSES <code>.btn.is-outline</code> (dismiss) + <code>.btn.is-primary</code> (commit). 12px gap. Input chrome is specimen-local &mdash; brand ships the buttons, not the form layout.</p>
           </div>
 
-          <p class="section-end">Six surface modifiers (default, <code>.is-primary</code>, <code>.is-ink</code>, <code>.is-oxblood</code>, <code>.is-outline</code>, <code>.is-on-dark</code>). Three sizes (<code>.is-sm</code>, default, <code>.is-lg</code>). <code>.is-route</code> for navigation. <code>:disabled</code> / <code>[aria-disabled]</code>. Every button REST&rarr;HOVER&rarr;ACTIVE = raised&rarr;deboss&rarr;deboss.</p>
+          <p class="section-end">Six surface modifiers (default, <code>.is-primary</code>, <code>.is-ink</code>, <code>.is-oxblood</code>, <code>.is-outline</code>, <code>.is-dark</code>). Three sizes (<code>.is-sm</code>, default, <code>.is-lg</code>). <code>.is-route</code> for navigation. <code>:disabled</code> / <code>[aria-disabled]</code>. Every button REST&rarr;HOVER&rarr;ACTIVE = raised&rarr;deboss&rarr;deboss.</p>
         </div>
       </section>
 
@@ -1555,7 +1555,7 @@
             <p class="demo-label"><strong>Fund comparison</strong>.tbl.is-dark.is-dense inside .card-coal</p>
             <div class="demo-frame">
               <div class="card-coal-frame">
-                <p class="eyebrow-dark">Appendix <span class="jp">指標 &middot; shihyō</span></p>
+                <p class="eyebrow is-dark">Appendix <span class="jp">指標 &middot; shihyō</span></p>
                 <h4>Fund comparison &middot; year to date.</h4>
                 <table class="tbl is-dark is-dense">
                   <thead>
@@ -1836,7 +1836,7 @@
             <p class="demo-label"><strong>Appendix figure</strong>.chart.is-line-single.is-dark.is-sm inside .card-coal</p>
             <div class="demo-frame">
               <div class="card-coal-frame">
-                <p class="eyebrow-dark">Appendix <span class="jp">図表</span></p>
+                <p class="eyebrow is-dark">Appendix <span class="jp">図表</span></p>
                 <h4>Last four months.</h4>
                 <svg class="chart is-line-single is-dark is-sm" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">
                   <text class="axis-tick" x="34" y="34" text-anchor="end">$870k</text>

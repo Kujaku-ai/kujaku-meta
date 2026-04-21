@@ -103,9 +103,9 @@ Paper surfaces are what content sits on. They are never text colors. The gold to
 - Approved uses: annual report covers, anniversary marks, the single most important figure on a flagship page.
 - Forbidden: body text, UI chrome (buttons, inputs, borders, icons), decorative accents, anything paired with red in the same element.
 - Default answer to "should this be gold?" is no.
-- **Gold primitives — chain:** `.eyebrow.is-gold`, `.eyebrow-dark` (default gold JP), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, `.tbl.is-eyebrow-header` (with gold caption JP). Any ONE per page; never two together. Each primitive's subsection cross-references this rule.
+- **Gold primitives — chain:** `.eyebrow.is-gold`, `.eyebrow.is-dark` (default gold JP), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, `.tbl.is-eyebrow-header` (with gold caption JP). Any ONE per page; never two together. Each primitive's subsection cross-references this rule.
 
-**Gold cards are permitted.** `.card-gold` and `.card-gold-sunken` are ceremonial content blocks subject to the one-gold-per-page rule. The rule applies collectively: one gold card OR one gold eyebrow OR one gold figure, not one of each. Gold card interiors must contain no `--red` anywhere (the two-reds prohibition stands). For eyebrow labels inside gold cards, use `.eyebrow-dark.is-ink`.
+**Gold cards are permitted.** `.card-gold` and `.card-gold-sunken` are ceremonial content blocks subject to the one-gold-per-page rule. The rule applies collectively: one gold card OR one gold eyebrow OR one gold figure, not one of each. Gold card interiors must contain no `--red` anywhere (the two-reds prohibition stands). For eyebrow labels inside gold cards, use `.eyebrow.is-dark.is-ink`.
 
 ---
 
@@ -224,7 +224,7 @@ When using illustrations (koi, brushwork, sumi-e):
 | Pattern | Where to find |
 |---|---|
 | `.eyebrow` + `.eyebrow.is-gold` | Eyebrows section; used above every specimen section heading |
-| `.eyebrow-dark` | Cards section (coal, oxblood, gold variants) |
+| `.eyebrow.is-dark` | Cards section (coal, oxblood, gold variants) |
 | `.card-paper` / `.card-paper-sunken` / `.card-coal` / `.card-oxblood` | Cards section |
 | `.hanko` | Hanko section; composed inside card and nav demos |
 | `.nav-composition` / `.nav-rail` / `.nav-masthead` | Nav section |
@@ -277,16 +277,16 @@ Classes compose freely. Examples:
 
 **Gold-budget chain:**
 
-`.eyebrow.is-gold` CLAIMS the page's one-gold budget. Cross-refers to `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
+`.eyebrow.is-gold` CLAIMS the page's one-gold budget. Cross-refers to `.eyebrow.is-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 
 **Don't:**
 - Apply `.is-gold` to more than one eyebrow per page.
 - Pair gold with red elsewhere on the same line or element.
 - Use JP characters outside the /voice approved vocabulary table.
 
-### Eyebrow · Dark
+### Eyebrow · is-dark
 
-Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `.card-gold` and their sunken variants). The base `.eyebrow` recipe's `--ink-mid` text and `--red` JP gloss are unreadable on dark surfaces; `.eyebrow-dark` swaps in paper-family colors with a gold JP accent as default.
+Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `.card-gold` and their sunken variants). The base `.eyebrow` recipe's `--ink-mid` text and `--red` JP gloss are unreadable on dark surfaces; `.eyebrow.is-dark` swaps in paper-family colors with a gold JP accent as default.
 
 **Default:** paper-colored label, gold JP gloss, paper-toned hairline (`rgba(255,251,240,0.25)`). Use on `.card-coal`, `.card-oxblood`, and their sunken variants.
 
@@ -303,11 +303,11 @@ Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `
 
 **Gold-budget chain:**
 
-Default `.eyebrow-dark` uses `--gold` for the JP gloss. This CLAIMS the page's one-gold budget. For a dark-card page that needs gold elsewhere (a gold eyebrow, a gold indicator-gloss, a gold button kanji, a gold table caption), use `.eyebrow-dark.is-paper` (no-gold variant) instead. Chains with `.eyebrow.is-gold`, `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
+Default `.eyebrow.is-dark` uses `--gold` for the JP gloss. This CLAIMS the page's one-gold budget. For a dark-card page that needs gold elsewhere (a gold eyebrow, a gold indicator-gloss, a gold button kanji, a gold table caption), use `.eyebrow.is-dark.is-paper` (no-gold variant) instead. Chains with `.eyebrow.is-gold`, `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 
 **Don't:**
-- Use `.eyebrow-dark.is-gold` on `.card-gold` (two gold elements; breaks one-per-page rule).
-- Use `.eyebrow-dark.is-ink` on `.card-coal` or `.card-oxblood` (ink invisible on warm-dark).
+- Use `.eyebrow.is-dark.is-gold` on `.card-gold` (two gold elements; breaks one-per-page rule).
+- Use `.eyebrow.is-dark.is-ink` on `.card-coal` or `.card-oxblood` (ink invisible on warm-dark).
 - Use the base `.eyebrow` on any dark card surface (the gray and red disappear).
 
 ### Cards
@@ -341,9 +341,9 @@ Eight card recipes in four colors × two states. Cards frame content: text, data
 
 - Cards only on `--paper`, `--paper-deep`, or `--paper-coal` backgrounds. Cards on `--ink` lose their cast shadows and should use a different pattern (e.g. a bordered block).
 - No red interior content on `.card-oxblood` or its sunken variant — red on red-deep is invisible; the two-reds rule permits red + red-deep as the only red pair.
-- No red or gold interior content on `.card-gold` or its sunken variant (the one-gold-per-page rule and two-reds rule both apply). Use `.eyebrow-dark.is-ink` for eyebrow labels inside gold cards.
+- No red or gold interior content on `.card-gold` or its sunken variant (the one-gold-per-page rule and two-reds rule both apply). Use `.eyebrow.is-dark.is-ink` for eyebrow labels inside gold cards.
 - Nesting: same-variant nesting works (e.g. `.card-paper` inside `.card-paper`). Cross-variant nesting works (e.g. `.card-paper.is-sm` inside `.card-coal.is-lg` for dashboard composition). No hard rule — use judgment; if the illusion fails visually, reconsider the composition.
-- Use `.eyebrow-dark` (NOT `.eyebrow`) on any dark card.
+- Use `.eyebrow.is-dark` (NOT `.eyebrow`) on any dark card.
 
 ### Hanko
 
@@ -624,7 +624,7 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
 - Delta color is ALWAYS `--ink-mid`. NEVER color-code direction (no green for positive, no red for negative). Direction is encoded by the `+/-` sign. Matches the `/graphs` and `.nav-masthead` conventions. A site that genuinely needs direction coding must do it locally — it's not a brand primitive.
 - Width defaults to content-sized. Consumers add `width: 100%` in their scene CSS where fill is wanted (ledgers, single-column stacks, card-bound rows).
 - The sparkline stroke (1px `--ink`) and end-dot (filled `--red` r=2) are canonical. Do NOT override stroke color to red or widen the polyline to create a bar-like effect — that's a chart, not a sparkline.
-- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
+- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow.is-dark` (default), `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 - `.is-stacked` is for narrow KPI cells. Don't use it in wide dashboards where horizontal would read cleaner.
 - When composing `.indicator-row` with a sparkline next to it (positions list with trajectories), the pattern is scene-local, not a promoted recipe. Use a custom grid at the consuming site. Brand may promote an `.indicator-list` primitive in a future cycle.
 
@@ -653,7 +653,7 @@ Shadow transitions are `--duration-fast` `--ease-out`. No scale transforms, no r
 | `.is-ink` | Paper-coal fill with paper text. Rare use (dark standalone surface). |
 | `.is-oxblood` | Red-deep ceremonial. Optional `.jp` kanji slot renders in gold. |
 | `.is-outline` | Transparent fill with 1px `--ink` border. Ghost / secondary. |
-| `.is-on-dark` | For buttons placed INSIDE `.card-coal`, `.card-oxblood`, or `.card-ink`. Transparent fill, paper border, paper text. Different press grammar: border-darkens on hover instead of deboss shadow. |
+| `.is-dark` | For buttons placed INSIDE `.card-coal`, `.card-oxblood`, or `.card-ink`. Transparent fill, paper border, paper text. Different press grammar: border-darkens on hover instead of deboss shadow. |
 
 **Semantic modifier — `.is-route`:**
 
@@ -720,7 +720,7 @@ This is brand's DISABLED CONVENTION. A future cycle may apply this convention ac
 
 <!-- Button inside a dark card -->
 <div class="card card-oxblood">
-  <a class="btn is-on-dark is-route" href="/methodology">methodology</a>
+  <a class="btn is-dark is-route" href="/methodology">methodology</a>
 </div>
 
 <!-- Disabled button -->
@@ -732,10 +732,10 @@ This is brand's DISABLED CONVENTION. A future cycle may apply this convention ac
 
 - Press mechanic is non-negotiable. Every on-brand button uses REST→HOVER→ACTIVE as raised→deboss→deboss. No alternative hover behaviors (no fade, no slide, no scale).
 - `.is-primary` and `.is-oxblood` are mutually exclusive. Red on red-deep is unreadable. A page's flagship CTA is EITHER primary OR oxblood, never both.
-- `.is-primary` inside `.card-oxblood` is forbidden — same readability failure. Use `.is-on-dark` for buttons nested inside dark cards.
+- `.is-primary` inside `.card-oxblood` is forbidden — same readability failure. Use `.is-dark` for buttons nested inside dark cards.
 - `.is-route` indicates the button navigates. NEVER use it for buttons that perform an action (Submit, Cancel, etc.). The slash semantic must mean "there is a route here."
 - Button text for `.is-route` does NOT include a literal `/` — the slash is supplied by a `::before` pseudo-element. Consumers write `href="/subscribe"` and label text `subscribe` — the pseudo-element adds the visible prefix.
-- Gold kanji slot (`.btn.is-oxblood .jp`) CLAIMS the page's one-gold budget. Cross-refers /colors one-gold rule and chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page.
+- Gold kanji slot (`.btn.is-oxblood .jp`) CLAIMS the page's one-gold budget. Cross-refers /colors one-gold rule and chains with `.eyebrow.is-gold`, `.eyebrow.is-dark` (default), `.indicator-gloss.is-dark`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page.
 - Sentient italic is NEVER used for button labels. Sentient is editorial display typography; UI chrome uses mono or Satoshi.
 - Disabled state is `--ink-pale` text + flat shadow + cursor not-allowed. No red-X, no strikethrough, no tooltip chrome.
 - `.is-masthead`-style buttons (mono-caps, no press, color-shift-only) are NOT a button variant. The masthead-action pattern lives at `.nav-masthead .actions a` — it's a nav concern, not a button concern.
@@ -744,17 +744,15 @@ This is brand's DISABLED CONVENTION. A future cycle may apply this convention ac
 
 Buttons compose inside forms, card footers, nav rails, editorial article bodies, ticker mastheads (as form actions, not as masthead-action links), and inline within Satoshi prose.
 
-Inside dark cards (`.card-coal`, `.card-oxblood`, `.card-ink`), ALWAYS use `.btn.is-on-dark` — NEVER `.is-primary` or other filled variants. The `.is-on-dark` modifier exists specifically for this composition.
+Inside dark cards (`.card-coal`, `.card-oxblood`, `.card-ink`), ALWAYS use `.btn.is-dark` — NEVER `.is-primary` or other filled variants. The `.is-dark` modifier exists specifically for this composition.
 
 A form footer typically pairs one `.is-outline` or default button (Cancel) with one `.is-primary` button (Save, Submit). Primary sits on the right (forward action convention).
 
-**Naming note — `.is-on-dark` vs `.is-dark`:**
+**Naming note — `.is-dark` unified across primitives:**
 
-Button uses `.is-on-dark` (not `.is-dark`) because the modifier describes a button's POSITION — it sits ON a dark surface — not its own identity. The press mechanic actually changes in this context (border-darken instead of deboss shadow).
+Eyebrow, button, indicator, table, and chart primitives all use `.is-dark` for their dark-surface treatment. The convention was harmonized in a dedicated cleanup cycle — earlier primitives had used divergent naming (a compound class for eyebrow; a positional variant for button) before the `.is-dark` modifier was established as the brand-wide pattern. Git history records the migration.
 
-Eyebrow uses `.eyebrow-dark` (compound class, legacy from earlier promotion). Indicator uses `.is-dark` (modifier, matches the indicator's own identity when placed on dark). The three conventions differ by intent.
-
-A future cycle may harmonize these into one convention. For now, each primitive's dark-surface treatment uses its own established pattern.
+The naming is unified; the internal behavior is not. Button's `.is-dark` uses a different press grammar than other primitives' `.is-dark` — it border-darkens on hover instead of debossing, because a transparent button on a dark fill can't deboss. Each primitive's `.is-dark` asserts a dark-surface treatment appropriate to that primitive; they are not required to share internal mechanics. This is the honest architectural position.
 
 ### Table
 
@@ -942,7 +940,7 @@ See /components Button for the full disabled spec.
 - Delta cells use `+/-` sign for direction. NEVER color-code direction (matches `/graphs`, `.nav-masthead`, `.indicator-*`, `.btn` conventions).
 - Red usage: one emphasis per table maximum. Red does not encode direction — only ceremonial attention on a specific row.
 - Sort indicators are monochrome carets — never colored.
-- `.tbl.is-eyebrow-header` with a gold JP character in its caption CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+- `.tbl.is-eyebrow-header` with a gold JP character in its caption CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow.is-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
 - `.has-expandable` ships the visual affordance only. Consumer owns the state toggle (via `.is-open` class or `:checked + sibling` CSS pattern or ~5 lines of JS). Matches `.nav-masthead .is-hidden` scroll-hide contract.
 - Sentient italic is NEVER used inside a table cell. Sentient is editorial display; data cells use mono + Satoshi.
 - Cross-recipe composition is encouraged: `.hanko.is-22` in `.has-hanko td.cell-hanko`, `.indicator-trend .spark` in `.has-trend td.cell-trend`, `.badge` in any cell.

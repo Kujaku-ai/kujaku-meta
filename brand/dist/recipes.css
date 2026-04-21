@@ -357,7 +357,7 @@
  * ============================================================ */
 
 /* ---------- base ---------- */
-.eyebrow-dark {
+.eyebrow.is-dark {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
@@ -369,7 +369,7 @@
   gap: 16px;
   margin-bottom: 24px;
 }
-.eyebrow-dark .jp {
+.eyebrow.is-dark .jp {
   font-family: var(--font-jp);
   font-size: 14px;
   font-weight: 400;
@@ -377,7 +377,7 @@
   text-transform: none;
   color: var(--gold);
 }
-.eyebrow-dark::after {
+.eyebrow.is-dark::after {
   content: '';
   flex: 1 1 auto;
   height: 1px;
@@ -388,31 +388,31 @@
 
 /* .is-paper: monochromatic paper — use when the card carries a
    gold accent elsewhere and the eyebrow should not compete. */
-.eyebrow-dark.is-paper { color: var(--paper); }
-.eyebrow-dark.is-paper .jp { color: var(--paper); }
+.eyebrow.is-dark.is-paper { color: var(--paper); }
+.eyebrow.is-dark.is-paper .jp { color: var(--paper); }
 
 /* .is-gold: gold label, paper JP — reverses the default accent. */
-.eyebrow-dark.is-gold { color: var(--gold); }
-.eyebrow-dark.is-gold .jp { color: var(--paper); }
+.eyebrow.is-dark.is-gold { color: var(--gold); }
+.eyebrow.is-dark.is-gold .jp { color: var(--paper); }
 
 /* .is-ink: ink text, ink JP — ONLY for use on .card-gold where
    ink is the legible color. */
-.eyebrow-dark.is-ink { color: var(--ink); }
-.eyebrow-dark.is-ink .jp { color: var(--ink); }
+.eyebrow.is-dark.is-ink { color: var(--ink); }
+.eyebrow.is-dark.is-ink .jp { color: var(--ink); }
 
 /* ---------- alignment modifiers ---------- */
 
-.eyebrow-dark.is-center { justify-content: center; }
-.eyebrow-dark.is-center::before {
+.eyebrow.is-dark.is-center { justify-content: center; }
+.eyebrow.is-dark.is-center::before {
   content: '';
   flex: 1 1 auto;
   height: 1px;
   background: rgba(255, 251, 240, 0.25);
 }
 
-.eyebrow-dark.is-right { justify-content: flex-end; }
-.eyebrow-dark.is-right::after { display: none; }
-.eyebrow-dark.is-right::before {
+.eyebrow.is-dark.is-right { justify-content: flex-end; }
+.eyebrow.is-dark.is-right::after { display: none; }
+.eyebrow.is-dark.is-right::before {
   content: '';
   flex: 1 1 auto;
   height: 1px;
@@ -421,7 +421,7 @@
 
 /* ---------- numbered modifier ---------- */
 
-.eyebrow-dark.is-numbered .num {
+.eyebrow.is-dark.is-numbered .num {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
@@ -1154,7 +1154,7 @@
    a full-bleed block.
 
    .is-dark flips the red JP character to --gold (matching the
-   .eyebrow-dark precedent). IMPORTANT: this flip CLAIMS the
+   .eyebrow.is-dark precedent). IMPORTANT: this flip CLAIMS the
    page's one-gold-per-page budget — no other gold element may
    appear on a page that uses .indicator-gloss.is-dark. */
 .indicator-gloss {
@@ -1295,7 +1295,7 @@
  *   .is-ink — paper-coal (rare "dark CTA" treatment)
  *   .is-oxblood — red-deep ceremonial (+ optional .jp gold slot)
  *   .is-outline — bordered ghost (1px --ink border)
- *   .is-on-dark — for buttons INSIDE dark cards (transparent
+ *   .is-dark — for buttons INSIDE dark cards (transparent
  *                 fill, paper border; press lives in border +
  *                 background-fill, not shadow stack).
  *
@@ -1317,7 +1317,7 @@
  *
  * Forbidden composition: .is-primary + .is-oxblood (red on
  * red-deep unreadable). .is-primary inside .card-oxblood or
- * .card-coal also fails — use .is-on-dark instead.
+ * .card-coal also fails — use .is-dark instead.
  *
  * See STYLE.md /components Button for the full spec.
  * ============================================================ */
@@ -1496,13 +1496,14 @@
 }
 
 
-/* ---------- .btn.is-on-dark — for buttons nested INSIDE
- * .card-coal / .card-oxblood / .card-ink or any --paper-coal /
- * --red-deep / --ink surface. Light-on-light shadow vocabulary
- * can't contrast on dark paper, so press mechanic moves to
- * border + background-fill. Different grammar, consistent with
- * .eyebrow-dark and .indicator.is-dark precedents. */
-.btn.is-on-dark {
+/* ---------- .btn.is-dark — buttons placed inside dark-surface
+ * cards (.card-coal, .card-oxblood, .card-ink). NOTE: Uses a
+ * different press grammar than other .is-dark primitives —
+ * border-darkens on hover instead of debossing, because a
+ * transparent button on a dark fill can't deboss. Semantic
+ * naming unified with eyebrow/indicator/table/chart .is-dark
+ * convention per cleanup cycle. */
+.btn.is-dark {
   background: transparent;
   color: var(--paper);
   border: 1px solid rgba(241,236,224,0.4);
@@ -1513,12 +1514,12 @@
   /* rgba(241,236,224) encodes alpha against --paper;
      CSS can't express alpha-on-var(). */
 }
-.btn.is-on-dark:hover {
+.btn.is-dark:hover {
   border-color: var(--paper);
   background: rgba(241,236,224,0.08);
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.20);
 }
-.btn.is-on-dark:active {
+.btn.is-dark:active {
   background: rgba(241,236,224,0.14);
   box-shadow: inset 0 3px 5px rgba(0,0,0,0.28);
 }
@@ -1647,7 +1648,7 @@
  *
  * rgba() literals on dark surfaces encode alpha against --paper;
  * CSS can't express alpha-on-var(). Same precedent as .hanko,
- * .nav-rail, .btn.is-on-dark.
+ * .nav-rail, .btn.is-dark.
  *
  * See STYLE.md /components Table for the full spec.
  * ============================================================ */
@@ -1739,7 +1740,7 @@
 /* ---------- SURFACE modifier — .is-dark ----------
  * Paper text on --paper-coal / --red-deep / --ink surfaces.
  * rgba(241,236,224) encodes --paper with alpha (CSS can't
- * express alpha-on-var). Same precedent as .btn.is-on-dark. */
+ * express alpha-on-var). Same precedent as .btn.is-dark. */
 .tbl.is-dark { color: var(--paper); }
 .tbl.is-dark thead th {
   color: rgba(241,236,224,0.68);
@@ -2090,7 +2091,7 @@
  *                      (brand signal). rgba(241,236,224) encodes
  *                      alpha against --paper; CSS can't express
  *                      alpha-on-var(). Same precedent as .tbl.is-dark,
- *                      .indicator-trend.is-dark, .btn.is-on-dark.
+ *                      .indicator-trend.is-dark, .btn.is-dark.
  *
  * Capability flags (stack freely):
  *   .has-gridlines       — 1px --ink-faint horizontal rules
