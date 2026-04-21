@@ -1373,10 +1373,10 @@
 }
 .btn:disabled,
 .btn[aria-disabled="true"] {
-  background: var(--paper);
   color: var(--ink-pale);
+  box-shadow: none;
   cursor: not-allowed;
-  box-shadow: 0 1px 0 rgba(255,251,240,0.5);
+  pointer-events: none;
 }
 
 
@@ -1406,9 +1406,10 @@
 }
 .btn.is-primary:disabled,
 .btn.is-primary[aria-disabled="true"] {
-  background: var(--ink-pale);
-  color: var(--paper);
-  box-shadow: 0 1px 0 rgba(255,251,240,0.3);
+  color: var(--ink-pale);
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 
