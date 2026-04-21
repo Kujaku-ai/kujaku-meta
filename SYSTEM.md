@@ -261,7 +261,7 @@ Note: the BTC collector's local folder is named `data/` for historical reasons, 
 ## Build Order
 
 **Shipped:**
-- Layer 1 BTC — `kujaku-data-btc` live, generic schema, ~5 days of clean data accumulating.
+- Layer 1 BTC — `kujaku-data-btc` live, generic schema, ~5 days of clean data accumulating. Phase 14 added Coinbase Exchange 1m OHLCV collection (`ohlcv_bars` table, `/api/ohlcv/*` endpoints); Phase 15 reorganized the operator dashboard ticker-centric via the reusable `app/tickers.py` config so future verticals plug in with a one-file edit.
 - Layer 2b BTC (Kalshi 15-min) — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.0.0-paper`, first live paper trade confirmed, settlements processing.
 - Layer 2a ICT indicators — `charting-calculations` live, FVG (Phase 12) and liquidity zones (Phase 14) shipped. See NOTES.md for the indicator catalog and phase state.
 
@@ -311,6 +311,13 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 ## Session Log
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
+
+**2026-04-21 — BTC volume collection + per-ticker dashboard.**
+- `kujaku-data-btc` Phase 14: 1m OHLCV collection from Coinbase Exchange's candles endpoint. New `ohlcv_bars` table (generic `source`/`asset`/`quote` schema) with upsert semantics so the in-progress current bar mutates every poll. Polls every 30s with 5-minute lookback.
+- New endpoints `/api/ohlcv/latest` and `/api/ohlcv/recent`. `/health` gained `last_ohlcv_bar_age_s` (threshold <90s).
+- Existing 10s spot tick loop kept running in parallel — ticks are the real-time price product, OHLCV is the volume-aware analytical product.
+- Phase 15: dashboard reorganized ticker-centric. `app/tickers.py` declares each ticker's streams as a reusable config; template loops over it. Adding a future ticker (ETH, SPX, QC) becomes a one-file edit to `app/tickers.py` plus whatever polling/tables the ticker requires.
+- Three-actor collaboration protocol (Susie / architect / implementer) formalized in `kujaku-data-btc/CLAUDE.md` and mirrored into `kujaku-meta/CLAUDE.md`.
 
 **2026-04-20 — Layer 2a matured; liquidity zones shipped.**
 - `charting-calculations` Phase 14 (liquidity zones) live end-to-end: detector, scheduler integration, `/api/liquidity` + `/health` counts, dashboard overlay.
