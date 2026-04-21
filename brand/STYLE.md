@@ -223,26 +223,16 @@ When using illustrations (koi, brushwork, sumi-e):
 
 | Pattern | Where to find |
 |---|---|
-| Hanko stamp | Hero corner, card seals, eyebrow accents |
-| Eyebrow | Above every section title |
-| Card (letterpress) | Sector intelligence cards section |
-| Data row | Inside cards, label + value |
-| Hero | Top of `specimen.html` |
-| Empty / reserved slot | "Reserved 余白" section |
-
-**Card recipe:**
-```css
-.card {
-  background: #F4EFE6;
-  border-radius: 6px;
-  padding: 32px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,251,240,0.7),
-    0 1px 0 rgba(255,251,240,0.5),
-    0 4px 12px rgba(40,30,18,0.06),
-    0 16px 40px rgba(40,30,18,0.06);
-}
-```
+| `.eyebrow` + `.eyebrow.is-gold` | Eyebrows section; used above every specimen section heading |
+| `.eyebrow-dark` | Cards section (coal, oxblood, gold variants) |
+| `.card-paper` / `.card-paper-sunken` / `.card-coal` / `.card-oxblood` | Cards section |
+| `.hanko` | Hanko section; composed inside card and nav demos |
+| `.nav-composition` / `.nav-rail` / `.nav-masthead` | Nav section |
+| `.indicator-row` / `.indicator-tabular` / `.indicator-gloss` / `.indicator-trend` | Indicators section |
+| `.btn` | Buttons section |
+| `.tbl` | Tables section |
+| `.badge` | Badges section |
+| `.chart` | Charts section (see also `/graphs`) |
 
 ### Eyebrow
 
@@ -1014,9 +1004,14 @@ See /graphs for:
 
 ## /graphs
 
-**Purpose:** chart format rules and templates.
-
-**What lives here:** chart-style CSS, SVG chart templates, axis/grid recipes, possibly D3 or Chart.js config presets.
+The `/graphs` section documents brand's data-visualization primitives:
+sparklines at micro scale (`.indicator-trend .spark`), full-scale line
+and bar charts (`.chart` recipe family), and the companion JavaScript
+helper `brand/dist/charts.js` that wires hover tooltip, crosshair, and
+point-highlight interactivity on opted-in charts. Brand ships the
+visual contract; consumers provide data. Chart interactivity is the
+single documented exception to the visual-affordance-only contract —
+see the Interactivity subsection below.
 
 ### Hard chart rules
 
