@@ -995,6 +995,21 @@ Small inline severity/status tag. Usable in table cells, log entries, incident r
 
 Badges compose inside table cells (impact columns, status columns), inside log entries, inline-in-prose (for status noting), and inside `.indicator-row`'s delta cell when a text status fits better than a numeric delta (rare).
 
+### Chart
+
+Full-scale line and bar chart primitive. Ships as `.chart` with chart-type modifiers (`.is-line-single`, `.is-line-multi`, `.is-bar-grouped`), surface modifier (`.is-dark`), size modifiers (`.is-sm` / `.is-lg`), and capability flags (`.has-gridlines`, `.has-reference-line`, `.has-value-labels`, `.has-annotations`).
+
+Full specification lives at /graphs — see **Line chart**, **Bar chart**, and **Interactivity** subsections there. This entry exists in /components for discoverability alongside the other primitives.
+
+The chart primitive is the first brand recipe to ship with a companion JavaScript helper (`brand/dist/charts.js`). Sort indicators, scroll-hide, and expandable-row interactions remain consumer-owned per the visual-affordance-only contract. Charts are the documented exception.
+
+See /graphs for:
+
+- Sparkline micro-chart (the `.indicator-trend .spark` precedent)
+- Line chart (full-scale extension, single + multi series)
+- Bar chart (grouped, diverging)
+- Interactivity (`data-chart-interactive` opt-in, tooltip/crosshair JS)
+
 ---
 
 ## /graphs
@@ -1084,6 +1099,234 @@ All widths and heights are literals tuned to the size ladder — not tokens.
 The sparkline lives exclusively inside `.indicator-trend`. It is not a standalone primitive. Consumers do not render `<svg class="spark">` outside the `.indicator-trend` markup.
 
 For full-size charts (anything larger than `.indicator-trend.is-lg` at 220×44), use the main `/graphs` conventions at the top of this section — not the sparkline spec.
+
+### Line chart
+
+Full-scale line chart. Extends the sparkline language to charts with axes, labels, and interactivity. Ships as a single `.chart` recipe with chart-type + surface + size + capability modifiers.
+
+**Continuity with sparkline:**
+
+| Scale | Stroke width | Endpoint radius |
+|---|---|---|
+| Sparkline `.is-sm` | 1 px `--ink` | r=2 |
+| Sparkline default | 1 px `--ink` | r=2 |
+| Sparkline `.is-lg` | 1.25 px `--ink` | r=3 |
+| Chart `.is-sm` | 1.25 px `--ink` | r=3 |
+| Chart default | 1.25 px `--ink` | r=3.5 |
+| Chart `.is-lg` | 1.5 px `--ink` | r=4 |
+
+Continuous ladder from micro to hero. A sparkline is a chart that chose to be quiet; a chart is a sparkline that earned labels.
+
+**Single-series line (`.chart.is-line-single`):**
+
+| Element | Treatment |
+|---|---|
+| Polyline | 1.25 px stroke `--ink`, no fill |
+| End-point | Filled `--red`, r=3.5 default (r=3 small, r=4 large) |
+| X-axis | 1 px `--ink` baseline |
+| Y-axis | No visible line; 3-4 tick labels floating in `--ink-pale` mono 9 px |
+| Gridlines | OFF by default. `.has-gridlines` adds 1 px `--ink-faint` horizontal rules at each y-tick. |
+| Background | `--paper` (inherited from page) |
+
+**Multi-series line (`.chart.is-line-multi`):**
+
+Up to 3 series. Ink-family ladder; red reserved for a single end-dot on the primary series.
+
+| Series | Stroke | Width | Dash |
+|---|---|---|---|
+| `.is-primary` | `--ink` | 1.25 px | none |
+| `.is-secondary` | `--ink-soft` | 1 px | none |
+| `.is-tertiary` | `--ink-mid` | 1 px | 3-2 |
+
+End-point labels (not a legend row). Each line ends with its name in mono 9 px at the final coordinate, colored to match the line. This keeps the legend visually tied to the data and avoids a separate chrome row above the chart.
+
+NEVER use a second red. NEVER use green, amber, or teal. Only the ink family ladder + one red end-dot total per chart.
+
+**Size modifiers:**
+
+| Modifier | Max width |
+|---|---|
+| `.is-sm` | 360 px |
+| (default) | 640 px |
+| `.is-lg` | 960 px |
+
+Consumer SVG viewBox should be proportioned to the size modifier (viewBox `0 0 640 260` is a reasonable default).
+
+**Dark surface (`.is-dark`):**
+
+For charts nested inside `.card-coal`, `.card-oxblood`, or `.card-ink`. Polyline stroke flips to `--paper`. Axis tick and gridline colors flip to rgba-paper alpha. Red end-dot STAYS red — the red dot is the brand signal, not a surface-dependent color.
+
+**Capability flags (line chart):**
+
+| Modifier | Adds |
+|---|---|
+| `.has-gridlines` | 1 px `--ink-faint` horizontal rules at each y-tick |
+| `.has-reference-line` | 1 px `--ink-pale` horizontal dashed (4-3 pattern) at a named benchmark value. Include via `<line class="reference-line">` element. |
+| `.has-annotations` | Consumer adds `<line class="annotation-pointer">` + `<text class="annotation-label">` to call out specific points. |
+
+**Canonical markup:**
+
+```html
+<!-- Single-series, minimal (no gridlines default) -->
+<svg class="chart is-line-single" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet">
+  <!-- optional: x-axis line, y-tick labels -->
+  <line class="axis-line" x1="40" y1="240" x2="620" y2="240"/>
+  <text class="axis-tick" x="40" y="20">$70k</text>
+  <text class="axis-tick" x="40" y="80">$65k</text>
+  <text class="axis-tick" x="40" y="140">$60k</text>
+  <text class="axis-tick" x="40" y="200">$55k</text>
+  <!-- the data -->
+  <polyline class="series" points="40,180 100,165 160,170 220,150 ..."/>
+  <circle class="endpoint" cx="620" cy="85" r="3.5"/>
+</svg>
+
+<!-- Multi-series with end-point labels -->
+<svg class="chart is-line-multi" viewBox="0 0 640 260">
+  <polyline class="series is-primary" points="..."/>
+  <polyline class="series is-secondary" points="..."/>
+  <polyline class="series is-tertiary" points="..."/>
+  <circle class="endpoint" cx="620" cy="95" r="3.5"/>
+  <text class="end-label" x="624" y="98" fill="var(--ink)">FUND</text>
+  <text class="end-label" x="624" y="118" fill="var(--ink-soft)">BENCH</text>
+  <text class="end-label" x="624" y="138" fill="var(--ink-mid)">INDEX</text>
+</svg>
+```
+
+**Rules:**
+
+- Polyline stroke: `--ink` on paper, `--paper` on dark. Never `--red`. The polyline carries trajectory; red carries the signal.
+- Red: ONE per chart maximum — the end-dot on the primary series. Not on every series.
+- Multi-series: ink-family ladder only. Never a second red, never green/amber/teal.
+- End-point labels over legend rows. The label is the data's name at its destination.
+- Gridlines OFF by default (line-single). Opt in via `.has-gridlines` when magnitude comparison matters.
+- Dash patterns reserved by semantic: 3-2 for tertiary series (continuous data, de-emphasized), 4-3 for reference lines and forecast extensions (interpretive overlay), 4-3 for the interactive crosshair (transient cursor).
+- All chart text (ticks, labels, annotations) uses mono. Never Sentient. Never Satoshi. Data is not display.
+- Interactive charts MUST have an explicit `viewBox` attribute. The charts.js helper reads viewBox dimensions to size the crosshair.
+
+### Bar chart
+
+Grouped bar charts for categorical comparison. Vertical bars, 2-3 bars per category.
+
+**Grouped bar (`.chart.is-bar-grouped`):**
+
+| Element | Treatment |
+|---|---|
+| Primary bars | Fill `--red`, no stroke |
+| Secondary bars | Fill `--ink-soft`, no stroke |
+| Tertiary bars | Fill `--ink-mid`, no stroke |
+| X-axis | 1 px `--ink` baseline |
+| Y-axis | No visible line; tick labels in `--ink-mid` mono 9 px |
+| Gridlines | ON by default. 1 px `--ink-faint` horizontal rules. Bars need gridlines for magnitude comparison. |
+| Bar width | 12 px default. 8 px at `.is-sm`, 16 px at `.is-lg`. |
+| Inter-bar gap | 2 px (within a group) |
+| Inter-group gap | 16 px default, 10 px at `.is-sm`, 24 px at `.is-lg` |
+| Category labels | Mono 9 px `--ink-mid` below x-axis, centered under each group |
+
+**Color encoding:** Same rule as line charts — ink-family ladder plus ONE red. Primary position uses red; secondary and tertiary step through `--ink-soft` and `--ink-mid`. Red is ceremony, not direction. Negative values do NOT get a different color — they get a negative sign and stay in the ink family.
+
+**Capability flags (bar chart):**
+
+| Modifier | Adds |
+|---|---|
+| `.has-value-labels` | Numeric value above each bar in mono 9 px `--ink` |
+| `.has-reference-line` | Dashed `--ink-pale` horizontal benchmark line |
+| `.has-gridlines` | Redundant on bar charts (already ON); present for consistency |
+
+**Diverging bar pattern:**
+
+For signed data (e.g. P&L by position), place the x-axis at y=0 with positive bars extending up and negative bars extending down. Both directions use the same red/ink-soft/ink-mid palette. Do NOT color-code positive vs negative.
+
+**Canonical markup:**
+
+```html
+<svg class="chart is-bar-grouped has-value-labels" viewBox="0 0 640 280">
+  <!-- gridlines default on -->
+  <line class="gridline" x1="50" y1="50" x2="620" y2="50"/>
+  <line class="gridline" x1="50" y1="110" x2="620" y2="110"/>
+  <line class="gridline" x1="50" y1="170" x2="620" y2="170"/>
+  <!-- x-axis -->
+  <line class="axis-line" x1="50" y1="230" x2="620" y2="230"/>
+  <!-- y-ticks -->
+  <text class="axis-tick" x="40" y="54">$30k</text>
+  <text class="axis-tick" x="40" y="114">$20k</text>
+  <text class="axis-tick" x="40" y="174">$10k</text>
+  <!-- group 1 -->
+  <rect class="bar is-primary"   x="80"  y="120" width="12" height="110"/>
+  <rect class="bar is-secondary" x="94"  y="145" width="12" height="85"/>
+  <rect class="bar is-tertiary"  x="108" y="160" width="12" height="70"/>
+  <text class="value-label" x="86"  y="115">$22k</text>
+  <text class="value-label" x="100" y="140">$17k</text>
+  <text class="value-label" x="114" y="155">$14k</text>
+  <text class="axis-tick" x="105" y="248">Q1</text>
+  <!-- group 2, 3, 4 ... -->
+</svg>
+```
+
+**Rules:**
+
+- Primary = red. Secondary = `--ink-soft`. Tertiary = `--ink-mid`.
+- Negative values: same palette, extend below x-axis baseline.
+- Never color-code positive vs negative direction.
+- Bar width is fixed by size modifier (8/12/16 px). Consumers don't override unless the chart is unusually wide.
+- Gridlines default ON for bar charts — bars need them.
+- Value labels (`.has-value-labels`) are optional. Use when exact values matter more than shape comparison.
+
+### Interactivity
+
+Brand ships a single JS helper, `brand/dist/charts.js`, that wires hover + tooltip + crosshair behavior on any chart SVG opted in via the `data-chart-interactive` attribute.
+
+This is the ONLY JavaScript in brand/dist/. All other brand interactivity (scroll-hide masthead, sort indicators, expandable table rows) remains consumer-owned per the visual-affordance-only contract. Charts are the documented exception — hover tooltip logic is non-trivial enough to justify centralization.
+
+**What charts.js provides:**
+
+| Feature | Behavior |
+|---|---|
+| Vertical crosshair | 1 px `--ink-faint` dashed line tracking mouse X. Dash pattern 4-3 (same as reference lines). |
+| Point highlight | Nearest data point gets a visible ring on hover. |
+| Tooltip | Mono 10 px box above the hovered point. `--paper` background, 1 px `--ink-faint` border, 2 px radius. Shows x/y values using `data-xlabel` and `data-ylabel` from the polyline. |
+| Series dim | When hovering a multi-series chart, non-hovered series dim to 0.3 opacity. |
+
+**Consumer contract:**
+
+1. Load `brand/dist/charts.js` via a `<script src="..." defer>` tag.
+2. Add `data-chart-interactive` to any `.chart` SVG to opt in.
+3. Optionally add `data-xlabel` and `data-ylabel` attributes on each `<polyline class="series">` to customize tooltip text.
+4. SVG MUST have an explicit `viewBox` attribute — the helper reads viewBox dimensions to size the crosshair.
+
+```html
+<svg class="chart is-line-multi" viewBox="0 0 640 260"
+     data-chart-interactive>
+  <polyline class="series is-primary"
+            points="..."
+            data-xlabel="Month" data-ylabel="$"/>
+  ...
+</svg>
+```
+
+**What charts.js does NOT provide:**
+
+- Sort logic, zoom, pan, real-time data updates — consumer-owned.
+- Animation on render — brand ships static charts; animated entry is a consumer choice.
+- Mobile touch/tap interactions beyond default hover emulation.
+- Multiple-point tooltip (showing all series values at one X) — current helper shows only the hovered polyline's nearest point. Future helper iteration may add this.
+
+**Dark-surface tooltips:**
+
+Tooltips inside `.card-coal` or `.card-oxblood` get a subtle cast shadow to lift off the dark background. Tooltip background stays `--paper` — the tooltip is a callout, not a surface-dependent element.
+
+**Dash-pattern vocabulary:**
+
+Three distinct dash patterns with distinct semantics:
+
+| Pattern | Used for |
+|---|---|
+| 3-2 | Tertiary series (continuous, de-emphasized) |
+| 4-3 | Reference lines, forecast extensions, interactive crosshair |
+| No dash | Primary + secondary series, axis lines, gridlines |
+
+**Data-attribute API pattern:**
+
+`data-chart-interactive` is brand's first opt-in data-attribute API. Future primitives that need consumer JS opt-in (e.g. sortable tables, expandable cards) will follow the same pattern: `data-[feature]-interactive` or `data-[feature]-enabled`.
 
 ---
 

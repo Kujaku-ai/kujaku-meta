@@ -25,7 +25,7 @@ Operational rules for Claude Code when working anywhere inside this folder.
 
 - `git add .` — ever. Stage files explicitly.
 - Editing STYLE.md rules without an explicit instruction to change a rule.
-- Adding JavaScript to brand/dist/. Brand is CSS + assets only.
+- No JavaScript in brand/dist/, EXCEPT brand/dist/charts.js which ships the chart interactivity helper (~142 lines, vanilla JS, no dependencies). This is a deliberate architectural exception documented in STYLE.md /graphs Interactivity. The helper provides hover-crosshair + tooltip + point-highlight — interactions non-trivial enough to justify centralization. All other interactivity (scroll-hide, sort state, expandable-row toggle) remains consumer-owned per the visual-affordance-only contract.
 - Promoting from sandbox to dist without explicitly verifying every item in the Promotion Checklist (see README.md).
 
 ## When in doubt

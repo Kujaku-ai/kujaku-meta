@@ -2070,3 +2070,231 @@
 .badge.is-low  { border-color: var(--ink-pale); color: var(--ink-pale); }
 .badge.is-med  { border-color: var(--ink-mid);  color: var(--ink-mid); }
 .badge.is-high { border-color: var(--ink);      color: var(--ink);      font-weight: 600; }
+
+
+/* ============================================================
+ * CHARTS — line + bar full-size data visualization.
+ *
+ * Single .chart recipe with three chart-type modifiers and
+ * composable capability flags. Continuity with .indicator-trend
+ * .spark — sparklines are charts that chose to be quiet.
+ *
+ * Chart-type modifiers (pick one):
+ *   .is-line-single  — single-series line, .has-gridlines default OFF
+ *   .is-line-multi   — multi-series line, end-point labels not legend
+ *   .is-bar-grouped  — grouped bar, gridlines ON via markup
+ *
+ * Surface modifier:
+ *   .is-dark         — paper stroke + rgba-paper axes on
+ *                      coal/oxblood surfaces. Red end-dot stays red
+ *                      (brand signal). rgba(241,236,224) encodes
+ *                      alpha against --paper; CSS can't express
+ *                      alpha-on-var(). Same precedent as .tbl.is-dark,
+ *                      .indicator-trend.is-dark, .btn.is-on-dark.
+ *
+ * Capability flags (stack freely):
+ *   .has-gridlines       — 1px --ink-faint horizontal rules
+ *   .has-reference-line  — dashed --ink-pale horizontal reference
+ *   .has-value-labels    — bar values above each bar (bar-grouped)
+ *   .has-annotations     — pointer lines + mono labels at points
+ *
+ * Sizes: .is-sm / default / .is-lg — step max-width, stroke-width,
+ * tick font-size, endpoint radius.
+ *
+ * Stroke vocabulary (continuity with sparkline):
+ *   Sparkline: 1px    --ink polyline, filled --red endpoint r=2
+ *   Chart:     1.25px --ink polyline, filled --red endpoint r=3.5
+ *   .is-lg:    1.5px  --ink polyline, filled --red endpoint r=4
+ *
+ * Multi-series color tiers (NEVER color-code direction):
+ *   Primary   --ink      1.25px solid
+ *   Secondary --ink-soft 1px solid
+ *   Tertiary  --ink-mid  1px dashed 3-2
+ *   Red reserved for ONE end-dot on primary series only.
+ *
+ * Interactivity: add data-chart-interactive to the <svg> to opt in
+ * to brand's charts.js helper (hover crosshair + tooltip + multi-
+ * series dim-to-0.3). Brand ships the affordance only; consumer
+ * owns the data. Same contract as .nav-masthead .is-hidden.
+ *
+ * See STYLE.md /graphs Line chart + Bar chart subsections for the
+ * full spec.
+ * ============================================================ */
+
+/* ---------- base container ---------- */
+.chart {
+  display: block;
+  width: 100%;
+  max-width: 640px; /* default; .is-sm / .is-lg override */
+}
+
+/* ---------- shared SVG children ---------- */
+.chart .axis-line  { stroke: var(--ink);       stroke-width: 1px; fill: none; }
+.chart .axis-soft  { stroke: var(--ink-faint); stroke-width: 1px; fill: none; }
+.chart .gridline   { stroke: var(--ink-faint); stroke-width: 1px; fill: none; }
+.chart .reference-line {
+  stroke: var(--ink-pale);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3; /* literal — forecast/reference dash vocabulary */
+  fill: none;
+}
+.chart .axis-tick {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  fill: var(--ink-mid);
+  font-variant-numeric: tabular-nums;
+}
+.chart .axis-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: var(--ink-mid);
+  font-weight: 500;
+}
+.chart .end-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  fill: var(--ink-mid);
+  font-variant-numeric: tabular-nums;
+}
+.chart .annotation-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.chart .annotation-pointer { stroke: var(--ink-faint); stroke-width: 1px; fill: none; }
+
+/* ---------- .is-line-single ---------- */
+.chart.is-line-single polyline.series {
+  stroke: var(--ink);
+  stroke-width: 1.25px; /* literal — continuity with sparkline .is-lg */
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.chart.is-line-single circle.endpoint {
+  fill: var(--red);
+  stroke: none;
+  r: 3.5; /* literal — full-chart endpoint, vs sparkline r=2 */
+}
+/* gridlines OFF by default — opt in via .has-gridlines + markup */
+
+/* ---------- .is-line-multi ---------- */
+.chart.is-line-multi polyline.series {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.chart.is-line-multi polyline.series.is-primary {
+  stroke: var(--ink);
+  stroke-width: 1.25px;
+}
+.chart.is-line-multi polyline.series.is-secondary {
+  stroke: var(--ink-soft);
+  stroke-width: 1px;
+}
+.chart.is-line-multi polyline.series.is-tertiary {
+  stroke: var(--ink-mid);
+  stroke-width: 1px;
+  stroke-dasharray: 3 2; /* literal — tertiary-series dash pattern,
+                            distinct from forecast 4-3 and
+                            reference-line 4-3 */
+}
+.chart.is-line-multi circle.endpoint {
+  fill: var(--red); /* one red end-dot on primary series only */
+  stroke: none;
+  r: 3.5;
+}
+
+/* ---------- .is-bar-grouped ---------- */
+.chart.is-bar-grouped rect.bar { stroke: none; }
+.chart.is-bar-grouped rect.bar.is-primary   { fill: var(--red); }
+.chart.is-bar-grouped rect.bar.is-secondary { fill: var(--ink-soft); }
+.chart.is-bar-grouped rect.bar.is-tertiary  { fill: var(--ink-mid); }
+/* gridlines ON by default for bar charts — include .gridline
+   elements in markup. Bars need them for magnitude comparison. */
+
+/* ---------- capability flags ---------- */
+.chart.has-value-labels .value-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- .is-dark (surface modifier) ---------- */
+.chart.is-dark .axis-line      { stroke: rgba(241,236,224,0.6); }
+.chart.is-dark .axis-soft      { stroke: rgba(241,236,224,0.3); }
+.chart.is-dark .axis-tick      { fill:   rgba(241,236,224,0.7); }
+.chart.is-dark .axis-title     { fill:   rgba(241,236,224,0.6); }
+.chart.is-dark .gridline       { stroke: rgba(241,236,224,0.08); }
+.chart.is-dark .reference-line { stroke: rgba(241,236,224,0.3); }
+.chart.is-dark .end-label      { fill:   rgba(241,236,224,0.7); }
+.chart.is-dark .annotation-label   { fill: var(--paper); }
+.chart.is-dark .annotation-pointer { stroke: rgba(241,236,224,0.3); }
+
+.chart.is-dark.is-line-single polyline.series { stroke: var(--paper); }
+.chart.is-dark.is-line-multi polyline.series.is-primary   { stroke: var(--paper); }
+.chart.is-dark.is-line-multi polyline.series.is-secondary { stroke: rgba(241,236,224,0.6); }
+.chart.is-dark.is-line-multi polyline.series.is-tertiary  { stroke: rgba(241,236,224,0.4); }
+.chart.is-dark circle.endpoint { fill: var(--red); /* red signal stays red on dark */ }
+.chart.is-dark.is-bar-grouped rect.bar.is-secondary { fill: rgba(241,236,224,0.55); }
+.chart.is-dark.is-bar-grouped rect.bar.is-tertiary  { fill: rgba(241,236,224,0.3); }
+.chart.is-dark.has-value-labels .value-label { fill: var(--paper); }
+
+/* ---------- sizes ---------- */
+.chart.is-sm { max-width: 360px; }
+.chart.is-sm .axis-tick,
+.chart.is-sm .end-label { font-size: 8px; }
+.chart.is-sm polyline.series { stroke-width: 1px; }
+.chart.is-sm polyline.series.is-primary { stroke-width: 1.25px; }
+.chart.is-sm circle.endpoint { r: 3; }
+
+.chart.is-lg { max-width: 960px; }
+.chart.is-lg .axis-tick,
+.chart.is-lg .end-label { font-size: 10px; }
+.chart.is-lg .axis-title { font-size: 11px; }
+.chart.is-lg polyline.series { stroke-width: 1.25px; }
+.chart.is-lg polyline.series.is-primary { stroke-width: 1.5px; }
+.chart.is-lg circle.endpoint { r: 4; }
+
+/* ---------- interactivity (charts.js) ----------
+ * Styling for the crosshair line and tooltip element injected
+ * by brand/dist/charts.js. Consumer loads charts.js via
+ *   <script src=".../brand/dist/charts.js" defer></script>
+ * and opts in per-chart with
+ *   <svg class="chart ..." data-chart-interactive>
+ * See STYLE.md /graphs Interactivity for the full JS contract. */
+.chart-crosshair {
+  stroke: var(--ink-faint);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+.chart-tooltip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink-faint);
+  border-radius: 2px;
+  padding: 6px 10px; /* literal — mono-tight padding matching .badge rhythm */
+  white-space: nowrap;
+  z-index: 10;
+  font-variant-numeric: tabular-nums;
+}
+/* Dark-surface tooltip: when an interactive chart is nested
+   inside a .card-coal / .card-oxblood, the tooltip reads as a
+   paper pill lifted off the dark surface. Parent selector keeps
+   the tooltip's own paper bg (it's a callout, not a background
+   flip) and adjusts only the shadow. */
+.card-coal .chart-tooltip,
+.card-oxblood .chart-tooltip {
+  box-shadow: 0 2px 6px rgba(40,30,18,0.28);
+}

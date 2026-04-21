@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="dist/tokens.css">
 <link rel="stylesheet" href="dist/textures.css">
 <link rel="stylesheet" href="dist/recipes.css">
+<script src="dist/charts.js" defer></script>
 
 <style>
   :root {
@@ -298,6 +299,29 @@
   #badges .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 820px; }
   #badges .section-end code { color: var(--ink); }
 
+  /* CHARTS section-local helpers. Scoped under #charts so
+     nothing leaks. Real .chart recipe lives in dist/recipes.css;
+     real interactivity lives in dist/charts.js; only demo
+     scaffolding here. */
+  #charts .sub-title { font-family: var(--font-display); font-weight: 400; font-size: 28px; letter-spacing: -0.01em; color: var(--ink); margin: 48px 0 16px; }
+  #charts .sub-lede { font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink-soft); max-width: 60ch; margin: 0 0 24px; }
+  #charts .demo-block { margin-bottom: 44px; }
+  #charts .demo-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mid); margin: 0 0 10px; }
+  #charts .demo-label strong { color: var(--ink); font-weight: 500; margin-right: 10px; }
+  #charts .demo-frame { padding: 28px 32px; background: var(--paper); border: 1px solid var(--ink-faint); border-radius: 6px; position: relative; }
+  #charts .demo-frame svg.chart { display: block; }
+  #charts .demo-caption { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--ink-faint); line-height: 1.6; }
+  #charts .demo-caption code { background: transparent; color: var(--ink); }
+
+  /* coal-card wrapper for Subsection 5 */
+  #charts .card-coal-frame { background: var(--paper-coal); padding: 24px 28px; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,251,240,0.16), 0 4px 12px rgba(40,30,18,0.10); position: relative; }
+  #charts .card-coal-frame .eyebrow-dark { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(241,236,224,0.7); margin: 0 0 6px; }
+  #charts .card-coal-frame .eyebrow-dark .jp { font-family: var(--font-jp); font-size: 13px; color: var(--paper); margin-left: 6px; letter-spacing: 0.06em; }
+  #charts .card-coal-frame h4 { font-family: var(--font-display); font-style: italic; font-weight: 300; font-size: 18px; color: var(--paper); letter-spacing: -0.01em; margin: 0 0 14px; }
+
+  #charts .section-end { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); line-height: 1.7; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--ink-faint); max-width: 820px; }
+  #charts .section-end code { color: var(--ink); }
+
   /* COLOPHON */
   .colophon { background: var(--ink); color: var(--paper); padding: 80px 0 64px; margin-top: 0; position: relative; overflow: hidden; }
   .colophon::before { content: '孔雀'; position: absolute; right: -40px; bottom: -120px; font-family: var(--font-jp); font-weight: 300; font-size: 420px; line-height: 1; color: var(--paper); opacity: 0.04; pointer-events: none; }
@@ -380,6 +404,7 @@
         <a class="nav-item" href="#buttons"><span class="slash">/</span><span class="label">buttons</span></a>
         <a class="nav-item" href="#tables"><span class="slash">/</span><span class="label">tables</span></a>
         <a class="nav-item" href="#badges"><span class="slash">/</span><span class="label">badges</span></a>
+        <a class="nav-item" href="#charts"><span class="slash">/</span><span class="label">charts</span></a>
       </div>
     </nav>
     <div class="footer">
@@ -1635,6 +1660,227 @@
           </div>
 
           <p class="section-end">Four variants (default, <code>.is-low</code>, <code>.is-med</code>, <code>.is-high</code>). Ink-weight severity encoding. No <code>.is-red</code>, no <code>.is-gold</code> &mdash; badges are utilitarian, not ceremonial.</p>
+        </div>
+      </section>
+
+      <hr class="section-rule">
+
+      <!-- CHARTS -->
+      <section id="charts" class="specimen-section">
+        <div class="wrap">
+          <div class="eyebrow">Charts <span class="jp">図表 &middot; zuhyō</span></div>
+          <h2 style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:48px;letter-spacing:-0.02em;line-height:1.05;color:var(--ink);margin:0 0 24px;">Lines and bars.</h2>
+          <p style="font-family:var(--font-body);font-size:16px;line-height:1.7;color:var(--ink-soft);max-width:65ch;margin:0 0 40px;">Full-scale data visualization. Three chart types this cycle: line single-series, line multi-series, grouped bar. Continuity with the <code>.indicator-trend</code> sparkline &mdash; a sparkline is a chart that chose to be quiet. Hover any interactive chart to see the crosshair, tooltip, and series dim.</p>
+
+          <!-- S1 — line single-series, default -->
+          <h3 class="sub-title">Single-series baseline</h3>
+          <p class="sub-lede"><code>.chart.is-line-single</code> with no gridlines. Polyline + endpoint carry structure; four floating y-tick labels mark the range.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Portfolio value &middot; 12 months</strong>.chart.is-line-single</p>
+            <div class="demo-frame">
+              <svg class="chart is-line-single" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet">
+                <text class="axis-tick" x="44" y="49" text-anchor="end">$870k</text>
+                <text class="axis-tick" x="44" y="111" text-anchor="end">$850k</text>
+                <text class="axis-tick" x="44" y="172" text-anchor="end">$830k</text>
+                <text class="axis-tick" x="44" y="234" text-anchor="end">$810k</text>
+                <line class="axis-line" x1="50" y1="230" x2="620" y2="230"/>
+                <polyline class="series" points="50,199 102,224 154,184 205,138 257,153 309,122 361,92 412,113 464,82 516,45 568,61 620,61"/>
+                <circle class="endpoint" cx="620" cy="61" r="3.5"/>
+              </svg>
+            </div>
+            <p class="demo-caption">Baseline. <code>.chart.is-line-single</code>. Gridlines off by default &mdash; the polyline + endpoint carry structure.</p>
+          </div>
+
+          <!-- S2 — line single-series with gridlines + interactive -->
+          <h3 class="sub-title">Interactive with gridlines</h3>
+          <p class="sub-lede">Same data, now with <code>.has-gridlines</code> and <code>data-chart-interactive</code>. Move your cursor across the chart to see the crosshair and tooltip.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Portfolio value &middot; interactive</strong>.chart.is-line-single.has-gridlines + data-chart-interactive</p>
+            <div class="demo-frame">
+              <svg class="chart is-line-single has-gridlines" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet" data-chart-interactive>
+                <line class="gridline" x1="50" y1="45" x2="620" y2="45"/>
+                <line class="gridline" x1="50" y1="107" x2="620" y2="107"/>
+                <line class="gridline" x1="50" y1="168" x2="620" y2="168"/>
+                <text class="axis-tick" x="44" y="49" text-anchor="end">$870k</text>
+                <text class="axis-tick" x="44" y="111" text-anchor="end">$850k</text>
+                <text class="axis-tick" x="44" y="172" text-anchor="end">$830k</text>
+                <text class="axis-tick" x="44" y="234" text-anchor="end">$810k</text>
+                <line class="axis-line" x1="50" y1="230" x2="620" y2="230"/>
+                <polyline class="series" points="50,199 102,224 154,184 205,138 257,153 309,122 361,92 412,113 464,82 516,45 568,61 620,61" data-xlabel="Month" data-ylabel="Value"/>
+                <circle class="endpoint" cx="620" cy="61" r="3.5"/>
+              </svg>
+            </div>
+            <p class="demo-caption">Interactive. Hover to see crosshair and tooltip. <code>.chart.is-line-single.has-gridlines</code> + <code>data-chart-interactive</code>. Polyline carries <code>data-xlabel="Month"</code> and <code>data-ylabel="Value"</code> so charts.js reads the tooltip label pair.</p>
+          </div>
+
+          <!-- S3 — multi-series + end-point labels + interactive -->
+          <h3 class="sub-title">Multi-series with end-point labels</h3>
+          <p class="sub-lede">Three series, ink-family ladder. One red dot reserved for the primary endpoint. End-point labels stand in for a legend &mdash; the line's name lives where the line ends.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Fund vs benchmark vs index</strong>.chart.is-line-multi.has-gridlines + data-chart-interactive</p>
+            <div class="demo-frame">
+              <svg class="chart is-line-multi has-gridlines" viewBox="0 0 640 260" preserveAspectRatio="xMidYMid meet" data-chart-interactive>
+                <line class="gridline" x1="50" y1="36" x2="560" y2="36"/>
+                <line class="gridline" x1="50" y1="85" x2="560" y2="85"/>
+                <line class="gridline" x1="50" y1="133" x2="560" y2="133"/>
+                <line class="gridline" x1="50" y1="182" x2="560" y2="182"/>
+                <text class="axis-tick" x="44" y="40" text-anchor="end">12%</text>
+                <text class="axis-tick" x="44" y="89" text-anchor="end">9%</text>
+                <text class="axis-tick" x="44" y="137" text-anchor="end">6%</text>
+                <text class="axis-tick" x="44" y="186" text-anchor="end">3%</text>
+                <text class="axis-tick" x="44" y="234" text-anchor="end">0%</text>
+                <line class="axis-line" x1="50" y1="230" x2="560" y2="230"/>
+                <polyline class="series is-tertiary" points="50,230 96,222 143,211 189,201 236,190 282,182 329,172 375,162 422,152 468,141 515,130 560,117" data-xlabel="Month" data-ylabel="Index"/>
+                <polyline class="series is-secondary" points="50,230 96,217 143,201 189,190 236,178 282,165 329,152 375,141 422,130 468,109 515,88 560,78" data-xlabel="Month" data-ylabel="Benchmark"/>
+                <polyline class="series is-primary" points="50,230 96,211 143,190 189,169 236,157 282,146 329,120 375,109 422,98 468,77 515,56 560,46" data-xlabel="Month" data-ylabel="Alpha"/>
+                <circle class="endpoint" cx="560" cy="46" r="3.5"/>
+                <text class="end-label" x="566" y="50" fill="var(--ink)">ALPHA</text>
+                <text class="end-label" x="566" y="82" fill="var(--ink-soft)">BENCH</text>
+                <text class="end-label" x="566" y="121" fill="var(--ink-mid)">INDEX</text>
+              </svg>
+            </div>
+            <p class="demo-caption">Multi-series with end-point labels. One red dot (primary endpoint only). Hover dims non-hovered series to 0.3 opacity. <code>.chart.is-line-multi.has-gridlines</code> + <code>data-chart-interactive</code>. Tertiary series dashes 3-2.</p>
+          </div>
+
+          <!-- S4 — grouped bar with value labels -->
+          <h3 class="sub-title">Grouped bar with value labels</h3>
+          <p class="sub-lede">Six quarters, three asset classes per quarter. Gridlines ON by default &mdash; bars need them for magnitude comparison. Value labels opt-in via <code>.has-value-labels</code>.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Quarterly allocation &middot; <span class="jp" style="font-family:var(--font-jp);color:var(--red);letter-spacing:0.04em;font-size:12px;">指標</span></strong>.chart.is-bar-grouped.has-value-labels</p>
+            <div class="demo-frame">
+              <svg class="chart is-bar-grouped has-value-labels" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet">
+                <line class="gridline" x1="50" y1="70" x2="620" y2="70"/>
+                <line class="gridline" x1="50" y1="130" x2="620" y2="130"/>
+                <line class="gridline" x1="50" y1="190" x2="620" y2="190"/>
+                <text class="axis-tick" x="44" y="74" text-anchor="end">$30k</text>
+                <text class="axis-tick" x="44" y="134" text-anchor="end">$20k</text>
+                <text class="axis-tick" x="44" y="194" text-anchor="end">$10k</text>
+                <text class="axis-tick" x="44" y="254" text-anchor="end">$0</text>
+                <line class="axis-line" x1="50" y1="250" x2="620" y2="250"/>
+
+                <!-- Q1 -->
+                <rect class="bar is-primary"   x="77"  y="100" width="12" height="150"/>
+                <rect class="bar is-secondary" x="91"  y="142" width="12" height="108"/>
+                <rect class="bar is-tertiary"  x="105" y="190" width="12" height="60"/>
+                <text class="value-label" x="83"  y="95">$25</text>
+                <text class="value-label" x="97"  y="137">$18</text>
+                <text class="value-label" x="111" y="185">$10</text>
+                <text class="axis-tick" x="97" y="268" text-anchor="middle">24 Q3</text>
+
+                <!-- Q2 -->
+                <rect class="bar is-primary"   x="172" y="82"  width="12" height="168"/>
+                <rect class="bar is-secondary" x="186" y="118" width="12" height="132"/>
+                <rect class="bar is-tertiary"  x="200" y="178" width="12" height="72"/>
+                <text class="value-label" x="178" y="77">$28</text>
+                <text class="value-label" x="192" y="113">$22</text>
+                <text class="value-label" x="206" y="173">$12</text>
+                <text class="axis-tick" x="192" y="268" text-anchor="middle">24 Q4</text>
+
+                <!-- Q3 -->
+                <rect class="bar is-primary"   x="267" y="88"  width="12" height="162"/>
+                <rect class="bar is-secondary" x="281" y="94"  width="12" height="156"/>
+                <rect class="bar is-tertiary"  x="295" y="172" width="12" height="78"/>
+                <text class="value-label" x="273" y="83">$27</text>
+                <text class="value-label" x="287" y="89">$26</text>
+                <text class="value-label" x="301" y="167">$13</text>
+                <text class="axis-tick" x="287" y="268" text-anchor="middle">25 Q1</text>
+
+                <!-- Q4 -->
+                <rect class="bar is-primary"   x="362" y="64"  width="12" height="186"/>
+                <rect class="bar is-secondary" x="376" y="76"  width="12" height="174"/>
+                <rect class="bar is-tertiary"  x="390" y="166" width="12" height="84"/>
+                <text class="value-label" x="368" y="59">$31</text>
+                <text class="value-label" x="382" y="71">$29</text>
+                <text class="value-label" x="396" y="161">$14</text>
+                <text class="axis-tick" x="382" y="268" text-anchor="middle">25 Q2</text>
+
+                <!-- Q5 -->
+                <rect class="bar is-primary"   x="457" y="52"  width="12" height="198"/>
+                <rect class="bar is-secondary" x="471" y="58"  width="12" height="192"/>
+                <rect class="bar is-tertiary"  x="485" y="166" width="12" height="84"/>
+                <text class="value-label" x="463" y="47">$33</text>
+                <text class="value-label" x="477" y="53">$32</text>
+                <text class="value-label" x="491" y="161">$14</text>
+                <text class="axis-tick" x="477" y="268" text-anchor="middle">25 Q3</text>
+
+                <!-- Q6 -->
+                <rect class="bar is-primary"   x="552" y="40"  width="12" height="210"/>
+                <rect class="bar is-secondary" x="566" y="70"  width="12" height="180"/>
+                <rect class="bar is-tertiary"  x="580" y="160" width="12" height="90"/>
+                <text class="value-label" x="558" y="35">$35</text>
+                <text class="value-label" x="572" y="65">$30</text>
+                <text class="value-label" x="586" y="155">$15</text>
+                <text class="axis-tick" x="572" y="268" text-anchor="middle">25 Q4</text>
+
+                <!-- legend -->
+                <rect class="bar is-primary"   x="50" y="282" width="10" height="10"/>
+                <text class="axis-tick" x="66" y="291">Equities</text>
+                <rect class="bar is-secondary" x="156" y="282" width="10" height="10"/>
+                <text class="axis-tick" x="172" y="291">Crypto</text>
+                <rect class="bar is-tertiary"  x="250" y="282" width="10" height="10"/>
+                <text class="axis-tick" x="266" y="291">Cash</text>
+              </svg>
+            </div>
+            <p class="demo-caption">Grouped bar. Gridlines default on. <code>.chart.is-bar-grouped.has-value-labels</code>. One red accent across the primary row; secondary and tertiary step through <code>--ink-soft</code> and <code>--ink-mid</code>. Negative values (none in this cut) would extend below baseline in the same palette.</p>
+          </div>
+
+          <!-- S5 — dark surface small -->
+          <h3 class="sub-title">On coal surface (.is-dark)</h3>
+          <p class="sub-lede"><code>.is-sm</code> line chart nested inside a <code>.card-coal</code> card. Polyline flips to <code>--paper</code>; red endpoint stays red &mdash; the red dot is the brand signal, not surface-dependent.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Appendix figure</strong>.chart.is-line-single.is-dark.is-sm inside .card-coal</p>
+            <div class="demo-frame">
+              <div class="card-coal-frame">
+                <p class="eyebrow-dark">Appendix <span class="jp">図表</span></p>
+                <h4>Last four months.</h4>
+                <svg class="chart is-line-single is-dark is-sm" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">
+                  <text class="axis-tick" x="34" y="34" text-anchor="end">$870k</text>
+                  <text class="axis-tick" x="34" y="94" text-anchor="end">$840k</text>
+                  <text class="axis-tick" x="34" y="154" text-anchor="end">$810k</text>
+                  <line class="axis-line" x1="40" y1="150" x2="340" y2="150"/>
+                  <polyline class="series" points="40,130 140,100 240,70 340,46"/>
+                  <circle class="endpoint" cx="340" cy="46" r="3"/>
+                </svg>
+              </div>
+            </div>
+            <p class="demo-caption"><code>.is-dark</code> modifier. Polyline flips to <code>--paper</code> on coal. Red endpoint stays red. Axis tick labels in <code>rgba(241,236,224,0.7)</code>; axis line in <code>rgba(241,236,224,0.6)</code>.</p>
+          </div>
+
+          <!-- S6 — hero is-lg with reference line -->
+          <h3 class="sub-title">Hero scale with reference line</h3>
+          <p class="sub-lede"><code>.is-lg</code> line chart with <code>.has-gridlines</code> and <code>.has-reference-line</code>. The dashed <code>--ink-pale</code> reference line marks the benchmark average; the polyline reads against it.</p>
+
+          <div class="demo-block">
+            <p class="demo-label"><strong>Kujaku Alpha &middot; 18 months</strong>.chart.is-line-single.is-lg.has-gridlines.has-reference-line</p>
+            <div class="demo-frame">
+              <svg class="chart is-line-single is-lg has-gridlines has-reference-line" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet">
+                <line class="gridline" x1="70" y1="40" x2="900" y2="40"/>
+                <line class="gridline" x1="70" y1="127" x2="900" y2="127"/>
+                <line class="gridline" x1="70" y1="214" x2="900" y2="214"/>
+                <line class="reference-line" x1="70" y1="162" x2="900" y2="162"/>
+                <text class="axis-tick" x="62" y="44" text-anchor="end">15%</text>
+                <text class="axis-tick" x="62" y="131" text-anchor="end">10%</text>
+                <text class="axis-tick" x="62" y="218" text-anchor="end">5%</text>
+                <text class="axis-tick" x="62" y="304" text-anchor="end">0%</text>
+                <text class="axis-tick" x="905" y="166">bench avg &middot; 8%</text>
+                <line class="axis-line" x1="70" y1="300" x2="900" y2="300"/>
+                <text class="axis-tick" x="70" y="320" text-anchor="middle">JAN &apos;25</text>
+                <text class="axis-tick" x="363" y="320" text-anchor="middle">JUL &apos;25</text>
+                <text class="axis-tick" x="656" y="320" text-anchor="middle">JAN &apos;26</text>
+                <text class="axis-tick" x="900" y="320" text-anchor="middle">JUN &apos;26</text>
+                <polyline class="series" points="70,300 119,286 168,274 217,258 266,248 314,234 363,214 412,219 461,200 510,188 559,165 607,153 656,141 705,118 754,110 803,89 852,75 900,49"/>
+                <circle class="endpoint" cx="900" cy="49" r="4"/>
+              </svg>
+            </div>
+            <p class="demo-caption">Hero scale. <code>.chart.is-line-single.is-lg.has-gridlines.has-reference-line</code>. 1.5px polyline, r=4 endpoint. Reference line dashed 4-3 at 8% benchmark; the chart trajectory reads against it without color-coding the above/below split.</p>
+          </div>
+
+          <p class="section-end">Single <code>.chart</code> recipe. Three chart-type modifiers (<code>.is-line-single</code>, <code>.is-line-multi</code>, <code>.is-bar-grouped</code>). One surface (<code>.is-dark</code>). Three sizes (<code>.is-sm</code> / default / <code>.is-lg</code>). Capability flags stack (<code>.has-gridlines</code>, <code>.has-reference-line</code>, <code>.has-value-labels</code>, <code>.has-annotations</code>). Interactivity via <code>data-chart-interactive</code> opt-in. Full spec at /graphs.</p>
         </div>
       </section>
 
