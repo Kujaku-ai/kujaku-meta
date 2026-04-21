@@ -1607,3 +1607,466 @@
     inset 0 -1px 0 rgba(255,251,240,0.6);
 }
 .btn.is-lg.is-outline { padding: 15px 33px; }
+
+
+/* ============================================================
+ * TABLES — tabular data primitive.
+ *
+ * Hairline-only structural base. Mono-caps left-aligned headers
+ * (1px --ink bottom rule). tabular-nums on every cell. Row
+ * dividers are 1px --ink-faint on paper surfaces; on dark
+ * surfaces (via .is-dark) they shift to rgba-paper alpha.
+ * Hover shifts row background to --paper-deep (240ms).
+ *
+ * Architecture — two modifier categories:
+ *   SURFACE  (.is-*)  assert a visual treatment and do NOT
+ *                     compose with each other.
+ *                     .is-dense / .is-article / .is-dark /
+ *                     .is-slash / .is-eyebrow-header.
+ *   CAPABILITY (.has-*) are feature flags. Compose freely with
+ *                     each other AND with surface modifiers.
+ *                     .has-sort / .has-totals / .has-hanko /
+ *                     .has-trend / .has-expandable.
+ *
+ * Preset:
+ *   .is-ledger — expands with td.balance + th.balance-h styling
+ *                (hairline separator + weight 500).
+ *
+ * Cross-recipe composition:
+ *   - .has-trend cells host an inline .spark SVG using the
+ *     .indicator-trend .spark convention verbatim (1px --ink
+ *     polyline + filled --red endpoint r=2).
+ *   - .has-hanko cells host a .hanko.is-22 inline.
+ *   - .is-slash first-column prefix matches .nav-rail /
+ *     .nav-masthead .ticker-block .symbol / .btn.is-route pattern.
+ *   - Disabled pagination (.pages a.is-disabled) reuses the
+ *     .btn:disabled convention: --ink-pale + pointer-events:none.
+ *
+ * Delta signs are +/- in mono --ink-mid — NEVER color-coded by
+ * direction. Matches /graphs + .indicator .delta conventions.
+ *
+ * rgba() literals on dark surfaces encode alpha against --paper;
+ * CSS can't express alpha-on-var(). Same precedent as .hanko,
+ * .nav-rail, .btn.is-on-dark.
+ *
+ * See STYLE.md /components Table for the full spec.
+ * ============================================================ */
+
+/* ---------- base ---------- */
+.tbl {
+  border-collapse: collapse;
+  width: auto; /* consumer sets width: 100% scene-locally when
+                  fill is wanted. Same precedent as .indicator-*. */
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.tbl th,
+.tbl td {
+  text-align: left;
+  font-weight: 400;
+  vertical-align: middle;
+  padding: 12px 0;
+}
+.tbl th + th,
+.tbl td + td { padding-left: 28px; }
+
+.tbl thead th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+  padding-bottom: 12px;
+}
+.tbl tbody td { border-bottom: 1px solid var(--ink-faint); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.tbl tbody tr:hover td { background: var(--paper-deep); }
+
+/* ---------- cell-role helpers ---------- */
+.tbl td.num,
+.tbl td.pct,
+.tbl td.wt,
+.tbl td.delta,
+.tbl th.right,
+.tbl td.right { text-align: right; }
+.tbl td.sym { font-weight: 500; letter-spacing: 0.02em; }
+.tbl td.name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-variant-numeric: normal;
+}
+.tbl td.muted { color: var(--ink-mid); }
+.tbl td.pale  { color: var(--ink-pale); }
+
+
+/* ---------- SURFACE modifier — .is-dense ----------
+ * Dashboard density. 8/0 padding, 12px body, 9px caps header. */
+.tbl.is-dense { font-size: 12px; }
+.tbl.is-dense th,
+.tbl.is-dense td { padding: 8px 0; }
+.tbl.is-dense th + th,
+.tbl.is-dense td + td { padding-left: 20px; }
+.tbl.is-dense thead th {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  padding-bottom: 10px;
+}
+.tbl.is-dense td.name { font-size: 13px; }
+
+
+/* ---------- SURFACE modifier — .is-article ----------
+ * Narrow editorial embed. Sparse padding, paragraph-friendly.
+ * Opts in to width:100% within the article column. */
+.tbl.is-article {
+  font-size: 13px;
+  margin: 24px 0;
+  width: 100%;
+}
+.tbl.is-article th,
+.tbl.is-article td { padding: 10px 0; }
+.tbl.is-article th + th,
+.tbl.is-article td + td { padding-left: 32px; }
+
+
+/* ---------- SURFACE modifier — .is-dark ----------
+ * Paper text on --paper-coal / --red-deep / --ink surfaces.
+ * rgba(241,236,224) encodes --paper with alpha (CSS can't
+ * express alpha-on-var). Same precedent as .btn.is-on-dark. */
+.tbl.is-dark { color: var(--paper); }
+.tbl.is-dark thead th {
+  color: rgba(241,236,224,0.68);
+  border-bottom-color: rgba(241,236,224,0.3);
+}
+.tbl.is-dark tbody td {
+  border-bottom-color: rgba(241,236,224,0.12);
+  color: var(--paper);
+}
+.tbl.is-dark td.muted { color: rgba(241,236,224,0.6); }
+.tbl.is-dark td.name  { color: var(--paper); }
+.tbl.is-dark tbody tr:hover td { background: rgba(241,236,224,0.06); }
+
+
+/* ---------- SURFACE modifier — .is-slash ----------
+ * First-column slash-prefix via ::before. Mirrors the
+ * .nav-rail .nav-item .slash, .nav-masthead .ticker-block
+ * .symbol::before, and .btn.is-route::before vernacular.
+ * Consumer markup text does NOT include a literal "/". */
+.tbl.is-slash tbody td:first-child { position: relative; }
+.tbl.is-slash tbody td:first-child::before {
+  content: "/";
+  color: var(--ink-pale);
+  margin-right: 4px;
+  font-weight: 400;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tbl.is-slash tbody tr:hover td:first-child::before { color: var(--red); }
+
+
+/* ---------- SURFACE modifier — .is-eyebrow-header ----------
+ * <caption> renders as an eyebrow-gloss banner: JP bookend +
+ * Sentient title + mono gloss, separated by a 1px --ink rule
+ * from the thead. Gold JP claims the page's one-gold budget
+ * (see /colors + Eyebrow cross-references). */
+.tbl.is-eyebrow-header caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 16px;
+}
+.tbl.is-eyebrow-header caption .eyebrow-line {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ink);
+}
+.tbl.is-eyebrow-header caption .jp {
+  font-family: var(--font-jp);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+.tbl.is-eyebrow-header caption .title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+.tbl.is-eyebrow-header caption .gloss {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-mid);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+
+/* ---------- CAPABILITY flag — .has-sort ----------
+ * Sortable headers with monochrome carets. Inactive ▲▼ in
+ * --ink-pale; active single arrow in --ink via state classes
+ * .is-sorted-asc / .is-sorted-desc. Consumer supplies the
+ * caret glyph(s) inside the header cell. */
+.tbl.has-sort thead th.is-sortable {
+  cursor: pointer;
+  padding-right: 22px;
+  position: relative;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tbl.has-sort thead th.is-sortable:hover { color: var(--ink); }
+.tbl.has-sort thead th.is-sortable .caret {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-pale);
+  font-size: 9px;
+  line-height: 1;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tbl.has-sort thead th.is-sorted-asc  .caret,
+.tbl.has-sort thead th.is-sorted-desc .caret { color: var(--ink); }
+
+
+/* ---------- CAPABILITY flag — .has-totals ----------
+ * tfoot.totals row sits beneath the last data row with a
+ * 1px --ink top rule (stronger than --ink-faint data hairlines).
+ * td.label switches to mono-caps tracked --ink-mid. */
+.tbl.has-totals tfoot.totals td {
+  border-top: 1px solid var(--ink);
+  border-bottom: none;
+  padding-top: 14px;
+  padding-bottom: 4px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.tbl.has-totals tfoot.totals td.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  font-weight: 500;
+}
+
+
+/* ---------- CAPABILITY flag — .has-hanko ----------
+ * Reserves a 36px leading cell for an inline .hanko marker.
+ * 36px literal tuned to .hanko.is-22 (22px seal + breathing).
+ * Header equivalent th.cell-hanko-h holds the column width. */
+.tbl.has-hanko td.cell-hanko {
+  width: 36px;
+  padding-left: 0;
+  padding-right: 0;
+}
+.tbl.has-hanko th.cell-hanko-h {
+  width: 36px;
+  padding-left: 0;
+  padding-right: 0;
+}
+.tbl.has-hanko td.cell-hanko + td,
+.tbl.has-hanko th.cell-hanko-h + th { padding-left: 16px; }
+
+
+/* ---------- CAPABILITY flag — .has-trend ----------
+ * Reserves a cell for an inline sparkline. Uses the
+ * .indicator-trend .spark convention verbatim: 1px --ink
+ * polyline (no fill) + filled --red endpoint r=2.
+ * On dark surfaces via .is-dark, polyline stroke flips to
+ * --paper; endpoint stays --red (brand signal color). */
+.tbl.has-trend td.cell-trend { width: 100px; }
+.tbl.has-trend td.cell-trend .spark {
+  display: inline-block;
+  width: 84px;
+  height: 18px;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1;
+  overflow: visible;
+  vertical-align: middle;
+}
+.tbl.has-trend td.cell-trend .spark .endpoint {
+  fill: var(--red);
+  stroke: none;
+}
+.tbl.is-dark.has-trend td.cell-trend .spark { stroke: var(--paper); }
+
+
+/* ---------- CAPABILITY flag — .has-expandable ----------
+ * Per-row detail drawer. Parent row uses .row.is-expandable;
+ * toggled-open state adds .is-open; sibling row holds the
+ * drawer as .row-detail. The +/− indicator is ::before on
+ * the parent's first cell. Drawer background uses the
+ * .emboss-deboss inset-shadow vocabulary.
+ *
+ * State toggle (.is-open) requires ~5 lines of consumer JS,
+ * or the CSS :checked hidden-input pattern if pure-CSS is
+ * required. Brand ships the visual affordance only. */
+.tbl.has-expandable .row.is-expandable td:first-child { cursor: pointer; }
+.tbl.has-expandable .row.is-expandable td:first-child::before {
+  content: "+";
+  color: var(--ink-pale);
+  margin-right: 10px;
+  font-weight: 400;
+  display: inline-block;
+  width: 10px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tbl.has-expandable .row.is-expandable.is-open td:first-child::before {
+  content: "−";
+  color: var(--red);
+}
+.tbl.has-expandable .row-detail td {
+  background: var(--paper-deep);
+  box-shadow: inset 0 2px 4px rgba(40,30,18,0.06);
+  padding: 20px 0 22px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  border-bottom: 1px solid var(--ink-faint);
+}
+.tbl.has-expandable .row-detail .detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 8px 40px;
+  font-family: var(--font-mono);
+}
+.tbl.has-expandable .row-detail .detail-grid dt {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  margin: 0;
+}
+.tbl.has-expandable .row-detail .detail-grid dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.tbl.has-expandable .row-detail .detail-prose {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+  max-width: 72ch;
+}
+
+
+/* ---------- PRESET — .is-ledger ----------
+ * Convention: expects columns date / description / symbol /
+ * debit / credit / balance. Preset styles the balance column:
+ * 1px --ink-faint left separator + 24px left padding +
+ * weight 500 so the running balance reads as the spine. */
+.tbl.is-ledger td.balance {
+  font-weight: 500;
+  border-left: 1px solid var(--ink-faint);
+  padding-left: 24px;
+}
+.tbl.is-ledger th.balance-h {
+  border-left: 1px solid var(--ink-faint);
+  padding-left: 24px;
+}
+
+
+/* ---------- children — .cell-action / .reveal ----------
+ * Trailing action cell. The .reveal child fades in on row
+ * hover (opacity 0→1, color --ink-pale→--red). */
+.tbl td.cell-action { width: 48px; text-align: right; }
+.tbl td.cell-action .reveal {
+  color: var(--ink-pale);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+.tbl tbody tr:hover td.cell-action .reveal {
+  opacity: 1;
+  color: var(--red);
+}
+
+
+/* ---------- children — .pagination-bar ----------
+ * Mono-caps pagination footer. Lives inside tfoot.pagination >
+ * td (colspan=all) or standalone beneath the table. Disabled
+ * Prev/Next match the .btn:disabled convention: --ink-pale
+ * text + pointer-events: none. */
+.tbl tfoot.pagination td {
+  border-bottom: none;
+  padding: 16px 0 0;
+}
+.tbl .pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0 0;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  border-top: 1px solid var(--ink-faint);
+}
+.tbl .pagination-bar .pages a {
+  color: var(--ink);
+  text-decoration: none;
+  margin-left: 18px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.tbl .pagination-bar .pages a:hover { color: var(--red); }
+.tbl .pagination-bar .pages a.is-disabled {
+  color: var(--ink-pale);
+  pointer-events: none;
+}
+
+
+/* ============================================================
+ * BADGE — small inline severity/status tag.
+ *
+ * Standalone primitive. Used in table cells, log entries,
+ * incident rows, and inline prose to mark status. Severity
+ * encoded by INK WEIGHT, never by color. Matches /graphs +
+ * .indicator .delta conventions: "never a second red, never
+ * green or amber."
+ *
+ * Variants (surface stays identical — only border + text +
+ * weight step):
+ *   .badge       default — informational baseline
+ *                (--ink-mid text + --ink-faint border, weight 500)
+ *   .badge.is-low  quietest  (--ink-pale text + border)
+ *   .badge.is-med  elevated  (--ink-mid text + --ink-mid border)
+ *   .badge.is-high loudest   (--ink text + --ink border, weight 600)
+ *
+ * Font-variant-numeric reset to normal so a badge placed
+ * inside a tabular-nums context (e.g. .tbl) renders its
+ * label with normal spacing.
+ *
+ * See STYLE.md /components Badge for full spec.
+ * ============================================================ */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--ink-faint);
+  color: var(--ink-mid);
+  font-variant-numeric: normal;
+  line-height: 1.4;
+}
+.badge.is-low  { border-color: var(--ink-pale); color: var(--ink-pale); }
+.badge.is-med  { border-color: var(--ink-mid);  color: var(--ink-mid); }
+.badge.is-high { border-color: var(--ink);      color: var(--ink);      font-weight: 600; }

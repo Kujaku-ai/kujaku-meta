@@ -103,7 +103,7 @@ Paper surfaces are what content sits on. They are never text colors. The gold to
 - Approved uses: annual report covers, anniversary marks, the single most important figure on a flagship page.
 - Forbidden: body text, UI chrome (buttons, inputs, borders, icons), decorative accents, anything paired with red in the same element.
 - Default answer to "should this be gold?" is no.
-- **Gold primitives — chain:** `.eyebrow.is-gold`, `.eyebrow-dark` (default gold JP), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`. Any ONE per page; never two together. Each primitive's subsection cross-references this rule.
+- **Gold primitives — chain:** `.eyebrow.is-gold`, `.eyebrow-dark` (default gold JP), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, `.tbl.is-eyebrow-header` (with gold caption JP). Any ONE per page; never two together. Each primitive's subsection cross-references this rule.
 
 **Gold cards are permitted.** `.card-gold` and `.card-gold-sunken` are ceremonial content blocks subject to the one-gold-per-page rule. The rule applies collectively: one gold card OR one gold eyebrow OR one gold figure, not one of each. Gold card interiors must contain no `--red` anywhere (the two-reds prohibition stands). For eyebrow labels inside gold cards, use `.eyebrow-dark.is-ink`.
 
@@ -287,7 +287,7 @@ Classes compose freely. Examples:
 
 **Gold-budget chain:**
 
-`.eyebrow.is-gold` CLAIMS the page's one-gold budget. Cross-refers to `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+`.eyebrow.is-gold` CLAIMS the page's one-gold budget. Cross-refers to `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 
 **Don't:**
 - Apply `.is-gold` to more than one eyebrow per page.
@@ -313,7 +313,7 @@ Companion to `.eyebrow` for dark card surfaces (`.card-coal`, `.card-oxblood`, `
 
 **Gold-budget chain:**
 
-Default `.eyebrow-dark` uses `--gold` for the JP gloss. This CLAIMS the page's one-gold budget. For a dark-card page that needs gold elsewhere (a gold eyebrow, a gold indicator-gloss, a gold button kanji), use `.eyebrow-dark.is-paper` (no-gold variant) instead. Chains with `.eyebrow.is-gold`, `.indicator-gloss.is-dark`, and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+Default `.eyebrow-dark` uses `--gold` for the JP gloss. This CLAIMS the page's one-gold budget. For a dark-card page that needs gold elsewhere (a gold eyebrow, a gold indicator-gloss, a gold button kanji, a gold table caption), use `.eyebrow-dark.is-paper` (no-gold variant) instead. Chains with `.eyebrow.is-gold`, `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 
 **Don't:**
 - Use `.eyebrow-dark.is-gold` on `.card-gold` (two gold elements; breaks one-per-page rule).
@@ -634,7 +634,7 @@ Each size modifier steps ALL of: label font-size + letter-spacing, numeral font-
 - Delta color is ALWAYS `--ink-mid`. NEVER color-code direction (no green for positive, no red for negative). Direction is encoded by the `+/-` sign. Matches the `/graphs` and `.nav-masthead` conventions. A site that genuinely needs direction coding must do it locally — it's not a brand primitive.
 - Width defaults to content-sized. Consumers add `width: 100%` in their scene CSS where fill is wanted (ledgers, single-column stacks, card-bound rows).
 - The sparkline stroke (1px `--ink`) and end-dot (filled `--red` r=2) are canonical. Do NOT override stroke color to red or widen the polyline to create a bar-like effect — that's a chart, not a sparkline.
-- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), and `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+- `.indicator-gloss.is-dark` on an oxblood or coal card flips the JP kanji to `--gold`. This CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.btn.is-oxblood .jp`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page. See /colors one-gold rule.
 - `.is-stacked` is for narrow KPI cells. Don't use it in wide dashboards where horizontal would read cleaner.
 - When composing `.indicator-row` with a sparkline next to it (positions list with trajectories), the pattern is scene-local, not a promoted recipe. Use a custom grid at the consuming site. Brand may promote an `.indicator-list` primitive in a future cycle.
 
@@ -745,7 +745,7 @@ This is brand's DISABLED CONVENTION. A future cycle may apply this convention ac
 - `.is-primary` inside `.card-oxblood` is forbidden — same readability failure. Use `.is-on-dark` for buttons nested inside dark cards.
 - `.is-route` indicates the button navigates. NEVER use it for buttons that perform an action (Submit, Cancel, etc.). The slash semantic must mean "there is a route here."
 - Button text for `.is-route` does NOT include a literal `/` — the slash is supplied by a `::before` pseudo-element. Consumers write `href="/subscribe"` and label text `subscribe` — the pseudo-element adds the visible prefix.
-- Gold kanji slot (`.btn.is-oxblood .jp`) CLAIMS the page's one-gold budget. Cross-refers /colors one-gold rule and chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), and `.indicator-gloss.is-dark` — no two of these may appear on the same page.
+- Gold kanji slot (`.btn.is-oxblood .jp`) CLAIMS the page's one-gold budget. Cross-refers /colors one-gold rule and chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, and `.tbl.is-eyebrow-header` (with gold caption JP) — no two of these may appear on the same page.
 - Sentient italic is NEVER used for button labels. Sentient is editorial display typography; UI chrome uses mono or Satoshi.
 - Disabled state is `--ink-pale` text + flat shadow + cursor not-allowed. No red-X, no strikethrough, no tooltip chrome.
 - `.is-masthead`-style buttons (mono-caps, no press, color-shift-only) are NOT a button variant. The masthead-action pattern lives at `.nav-masthead .actions a` — it's a nav concern, not a button concern.
@@ -765,6 +765,235 @@ Button uses `.is-on-dark` (not `.is-dark`) because the modifier describes a butt
 Eyebrow uses `.eyebrow-dark` (compound class, legacy from earlier promotion). Indicator uses `.is-dark` (modifier, matches the indicator's own identity when placed on dark). The three conventions differ by intent.
 
 A future cycle may harmonize these into one convention. For now, each primitive's dark-surface treatment uses its own established pattern.
+
+### Table
+
+Tabular data primitive. Hairline-only structural base. Mono-caps left-aligned headers. `tabular-nums` on all numeric cells. Hover shifts row background to `--paper-deep`. Single `.tbl` recipe with two categories of modifiers.
+
+**Architecture — surface vs capability modifiers:**
+
+| Category | Prefix | Behavior |
+|---|---|---|
+| Surface | `.is-*` | Assert a surface treatment. Do NOT compose with each other — each takes over styling. Pick one at most. |
+| Capability | `.has-*` | Feature flags. Compose freely with each other AND with surface modifiers. Stack as many as needed. |
+
+This split is a cross-cutting brand pattern. Future recipes that need mutually-exclusive treatments plus feature additions can adopt the same convention.
+
+**Surface modifiers (at most one per table):**
+
+| Modifier | Treatment |
+|---|---|
+| (default) `.tbl` | Hairline base. Dashboard-ready at default density. |
+| `.is-dense` | Tight dashboard density (8/0 padding, 12px body, 9px caps headers). |
+| `.is-article` | Article-embedded density (10/0 padding, 32px col-gap, paragraph-friendly). |
+| `.is-dark` | Paper text + rgba-paper row dividers. For placement inside `.card-coal`, `.card-oxblood`, `.card-ink`. |
+| `.is-slash` | First-column row labels prefixed with `/` via `::before`. Matches `.nav-rail .nav-item .slash`, `.nav-masthead .ticker-block .symbol::before`, and `.btn.is-route::before` conventions. |
+| `.is-eyebrow-header` | `<caption>` renders as an eyebrow-gloss banner. If caption contains a JP character in `--gold`, CLAIMS the page's one-gold budget. |
+
+**Capability flags (stack freely):**
+
+| Modifier | Adds |
+|---|---|
+| `.has-sort` | Sortable-column carets on `th.is-sortable`. See sort-indicator spec below. |
+| `.has-totals` | `tfoot.totals` row with distinct weight + 1px `--ink` top rule. |
+| `.has-hanko` | Reserves `td.cell-hanko` (36px, pad-stripped). Consumer places `.hanko.is-22` inside. |
+| `.has-trend` | Reserves `td.cell-trend`. Consumer places `.indicator-trend .spark` SVG inside. |
+| `.has-expandable` | `.row.is-expandable` + `.row.is-open` + `.row-detail` for click-to-expand detail drawer. Visual affordance only — consumer owns state toggle (matches `.nav-masthead .is-hidden` contract). |
+
+**Preset bundle:**
+
+| Preset | Expands to |
+|---|---|
+| `.is-ledger` | `td.balance` + `th.balance-h` styling — hairline separator + 500 weight on a running-balance column. Use for transaction ledgers. |
+
+**Cell-role helpers (scoped under `.tbl`):**
+
+| Helper | Use |
+|---|---|
+| `td.num`, `td.pct`, `td.wt`, `td.delta` | Right-aligned numeric cells with tabular-nums. |
+| `td.sym` | Ticker symbols — mono 500 weight. |
+| `td.name` | Narrative labels — Satoshi normal. |
+| `td.muted`, `td.pale` | Color tier helpers (`--ink-mid`, `--ink-pale`). |
+
+**Sort-indicator spec (first brand use):**
+
+Tables with `.has-sort` add visible sort indicators to sortable columns.
+
+- Inactive column: dual caret `▲▼` in `--ink-pale`.
+- Active column: single arrow (`▲` for asc, `▼` for desc) in `--ink`.
+- Monochrome only. No colored sort states. No bouncy animation on sort change — direction change is instantaneous.
+- Consumer markup: `<th class="is-sortable">` for sortable columns, adding `.is-sorted-asc` or `.is-sorted-desc` for the active direction.
+
+This convention applies anywhere sort indicators are needed, not just tables. Future primitives (filterable lists, sortable card grids) reuse the same caret + color rules.
+
+**Pagination:**
+
+Tables can include a `tfoot.pagination` row or trailing `.pagination-bar` with prev/next links. Disabled state reuses the Button DISABLED CONVENTION:
+
+- `--ink-pale` text
+- `pointer-events: none`
+- `cursor: not-allowed`
+- No shadow
+
+See /components Button for the full disabled spec.
+
+**Canonical markup:**
+
+```html
+<!-- Base dashboard table -->
+<table class="tbl is-dense">
+  <thead><tr>
+    <th>Ticker</th><th>Name</th>
+    <th class="num">Shares</th><th class="num">Entry</th>
+    <th class="num">Current</th><th class="num">P&L</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td class="sym">BTC</td>
+      <td class="name">Bitcoin</td>
+      <td class="num">0.5</td>
+      <td class="num">$63,200</td>
+      <td class="num">$67,420</td>
+      <td class="num">+$2,110</td>
+    </tr>
+    <!-- ... more rows ... -->
+  </tbody>
+</table>
+
+<!-- Dashboard with sort, trend, totals (capability stack) -->
+<table class="tbl is-dense has-sort has-trend has-totals">
+  <thead><tr>
+    <th class="is-sortable is-sorted-desc">Ticker <span class="caret">▼</span></th>
+    <th>Name</th>
+    <th class="num is-sortable">Shares <span class="caret">▲▼</span></th>
+    <th class="num">Current</th>
+    <th>Trend</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td class="sym">BTC</td>
+      <td class="name">Bitcoin</td>
+      <td class="num">0.5</td>
+      <td class="num">$67,420</td>
+      <td class="cell-trend">
+        <svg class="spark" viewBox="0 0 84 24" preserveAspectRatio="none">
+          <polyline points="..."/>
+          <circle class="endpoint" cx="84" cy="5" r="2"/>
+        </svg>
+      </td>
+    </tr>
+  </tbody>
+  <tfoot class="totals">
+    <tr>
+      <td class="label" colspan="3">Total</td>
+      <td class="num">$247,230</td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- Ledger with running balance (preset) -->
+<table class="tbl is-ledger">
+  <thead><tr>
+    <th>Date</th><th>Description</th>
+    <th class="num">Debit</th><th class="num">Credit</th>
+    <th class="balance-h num">Balance</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td>2025-04-18</td>
+      <td class="name">Initial deposit</td>
+      <td class="num"></td>
+      <td class="num">$50,000</td>
+      <td class="balance num">$50,000</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Schedule/calendar (base .tbl + .badge, no preset needed) -->
+<table class="tbl is-dense">
+  <thead><tr>
+    <th>Date</th><th>Event</th><th>Impact</th>
+    <th class="num">Forecast</th><th class="num">Prior</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td>May 1</td>
+      <td class="name">FOMC Statement</td>
+      <td><span class="badge is-high">High</span></td>
+      <td class="num">—</td>
+      <td class="num">5.50%</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Inside a dark card -->
+<div class="card card-coal">
+  <table class="tbl is-dark is-dense">
+    <!-- same structure; .is-dark handles the color flips -->
+  </table>
+</div>
+
+<!-- Slash vernacular -->
+<table class="tbl is-slash is-dense">
+  <tbody>
+    <tr><td>spx</td><td class="num">5,248.30</td><td class="num">+0.18%</td></tr>
+    <!-- first-column "/" prefix added by ::before -->
+  </tbody>
+</table>
+```
+
+**Rules:**
+
+- Surface modifiers (`.is-dense`, `.is-article`, `.is-dark`, `.is-slash`, `.is-eyebrow-header`) do NOT compose with each other. One surface assertion per table.
+- Capability flags (`.has-sort`, `.has-totals`, `.has-hanko`, `.has-trend`, `.has-expandable`) compose freely with each other and with surface modifiers.
+- Numeric cells use `tabular-nums`. Non-negotiable for financial data.
+- Row dividers are 1px `--ink-faint` hairlines on paper surfaces, `rgba(241,236,224,0.08)` on dark surfaces. No thick borders, no double lines.
+- Delta cells use `+/-` sign for direction. NEVER color-code direction (matches `/graphs`, `.nav-masthead`, `.indicator-*`, `.btn` conventions).
+- Red usage: one emphasis per table maximum. Red does not encode direction — only ceremonial attention on a specific row.
+- Sort indicators are monochrome carets — never colored.
+- `.tbl.is-eyebrow-header` with a gold JP character in its caption CLAIMS the page's one-gold budget. Chains with `.eyebrow.is-gold`, `.eyebrow-dark` (default), `.indicator-gloss.is-dark`, `.btn.is-oxblood .jp` — no two of these may appear on the same page. See /colors one-gold rule.
+- `.has-expandable` ships the visual affordance only. Consumer owns the state toggle (via `.is-open` class or `:checked + sibling` CSS pattern or ~5 lines of JS). Matches `.nav-masthead .is-hidden` scroll-hide contract.
+- Sentient italic is NEVER used inside a table cell. Sentient is editorial display; data cells use mono + Satoshi.
+- Cross-recipe composition is encouraged: `.hanko.is-22` in `.has-hanko td.cell-hanko`, `.indicator-trend .spark` in `.has-trend td.cell-trend`, `.badge` in any cell.
+
+**Composition:**
+
+Tables compose inside `.card-paper`, `.card-paper-sunken`, `.card-coal`, `.card-oxblood`, inside article columns (with `.is-article`), and in dashboard grids. Dark cards ALWAYS use `.is-dark`.
+
+### Badge
+
+Small inline severity/status tag. Usable in table cells, log entries, incident rows, inline prose, anywhere a status pill fits. Severity encoded by INK WEIGHT, never by color.
+
+**Hierarchy — base is neutral, modifiers step up or down:**
+
+| Class | Treatment | Use case |
+|---|---|---|
+| `.badge` (default) | `--ink-mid` text + `--ink-faint` border, 500 weight | Informational/default status |
+| `.badge.is-low` | `--ink-pale` text + `--ink-pale` border | Quietest. Minor items. |
+| `.badge.is-med` | `--ink-mid` text + `--ink-mid` border, 500 weight | Elevated. Notable items. |
+| `.badge.is-high` | `--ink` text + `--ink` border, 600 weight | Loudest. Critical items. Still ink-only — never red/amber/green. |
+
+**Canonical markup:**
+
+```html
+<span class="badge">Active</span>
+<span class="badge is-low">Draft</span>
+<span class="badge is-med">Review</span>
+<span class="badge is-high">Critical</span>
+```
+
+**Rules:**
+
+- Severity is encoded by ink WEIGHT (500 → 600) and ink TIER (`--ink-pale` → `--ink-mid` → `--ink`). NEVER by color. No red for critical, no amber for warning, no green for success.
+- The lowest severity fades toward `--ink-pale`; the highest approaches `--ink`. Same vocabulary as `.indicator-gloss` label hierarchy.
+- Badges use `font-variant-numeric: normal` so they render correctly inside table cells that have `tabular-nums` applied.
+- Badges are INLINE elements. Don't use them as block-level status banners — use cards or eyebrows for that.
+- Badges do NOT have a `.is-red` or `.is-gold` variant. Ceremony belongs to eyebrows and indicators; badges are utilitarian.
+
+**Composition:**
+
+Badges compose inside table cells (impact columns, status columns), inside log entries, inline-in-prose (for status noting), and inside `.indicator-row`'s delta cell when a text status fits better than a numeric delta (rare).
 
 ---
 
