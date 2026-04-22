@@ -391,6 +391,7 @@
         <a class="nav-item" href="#cards"><span class="slash">/</span><span class="label">cards</span></a>
         <a class="nav-item" href="#hanko"><span class="slash">/</span><span class="label">hanko</span></a>
         <a class="nav-item" href="#nav"><span class="slash">/</span><span class="label">nav</span></a>
+        <a class="nav-item" href="#search-palette"><span class="slash">/</span><span class="label">search-palette</span></a>
         <a class="nav-item" href="#indicators"><span class="slash">/</span><span class="label">indicators</span></a>
         <a class="nav-item" href="#buttons"><span class="slash">/</span><span class="label">buttons</span></a>
         <a class="nav-item" href="#tables"><span class="slash">/</span><span class="label">tables</span></a>
@@ -927,6 +928,84 @@
 
           <hr style="border:none;border-top:1px solid var(--ink-faint);margin:20px 0 8px;">
           <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .nav-composition, .nav-rail, .nav-rail .mark, .nav-rail .items, .nav-section, .nav-item (.is-active), .nav-rail .footer, .nav-masthead, .ticker-viewport, .ticker-track, .ticker-block (.symbol, .delta, .price), .actions &middot; Hover the rail to expand; hover a ticker block to reveal price.</div>
+
+          <!-- MODIFIER DEMOS — app-shell extensions added in Cycle 7 -->
+          <h3 style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);margin:56px 0 18px;">Modifiers</h3>
+
+          <!-- .is-centered-ticker + .user — signed-in app-shell masthead -->
+          <div style="border:1px solid var(--ink-faint);margin-bottom:10px;">
+            <header class="nav-masthead is-centered-ticker" style="position:relative;">
+              <button class="palette-trigger" type="button" style="margin-left:20px;">/</button>
+              <div class="ticker-viewport">
+                <div class="ticker-track" style="animation:none;">
+                  <div class="ticker-block"><span class="symbol">BTC</span><span class="delta">+2.30%</span><span class="price">67,420</span></div>
+                  <div class="ticker-block"><span class="symbol">SPX</span><span class="delta">+0.18%</span><span class="price">5,248.30</span></div>
+                  <div class="ticker-block"><span class="symbol">NVDA</span><span class="delta">-0.42%</span><span class="price">932.14</span></div>
+                </div>
+              </div>
+              <span class="user">XBURT</span>
+            </header>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:28px;">.nav-masthead.is-centered-ticker &middot; .palette-trigger (left) &middot; ticker centered at 50% &middot; .user (right)</div>
+
+          <!-- .is-suppressed — ticker faded, marquee paused -->
+          <div style="border:1px solid var(--ink-faint);margin-bottom:10px;">
+            <header class="nav-masthead is-centered-ticker is-suppressed" style="position:relative;">
+              <button class="palette-trigger" type="button" style="margin-left:20px;">/</button>
+              <div class="ticker-viewport">
+                <div class="ticker-track" style="animation:none;">
+                  <div class="ticker-block"><span class="symbol">BTC</span><span class="delta">+2.30%</span><span class="price">67,420</span></div>
+                  <div class="ticker-block"><span class="symbol">SPX</span><span class="delta">+0.18%</span><span class="price">5,248.30</span></div>
+                </div>
+              </div>
+              <span class="user">XBURT</span>
+            </header>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:28px;">.nav-masthead.is-suppressed &middot; ticker opacity 0 + marquee paused &middot; paired with .palette.is-open</div>
+
+          <!-- .is-overlay caption — behavior isn't demonstrable in static specimen -->
+          <div style="padding:20px 24px;background:var(--paper-deep);border-left:2px solid var(--red-deep);">
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:8px;">.nav-rail.is-overlay</div>
+            <p style="font-family:var(--font-body);font-size:13px;line-height:1.6;color:var(--ink);margin:0;">App-shell modifier: rail becomes <code style="font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);">position: fixed</code> and main sibling reserves 64px + flex-grows to fill remaining width. Main does NOT reflow on rail expand. Static specimen can't illustrate the hover behavior meaningfully &mdash; see <code style="font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);">STYLE.md /components Nav &middot; App-shell extensions</code> for the contract and consumer markup.</p>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--ink-faint);margin:24px 0 8px;">
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">MODIFIER CLASSES: .nav-rail.is-overlay &middot; .nav-masthead.is-centered-ticker &middot; .nav-masthead.is-suppressed &middot; .nav-masthead .user</div>
+        </div>
+      </section>
+
+      <hr class="section-rule">
+
+      <!-- SEARCH PALETTE -->
+      <section id="search-palette" class="specimen-section">
+        <div class="wrap">
+          <div class="eyebrow">Search palette <span class="jp">見本 &middot; mihon</span></div>
+          <h2 class="section-title">Command, then dropdown.</h2>
+          <p class="section-lead">App-shell palette for functional search. Collapsed as a 32px trigger glyph; expanded as a full-width overlay with prefix, input, keyboard hint, and empty-state dropdown. Brand ships structure and styling; consumer owns the <code style="font-family:var(--font-mono);font-size:16px;color:var(--ink-soft);">.is-open</code> toggle (typically via <code style="font-family:var(--font-mono);font-size:16px;color:var(--ink-soft);">/</code> keypress, Escape, or click-outside). Reference JS implementation lives in kujaku-web at <code style="font-family:var(--font-mono);font-size:16px;color:var(--ink-soft);">src/components/Palette.astro</code>.</p>
+
+          <h3 style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);margin:56px 0 14px;">Collapsed</h3>
+          <div style="border:1px solid var(--ink-faint);padding:8px 0;background:var(--paper);">
+            <button class="palette-trigger" type="button" style="margin-left:20px;">/</button>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);margin:10px 0 28px;">.palette-trigger &middot; 32px glyph button &middot; click or / keypress opens</div>
+
+          <h3 style="font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink);margin:48px 0 14px;">Expanded</h3>
+          <div style="position:relative;border:1px solid var(--ink-faint);">
+            <div class="palette is-open" style="position:relative;right:auto;">
+              <div class="palette-bar">
+                <span class="palette-prefix" aria-hidden="true">/</span>
+                <input class="palette-input" type="text" placeholder="search" />
+                <kbd class="palette-hint">ESC</kbd>
+              </div>
+              <div class="palette-dropdown">
+                <p class="palette-empty">awaiting backend &middot; no results yet</p>
+              </div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);margin:10px 0 0;">.palette.is-open &middot; .palette-bar &middot; .palette-prefix &middot; .palette-input &middot; .palette-hint &middot; .palette-dropdown &middot; .palette-empty</div>
+
+          <hr style="border:none;border-top:1px solid var(--ink-faint);margin:24px 0 8px;">
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mid);">CLASSES: .palette-trigger, .palette (.is-open), .palette-bar, .palette-prefix, .palette-input, .palette-hint, .palette-dropdown, .palette-empty</div>
         </div>
       </section>
 

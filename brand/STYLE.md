@@ -506,6 +506,111 @@ This snippet is a reference, not a shipped helper. Consuming apps own their scro
 - Page shell: set `min-height: 100vh` on a page container OR on `.nav-composition` itself.
 - Embedded widget: default `min-height: 0` on `.nav-composition` means the nav fits inside its container's height naturally.
 
+**App-shell extensions (Cycle 7):**
+
+Four app-shell companions added for application surfaces (palette-driven UI, dashboards, signed-in canvases) where the default documentation-shell pattern doesn't fit. Opt-in via class application; the default `.nav-rail` / `.nav-masthead` behavior is unchanged.
+
+| Class | Applied to | Effect |
+|---|---|---|
+| `.is-overlay` | `.nav-rail` | Rail becomes `position: fixed`; sibling `main` reserves 64px + flex-grows to fill remaining width via CSS sibling selector. Main does NOT reflow when rail expands on hover. The default `.nav-rail` (position: relative) remains the documentation-shell pattern. |
+| `.is-centered-ticker` | `.nav-masthead` | Repositions `.ticker-viewport` as an absolutely-centered 50%-width element. For app-shell mastheads where the ticker is a visual midpoint between a left-side `.palette-trigger` and a right-side `.user` slot. |
+| `.is-suppressed` | `.nav-masthead` | Fades `.ticker-viewport` opacity to 0 and pauses the marquee. Paired with `.palette.is-open` or modal overlays — the ticker reads as "cleanly dismissed" rather than "running behind a curtain." Transition defined on the `.ticker-viewport` base rule so both directions animate. |
+
+**`.nav-masthead .user` (signed-in slot):**
+
+Companion child of `.nav-masthead` for displaying the signed-in username. Typography identical to `.actions a` — mono 11px uppercase tracked 0.18em `--ink` — but not a link (no hover, no href). Occupies the `--user-slot-width` reserved slot at the right edge of the masthead.
+
+The `--user-slot-width` layout token (default `120px`) lives in `tokens.css` and is also consumed by `.palette` (the palette's `right:` offset reserves the same width). Changing the token value updates both in lockstep.
+
+**App-shell composition pattern:**
+
+For the full signed-in app-shell, compose:
+
+```
+.nav-composition
+  └── aside.nav-rail.is-overlay
+  └── main
+        ├── header.nav-masthead.is-centered-ticker
+        │     ├── button.palette-trigger
+        │     ├── div.ticker-viewport > .ticker-track (+ blocks)
+        │     └── span.user (XBURT / username)
+        ├── div.palette  (sibling of masthead; .is-open when active)
+        │     ├── div.palette-bar (+ prefix, input, hint)
+        │     └── div.palette-dropdown (+ .palette-empty)
+        └── <slot>  (page content)
+```
+
+When the palette opens, consumer toggles `.is-suppressed` on the masthead so the ticker fades and the marquee pauses. The canonical reference implementation lives in kujaku-web at `src/components/Nav.astro` + `src/components/Palette.astro`.
+
+**Visual reference:** `specimen.html` → Nav section → "Modifiers" subsection (for `.is-centered-ticker`, `.is-suppressed`, `.user`) + Search palette section (for the palette family).
+
+### Search palette
+
+Command palette / spotlight pattern. Collapsed as a 32px trigger glyph; expanded as a full-width overlay with prefix, input, keyboard hint, and empty-state dropdown. Designed for app-shell surfaces where the palette is the primary functional-search affordance.
+
+**Structure:**
+
+| Class | Role |
+|---|---|
+| `.palette-trigger` | 32px glyph button (`/` character). Placed in `.nav-masthead`, typically at the left edge. Hover: border + color darken. Click (or consumer-wired `/` keypress) opens the palette. |
+| `.palette` | Overlay container. Hidden by default (`display: none`); visible on `.is-open`. Absolute-positioned, spanning from left to `right: var(--user-slot-width)`. |
+| `.palette-bar` | 48px row matching masthead height. Flex row: `.palette-prefix` + `.palette-input` + `.palette-hint`. Paper background + hairline border-bottom. |
+| `.palette-prefix` | Static `/` character mono 13px `--ink-pale`. Non-editable. Echoes `.nav-item .slash`, `.ticker-block .symbol::before`, `.btn.is-route::before`, `.tbl.is-slash` — the brand's slash vernacular. |
+| `.palette-input` | The search field. Mono 12px tracked 0.08em `--ink`. Consumer owns value + focus handling. |
+| `.palette-hint` | Keyboard hint pill (e.g. `ESC`). Mono 10px `--ink-pale`, hairline border, 2px radius. |
+| `.palette-dropdown` | Empty-state or results container. Hangs below the bar, extends past masthead bounds. Paper background + paper-lift shadow (two-layer rgba stack matching `.emboss-subtle` bottom layers). |
+| `.palette-empty` | Single-line mono placeholder for the empty state. Consumer supplies copy. |
+
+**State modifier:**
+
+| Class | Applied to | Effect |
+|---|---|---|
+| `.is-open` | `.palette` | Reveals palette + dropdown. Consumer toggles via JS on `/` keypress, Escape, click-outside, or click on `.palette-trigger`. Pair with `.nav-masthead.is-suppressed` so the ticker cleanly dismisses during palette open. |
+
+**JS contract (important — brand ships classes, not behavior):**
+
+Brand ships CSS for the `.search-palette` family only. The open/close toggle is a consumer concern — typically a ~35-line IIFE.
+
+Minimal handler responsibilities:
+- `/` keypress (outside any text input) → open palette, focus input, clear value
+- `Escape` while open → close palette, blur input, clear value
+- Click on `.palette-trigger` → open
+- Click outside `.palette` AND outside `.palette-trigger` → close
+- When opening → add `.is-suppressed` to the masthead; when closing → remove it
+
+**Canonical markup:**
+
+```html
+<!-- collapsed trigger (in masthead) -->
+<button class="palette-trigger" type="button" aria-label="Open search">/</button>
+
+<!-- expanded overlay (sibling of masthead, inside main) -->
+<div class="palette" id="palette" aria-hidden="true">
+  <div class="palette-bar">
+    <span class="palette-prefix" aria-hidden="true">/</span>
+    <input class="palette-input" type="text" aria-label="Search" />
+    <kbd class="palette-hint">ESC</kbd>
+  </div>
+  <div class="palette-dropdown" role="listbox">
+    <p class="palette-empty">awaiting backend · no results yet</p>
+  </div>
+</div>
+```
+
+**Rules:**
+
+- The `/` prefix (`.palette-prefix`) is static, non-editable, and visible inside the input area. Echoes brand slash vernacular — consumers should NOT reimplement with a different character.
+- Dropdown always renders when palette is open. Empty-state copy is the default; results UI is consumer-owned.
+- Palette is NEVER auto-opened on page load. No `autofocus` on the input in the default state. Consumer opens via user action only.
+- Dropdown shadow uses recipe-local rgba stack (paper-lift) — same convention as `.emboss-*` utilities in `textures.css`. No shadow tokens.
+- The `--user-slot-width` token (defined in `tokens.css`) coordinates the palette's `right:` offset with the `.user` slot width. Single source of truth.
+
+**Composition:**
+
+Palette composes inside `.nav-masthead` of an app-shell surface. Pair with `.nav-rail.is-overlay` + `.nav-masthead.is-centered-ticker` + `.nav-masthead .user` + `.nav-masthead.is-suppressed` (toggled on open) for the complete app-shell pattern.
+
+**Visual reference:** `specimen.html` → Search palette section → "Collapsed" and "Expanded" demos.
+
 ### Indicator
 
 Stat / numeral / delta primitives for the observational voice. Four recipes, each for a distinct job. All share the `.indicator` base class + `.label` / `.num` / `.delta` children, plus `.is-sm` / default / `.is-lg` size modifiers and `.is-dark` for coal / oxblood surfaces.
