@@ -43,4 +43,7 @@
   --duration-fast: 240ms;
   --duration-default: 600ms;
   --duration-slow: 700ms;
+
+  /* LAYOUT */
+  --user-slot-width: 120px;
 }

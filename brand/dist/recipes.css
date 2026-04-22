@@ -578,6 +578,26 @@
 .nav-rail.is-drawer { width: 100%; }
 
 
+/* ---------- rail .is-overlay (app-shell modifier) ---------- */
+
+/* .nav-rail.is-overlay — app-shell modifier. Rail becomes a
+   fixed overlay; main sibling reserves 64px and flex-grows to
+   fill remaining width. Use for application surfaces (palette-
+   driven UI, dashboards) where the main canvas must stay stable
+   when the rail expands on hover. The default .nav-rail (position:
+   relative) remains the documentation-shell pattern. Sibling
+   selector on main cascades the reserve + flex-grow so a single
+   class on the rail coordinates both concerns. */
+.nav-rail.is-overlay {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 20;
+}
+.nav-rail.is-overlay ~ main {
+  margin-left: 64px;
+  flex: 1;
+}
+
+
 /* ---------- rail .mark (brand slot) ---------- */
 
 /* .nav-rail .mark — 48px-tall brand slot at the top of the rail.
@@ -832,6 +852,7 @@
   display: flex;
   align-items: center;
   position: relative;
+  transition: opacity 150ms var(--ease-out);
 }
 
 /* Marquee track — holds the DOUBLED ticker-block list and runs
@@ -948,6 +969,26 @@
 .nav-masthead .actions a + a { margin-left: 24px; }
 
 
+/* ---------- user (signed-in slot) ---------- */
+
+/* .nav-masthead .user — signed-in username display. Typography
+   identical to .actions a, no link / no hover / no underline.
+   Occupies the --user-slot-width reserved slot at the right edge
+   of the masthead. Use as a direct child of .nav-masthead for
+   unauth-to-auth state transitions, or alongside .actions. */
+.nav-masthead .user {
+  flex: 0 0 var(--user-slot-width);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 24px;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+
 /* ---------- marquee keyframes ---------- */
 
 /* translateX(0 → -50%) pairs with the doubled markup contract
@@ -964,6 +1005,175 @@
    is defined on the base rule above (transform var(--duration-fast)). */
 .nav-masthead.is-hidden {
   transform: translateY(-100%);
+}
+
+
+/* ---------- modifier: centered ticker (app-shell layout) ---------- */
+
+/* .nav-masthead.is-centered-ticker — repositions .ticker-viewport
+   as an absolutely-centered 50%-width element. Use when the
+   masthead layout wants the ticker as a visual midpoint (e.g.
+   palette trigger on the left, fixed .user slot on the right)
+   rather than a flex-grow element. Absolute positioning removes
+   .ticker-viewport from the flex row; remaining flex children
+   (.palette-trigger, .user, .actions) arrange naturally around
+   the centered ticker.
+
+   PROMOTION NOTE — this is a 7th recipe addition beyond the 6
+   originally specified in the Cycle 7 brand extraction plan.
+   Added to avoid forcing consumers to invent a .ticker-slot
+   wrapper class. Modifier-on-existing-element matches brand's
+   .is-expanded / .is-drawer / .is-hidden convention. */
+.nav-masthead.is-centered-ticker .ticker-viewport {
+  position: absolute; top: 0; bottom: 0;
+  left: 50%; transform: translateX(-50%);
+  width: 50%;
+}
+
+
+/* ---------- modifier: suppressed (ticker dismissed) ---------- */
+
+/* .nav-masthead.is-suppressed — fades ticker + pauses marquee.
+   Paired with search-palette open state (or modal overlays) so
+   the ticker reads as "cleanly dismissed" rather than "running
+   behind a curtain." Consumer toggles the class on palette
+   open/close. Opacity transition defined on the .ticker-viewport
+   base rule so both open→suppressed and suppressed→open animate. */
+.nav-masthead.is-suppressed .ticker-viewport {
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-masthead.is-suppressed .ticker-track {
+  animation-play-state: paused;
+}
+
+
+/* ============================================================
+ * SEARCH PALETTE — command palette / spotlight pattern.
+ *
+ * Collapsed trigger glyph + expanded overlay bar + empty-state
+ * dropdown. Designed for app-shell surfaces where the palette
+ * is the primary functional-search affordance.
+ *
+ * MARKUP CONTRACT —
+ *   <button class="palette-trigger" type="button">/</button>
+ *   <!-- ...other masthead content... -->
+ *   <div class="palette" id="palette" aria-hidden="true">
+ *     <div class="palette-bar">
+ *       <span class="palette-prefix">/</span>
+ *       <input class="palette-input" type="text" />
+ *       <kbd class="palette-hint">ESC</kbd>
+ *     </div>
+ *     <div class="palette-dropdown" role="listbox">
+ *       <p class="palette-empty">…empty state…</p>
+ *     </div>
+ *   </div>
+ *
+ * JS CONTRACT — brand ships structure + styling only.
+ * Consumer owns the `.is-open` toggle (typically via / key,
+ * Escape, click-outside, click-on-trigger). Reference impl
+ * ~35 lines in kujaku-web src/components/Palette.astro.
+ *
+ * Slash vernacular — .palette-prefix echoes .nav-item .slash,
+ * .ticker-block .symbol::before, .btn.is-route::before,
+ * .tbl.is-slash. The `/` prefix carries brand-wide meaning.
+ *
+ * See STYLE.md /components Search palette for full spec.
+ * ============================================================ */
+
+.palette-trigger {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink-faint);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-pale);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out);
+}
+.palette-trigger:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.palette {
+  display: none;
+  position: absolute;
+  top: 0; left: 0;
+  right: var(--user-slot-width);
+  z-index: 10;
+}
+.palette.is-open { display: block; }
+
+.palette-bar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink-faint);
+}
+
+.palette-prefix {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-pale);
+  user-select: none;
+}
+
+.palette-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  padding: 0;
+}
+.palette-input::placeholder { color: var(--ink-mid); }
+
+.palette-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ink-pale);
+  padding: 3px 6px;
+  border: 1px solid var(--ink-faint);
+  border-radius: 2px;
+}
+
+.palette-dropdown {
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink-faint);
+  padding: 48px 24px;
+  min-height: 140px;
+  /* Paper-lift shadow — mirrors .emboss-subtle bottom layers from
+     textures.css without the inset top-highlight, since the
+     dropdown hangs flush off the palette-bar's paper surface. */
+  box-shadow:
+    0 2px 6px rgba(40,30,18,0.04),
+    0 12px 28px rgba(40,30,18,0.06);
+}
+
+.palette-empty {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-pale);
 }
 
 
