@@ -595,6 +595,12 @@
 .nav-rail.is-overlay ~ main {
   margin-left: 64px;
   flex: 1;
+  /* Establishes positioning context so descendant .palette
+     (position: absolute; top: 0; left: 0) anchors to main's
+     left edge instead of .nav-composition's left edge, which
+     would fall under the fixed rail overlay and hide the
+     palette-input's first ~64px of content. */
+  position: relative;
 }
 
 
