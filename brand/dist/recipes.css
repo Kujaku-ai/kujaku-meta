@@ -2518,3 +2518,51 @@
 .card-oxblood .chart-tooltip {
   box-shadow: 0 2px 6px rgba(40,30,18,0.28);
 }
+
+
+/* ============================================================
+ * MOBILE — shell responsive behavior.
+ *
+ * Two breakpoints: tablet (max-width: 1023px) and phone
+ * (max-width: 767px). Desktop (≥1024px) is the default and
+ * gets no @media rule.
+ *
+ * Rail: tablet keeps 64px; phone hides by default and shows
+ * only with .is-drawer applied. Consumer JS owns the class
+ * toggle on a menu/hamburger trigger in the masthead.
+ *
+ * Ticker: tablet tightens block gap + track padding; phone
+ * hides the ticker-viewport entirely.
+ *
+ * Palette: phone spans full viewport minus 16px padding on
+ * each side. palette-bar + palette-dropdown track the same
+ * inset so the overlay reads edge-to-edge without slamming
+ * the viewport edges.
+ *
+ * Drawer width (240px) matches standard mobile side-drawer
+ * convention — wide enough to host the expanded rail's
+ * lockup + nav-section labels at their desktop font sizes
+ * without re-sizing the rail internals.
+ * ============================================================ */
+
+@media (max-width: 1023px) {
+  .nav-masthead .ticker-track { gap: 16px; padding: 0 16px; }
+}
+
+@media (max-width: 767px) {
+  .nav-rail.is-overlay {
+    transform: translateX(-100%);
+    transition: transform 200ms var(--ease-out);
+  }
+  .nav-rail.is-overlay.is-drawer {
+    transform: translateX(0);
+    width: 240px;
+  }
+  .nav-rail.is-overlay ~ main { margin-left: 0; }
+
+  .nav-masthead .ticker-viewport { display: none; }
+
+  .palette { left: 16px; right: 16px; }
+  .palette-bar { padding: 0 16px; }
+  .palette-dropdown { padding: 32px 16px; }
+}
