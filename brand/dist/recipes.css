@@ -838,6 +838,7 @@
   height: 48px;
   display: flex;
   align-items: stretch;
+  position: relative;
   background: var(--paper);
   border-bottom: 1px solid var(--ink-faint);
   overflow: hidden;
