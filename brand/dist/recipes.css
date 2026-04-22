@@ -1086,6 +1086,7 @@
   flex: 0 0 32px;
   width: 32px;
   height: 32px;
+  align-self: center;
   display: flex;
   align-items: center;
   justify-content: center;
