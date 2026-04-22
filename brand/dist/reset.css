@@ -1,0 +1,20 @@
+/* ============================================================
+ * Kujaku brand — reset.css
+ *
+ * Universally-inherited normalization. Holds ONLY rules that
+ * every element in a consuming page should inherit without
+ * opt-in. Keep this file small and opinion-free.
+ *
+ * What belongs here:
+ *   - box-sizing reset (total = declared, not content + padding + border)
+ *   - (future) margin-zero on body/html if/when needed
+ *
+ * What does NOT belong here:
+ *   - typography defaults (lives in tokens.css + fonts.css)
+ *   - component styling (lives in recipes.css)
+ *   - texture overlays (lives in textures.css)
+ * ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
