@@ -182,7 +182,7 @@ Bots hold the Anthropic API key and are the only place in the platform where LLM
 |---------|-------|--------|------|-------------|
 | BTC Collector | 1 | **LIVE** | `Kujaku-ai/kujaku-data-btc` | `data-btc.kujaku.ai` |
 | Charting Calculations (ICT) | 2a | **LIVE** | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
-| Kalshi 15-min BTC Bot | 2b | **LIVE (paper)** | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
+| Kalshi 15-min BTC Bot | 2b | **LIVE (paper, v1.5)** | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
 | Public Website | 3 | Next major project | `kujaku-web` | — |
 | ETH Collector | 1 | Future | `kujaku-data-eth` | — |
 | SPX Collector | 1 | Future | `kujaku-data-spx` | — |
@@ -262,8 +262,8 @@ Note: the BTC collector's local folder is named `data/` for historical reasons, 
 
 **Shipped:**
 - Layer 1 BTC — `kujaku-data-btc` live, generic schema, ~5 days of clean data accumulating. Phase 14 added Coinbase Exchange 1m OHLCV collection (`ohlcv_bars` table, `/api/ohlcv/*` endpoints); Phase 15 reorganized the operator dashboard ticker-centric via the reusable `app/tickers.py` config so future verticals plug in with a one-file edit.
-- Layer 2b BTC (Kalshi 15-min) — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.0.0-paper`, first live paper trade confirmed, settlements processing.
-- Layer 2a ICT indicators — `charting-calculations` live, FVG (Phase 12) and liquidity zones (Phase 14) shipped. See NOTES.md for the indicator catalog and phase state.
+- Layer 2b BTC (Kalshi 15-min) — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.5.0` (up from `v1.0.0-paper`). Thesis-first trading architecture shipped 2026-04-24 (see Session Log). v1 paper-mode invariant unchanged.
+- Layer 2a ICT indicators — `charting-calculations` live. Earlier phases (FVG, liquidity zones). v1.5 Stage 1 (2026-04-24) added momentum, VWAP, trend (extended to 30m + 4h), and strength-scored / state-tracked liquidity endpoints to support the Layer 2b thesis-first prompt. See NOTES.md for the indicator catalog and phase state.
 
 **Current phase:**
 - Observation + iteration on the three live services. Let the bot accumulate paper-trading data; let charting-calculations accumulate indicator history; eyeball reliability.
@@ -311,6 +311,10 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 ## Session Log
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
+
+**2026-04-24 — kalshi15min-btc bumped to v1.5 (thesis-first).**
+- `kujaku-bot-kalshi15min-btc` shipped v1.5 across three stages and tagged `v1.5.0`. Stage 1 added Layer 2a indicators (momentum, VWAP, trend extended to 30m + 4h, strength-scored liquidity) in the `charting-calculations` repo. Stage 2a added scaffolding to the bot (new Pydantic models, thesis-entry validator, six nullable `decisions` columns, idempotent migration script). Stage 2b was the atomic cutover — `STRATEGY_VERSION` flipped from `'v1.4'` to `'v1.5'`, scheduler prompts rewritten thesis-first, rolling_stats + reflector filters flipped to v1.5-clean, migration executed, portfolio reset to $1000 tagged v1.5. Stage 3 rewrote the operator dashboard per `kujaku-bot-kalshi15min-btc/docs/DASHBOARD_V15_WIREFRAME.md` with thesis banners, a 19-signal confluence strength heatmap, thesis × outcome 2×2 matrix, free-form probability histogram, and a three-state summary status (RUNNING/PAUSED/KILLED).
+- v1 paper-mode invariant unchanged. v1.4 transactional rows wiped at cutover; v1.4 playbook revisions preserved append-only. Spec lives at `kujaku-meta/V15_TRANSITION_SPEC.md`; engineering detail at `kujaku-bot-kalshi15min-btc/BOT.md` "Strategy Versions" → v1.5 + "Session Log" → 2026-04-24.
 
 **2026-04-21 — BTC volume collection + per-ticker dashboard.**
 - `kujaku-data-btc` Phase 14: 1m OHLCV collection from Coinbase Exchange's candles endpoint. New `ohlcv_bars` table (generic `source`/`asset`/`quote` schema) with upsert semantics so the in-progress current bar mutates every poll. Polls every 30s with 5-minute lookback.
