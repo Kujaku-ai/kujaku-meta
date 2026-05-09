@@ -265,7 +265,7 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 - **GitHub repo names:** `kujaku-{layer}-{market}` for Layer 1, `kujaku-bot-{strategy}-{market}` for Layer 2b, `kujaku-{role}` for cross-vertical services (e.g. `kujaku-web`). Layer 2a services: prefer `kujaku-analysis-{vertical}` or `kujaku-{role}` going forward; `charting-calculations` is a grandfathered exception.
 - **Spec docs:** UPPERCASE role name, `.md` extension — `COLLECTOR.md`, `BOT.md`, `ANALYSIS.md`, `SITE.md` — lives at the repo root.
 - **Subdomains:** match the service role and market (`data-btc.`, `kalshi15min-btc.`, `api.`).
-- **Env var prefixes:** ALL_CAPS, prefixed by the external system they integrate with (e.g. `KALSHI_TRADE_API_KEY`, `ANTHROPIC_API_KEY`, `LIVE_TRADING`).
+- **Env var prefixes:** ALL_CAPS, prefixed by the external system they integrate with (e.g. `ANTHROPIC_API_KEY`, `DISCORD_WEBHOOK_URL`).
 - **Database tables:** singular-context, plural-entity (`price_ticks`, `kalshi_snapshots`, `trade_plans`). No per-service prefixes; the context is the database itself.
 
 ---
