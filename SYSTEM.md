@@ -24,9 +24,9 @@ The platform is built as **separate, independently-deployable services** that co
                           ↑ HTTP GET /api/...
 ┌─────────────────────────────────────────────────────────────┐
 │  LAYER 2 — BACKEND LOGIC (runs on our servers)              │
-│  Thinks. Decides. Holds secrets.                            │
+│  Thinks. Decides. Executes. Holds secrets.                  │
 │                                                             │
-│  Split into two sub-layers:                                 │
+│  Split into three sub-layers:                               │
 │                                                             │
 │  • LAYER 2a — ANALYSIS SERVICES (deterministic, NO LLM)     │
 │    Pure-function detectors and analytics over Layer 1 data. │
@@ -37,6 +37,13 @@ The platform is built as **separate, independently-deployable services** that co
 │    Read Layer 1 data + Layer 2a signals, call Claude to     │
 │    form trade decisions, execute paper or real trades.      │
 │    One bot service per market-family × strategy × mode.     │
+│                                                             │
+│  • LAYER 2c — EXECUTION SERVICES (deterministic, NO LLM)    │
+│    Real-money order routers. Read a Layer 2b service's      │
+│    decisions/trades via its public JSON API and route them  │
+│    onto a live exchange account. Hold real-money            │
+│    credentials. No decision-making, no learning loop.       │
+│    One service per (signal source × exchange account).      │
 │                                                             │
 │  LLM calls happen in Layer 2b ONLY.                         │
 └─────────────────────────────────────────────────────────────┘
@@ -63,14 +70,15 @@ The platform is built as **separate, independently-deployable services** that co
 
 ---
 
-## Layer 2a vs Layer 2b — Why the Split
+## Layer 2 sub-layers — Why the splits
 
-Originally Layer 2 was a single "backend logic" layer. In practice, two genuinely different kinds of service emerged and the split is worth encoding:
+Originally Layer 2 was a single "backend logic" layer. In practice, three genuinely different kinds of service emerged and the splits are worth encoding:
 
 - **Layer 2a (analysis)** is deterministic. Same input → same output. No LLM, no randomness, no external decision-making. It turns raw Layer 1 data into structured signals (FVGs, liquidity zones, biases, regime classifications). It's cheap to run, easy to test, and many downstream services can consume the same outputs without duplication.
-- **Layer 2b (trading)** is where judgement lives. It consumes Layer 1 data + Layer 2a signals, calls Claude to form a plan, and acts on the plan. Each bot is narrow (one strategy on one market family) and expensive (LLM calls cost money and take time).
+- **Layer 2b (trading bots)** is where judgement lives. It consumes Layer 1 data + Layer 2a signals, calls Claude to form a plan, and acts on the plan. Each bot is narrow (one strategy on one market family) and expensive (LLM calls cost money and take time). Trading bots may be paper-only research labs (Paper Kev) or real-money traders.
+- **Layer 2c (execution)** is the dumb hand attached to Layer 2b's brain. A 2c service polls a 2b service's published trades and mirrors them onto a live exchange account. It holds real-money credentials but makes no decisions; it has no LLM, no strategy state, no learning loop. The only logic is "translate the brain's percent-of-portfolio sizing into real contracts, place the order, track the fill, attribute the P&L."
 
-The split prevents two failure modes: (1) indicator logic getting duplicated across every bot, and (2) LLM calls creeping into places they don't belong.
+The splits prevent four failure modes: (1) indicator logic getting duplicated across every bot, (2) LLM calls creeping into places they don't belong, (3) a single bot service mixing paper-mode research code with real-money order code, and (4) decision drift between a "real-money fork" of a bot and its paper-mode parent — Layer 2c eliminates the fork by design, since one brain feeds the executor verbatim.
 
 ---
 
@@ -175,6 +183,25 @@ Bots hold the Anthropic API key and are the only place in the platform where LLM
 
 ---
 
+## Layer 2c Convention: One Executor Per (Signal Source × Exchange Account)
+
+Same per-service isolation as Layers 1, 2a, and 2b. Each executor is its own service, its own repo, its own deploy, its own database.
+
+An executor consumes the JSON API of one Layer 2b service (the brain) and routes that brain's published trades onto one exchange account. Each Kalshi account gets its own executor instance; multiple instances can read from the same Layer 2b source.
+
+| Thing | Pattern | Example |
+|-------|---------|---------|
+| GitHub repo | `kujaku-executor-{label}` | `kujaku-executor-portfolio-001` |
+| Railway service | same as repo name | `kujaku-executor-portfolio-001` |
+| Subdomain | `{label}.kujaku.ai` | `portfolio-001.kujaku.ai` |
+| Spec doc | `EXECUTOR.md` | repo root |
+
+Executors hold real-money exchange credentials (API key + private key PEM). They never call an LLM. They never modify the brain's data. They are read-only consumers of one Layer 2b API and write-mostly producers against one exchange account.
+
+Decommission is intentionally simple: delete the Railway service, remove the GoDaddy DNS records, delete the GitHub repo. There is no in-service decommission script; the operator handles wind-down out of band.
+
+---
+
 ## Current Services
 
 | Service | Layer | Status | Repo | URL |
@@ -183,6 +210,7 @@ Bots hold the Anthropic API key and are the only place in the platform where LLM
 | QC Collector | 1 | LIVE | `Kujaku-ai/kujaku-data-qc` | (internal) |
 | Charting Calcs (ICT) | 2a | LIVE | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
 | Paper Kev | 2b | LIVE (paper-only research) | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
+| Portfolio_001 | 2c | Planned (next deliverable) | `Kujaku-ai/kujaku-executor-portfolio-001` | `portfolio-001.kujaku.ai` |
 | Public Website | 3 | Built, awaiting cutover review | `Kujaku-ai/kujaku-web` | (staging) |
 
 All services deploy to Railway, each as its own service, each with its own env vars and lifecycle.
@@ -207,12 +235,13 @@ Services do not import each other's code. They communicate only via:
 
 - In collectors (Layer 1) — collection is dumb by design
 - In analysis services (Layer 2a) — indicators are deterministic by design
+- In execution services (Layer 2c) — execution is deterministic by design; an executor that called an LLM would reintroduce the decision drift Layer 2c was created to eliminate
 - In the website frontend (Layer 3) — API keys would leak; cost would be per-visitor
 - In any service not explicitly designed to call an LLM
 
 LLM calls are triggered by events (new market window opens, new data arrives, scheduled time), not by user visits. The output is written to the bot's database. The frontend reads the output — it never causes the LLM to run.
 
-This is a hard architectural rule. If a future service needs LLM capabilities, it becomes a new Layer 2b service, not a modification to Layers 1, 2a, or 3.
+This is a hard architectural rule. If a future service needs LLM capabilities, it becomes a new Layer 2b service, not a modification to Layers 1, 2a, 2c, or 3.
 
 ---
 
@@ -237,6 +266,13 @@ MASTER_KUJAKU/
 │   ├── CLAUDE.md
 │   ├── app/
 │   ├── scripts/
+│   └── tests/
+│
+├── executor-portfolio-001/         ← Portfolio_001 (repo: kujaku-executor-portfolio-001)
+│   ├── EXECUTOR.md
+│   ├── CLAUDE.md
+│   ├── investors.json
+│   ├── app/
 │   └── tests/
 │
 ├── charting-calculations/          ← ICT indicators engine (Layer 2a)
@@ -283,6 +319,7 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 
 **Current phase:**
 - Paper Kev continuing as the strategy research lab.
+- Layer 2c executor (Portfolio_001) being built as the first real-money order router.
 
 **After that:**
 - Additional Layer 2a indicators as they earn their place.
@@ -298,7 +335,7 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 Any new subproject must:
 
 1. Have its own spec doc with a clear DOES / DOES NOT list
-2. State which layer (1, 2a, 2b, or 3) and which market family (or "cross-vertical") it belongs to
+2. State which layer (1, 2a, 2b, 2c, or 3) and which market family (or "cross-vertical") it belongs to
 3. Declare its inputs (what it reads) and outputs (what it writes)
 4. Not import code from any other service — all communication via API
 5. Not share a database with any other service — each service owns its storage
@@ -323,6 +360,12 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 ## Session Log
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
+
+**2026-05-09 — Layer 2c introduced; Portfolio_001 spec written.**
+- SYSTEM.md updated to define Layer 2c (execution services): deterministic real-money order routers that consume a Layer 2b brain via its public API and route trades to an exchange account.
+- `EXECUTOR.md` master spec written and committed in `kujaku-meta` and in the new `kujaku-executor-portfolio-001` repo at scaffold time.
+- First instance: Portfolio_001, consumes Paper Kev (`kalshi15min-btc.kujaku.ai`), routes to a single Kalshi account, supports a JSON-config investor cap table (50/50 placeholder for the first deploy).
+- Architectural learning encoded: Layer 2c eliminates decision drift between paper and live by construction. There is exactly one brain (Paper Kev) and one set of decisions; the executor mirrors verbatim and never re-decides.
 
 **2026-04-30 to 2026-05-06 — Paper Kev v1.7.x sizing overhaul.**
 - v1.7.3: half-Kelly sizing replacing the v1.5.2 bucketed Rule 5a ladder; tier-specific safety factors; per-trade and per-portfolio caps; per-tier anti-tilt (`sizing_state` table); hard-skip very_expensive primary.
