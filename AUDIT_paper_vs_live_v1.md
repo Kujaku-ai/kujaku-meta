@@ -1,5 +1,11 @@
 # AUDIT — Paper Kev vs Live Kev (v1)
 
+> **Closing note (2026-05-09):** Live Kev decommissioned per
+> `LIVE_KEV_DECOMMISSION_AUDIT_v1.md`. This audit's findings (C-1,
+> C-2, C-3) informed the decommission decision. No further work
+> scheduled on Paper-vs-Live divergence — no Live to compare
+> against.
+
 > **Audit closed: 2026-05-09 (UTC).** Audit version: **v1**. Status:
 > **architect-approved**. Findings C-1, C-2, C-3, N-5 named and accepted;
 > brain / config / charting-source / shim-leak hypotheses ruled out;

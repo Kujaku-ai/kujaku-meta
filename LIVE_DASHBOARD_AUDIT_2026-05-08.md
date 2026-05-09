@@ -1,5 +1,9 @@
 # Live vs Paper Dashboard Audit — 2026-05-08
 
+> **Closing note (2026-05-09):** Live Kev decommissioned per
+> `LIVE_KEV_DECOMMISSION_AUDIT_v1.md`. The dashboard audit's findings
+> are historical.
+
 **Mode:** Read-only. No production writes performed. SELECT-only SQL via
 `railway ssh`. No code changed in either repo. Findings are flagged, not
 fixed.
