@@ -87,8 +87,6 @@ Vertical: BTC
 │                                                  currently BTC-only,
 │                                                  multi-vertical later)
 ├── Layer 2b: kujaku-bot-kalshi15min-btc          (Paper Kev — research)
-│             kevbot-kalshi15min-btc              (Live Kev — real money;
-│                                                  forked from Paper Kev)
 └── Layer 3:  reached via kujaku-web              (shared frontend across
                                                    verticals)
 
@@ -173,54 +171,7 @@ The naming has evolved from the original `kujaku-bot-{market}` assumption becaus
 | Subdomain | `{strategy}-{market}.kujaku.ai` | `kalshi15min-btc.kujaku.ai` |
 | Spec doc | `BOT.md` | repo root |
 
-Bots hold the Anthropic API key (and, for live bots, Kalshi trading credentials) and are the only place in the platform where LLM calls happen.
-
----
-
-## Bot Duplication & Fork Model
-
-The BTC vertical's Layer 2b is unusual: it ships **two bots, not one**. Paper Kev (`kujaku-bot-kalshi15min-btc`) is the research and strategy lab. Live Kev (`kevbot-kalshi15min-btc`) is the real-money execution arm. Same brain, different consequences. This section documents the fork model so future market families can decide whether to copy it.
-
-**Why two services for one strategy.** A single bot service that flips between paper and real-money mode via env-var was rejected. The argument was that the consequences of each mode are different enough — operator habits, log volume, rollback semantics, financial blast radius — that a single service is one operator mistake away from a real-money order placed during what was meant to be paper research. Keeping them as separate services with separate repos, separate Railway deploys, and separate subdomains makes the boundary structural rather than configurational.
-
-**The fork.** Live Kev was forked from Paper Kev at commit `27f0578` / tag `v1.7.6` on 2026-05-05. From that moment forward, Live Kev maintains a v2.x version stream layered on top of whichever Paper Kev v1.x strategy tag has been backported (e.g. Live Kev v2.1.0 = Paper Kev v1.7.7 strategy + V20/V21 live shims).
-
-**The byte-mirror invariant.** A specific set of files MUST remain byte-identical between the two repos. The brain — the parts of the code that make the trade decision — is one logical artifact, just shipped to two services:
-
-- `app/claude_client.py`
-- `app/features.py`
-- `app/playbook.py`
-- `app/reflector.py`
-- `app/rolling_stats.py`
-- `app/realized_stats.py`
-- `app/paper.py` (P&L math; Live Kev uses it for settlement reconciliation)
-- `app/payout_math.py`
-- `app/kalshi_client.py`
-
-`app/kalshi_client.py` is a deliberate special case. It ships on Paper Kev as **dead code** — imported (so the module is reachable for parity with Live Kev's import graph) but never instantiated, since Paper Kev never authenticates against the Kalshi trading API. The `cryptography` dependency was added to Paper Kev's `requirements.txt` for the same reason: Live Kev needs it for RSA-PSS signing, and Paper Kev needs the same install footprint to keep the byte-mirror set importable. Tests follow the same invariant: `tests/test_kalshi_client.py` lives on both bots.
-
-The system-prompt strings assembled inside `app/scheduler.py` are also mirrored content between bots, but the file as a whole is a carve-out (see below) because the live-trading order-placement branches diverge. The mirror invariant on those strings is enforced at code-review time, not by a file-level diff.
-
-**The intentional carve-outs.** Files that legitimately diverge between bots — but only along live-trading boundaries that gate on `settings.live_trading` or a `live_*` symbol — are:
-
-- `app/db.py` (live-era columns: `live_order_id`, `live_fill_status`, `is_live_era`, `expected_payout_dollars`, `actual_payout_dollars`; OpenLiveTradeRow TypedDict)
-- `app/scheduler.py` (live-trading branches on the immediate-primary and immediate-hypothesis paths)
-- `app/settler.py` (live reconcile path: `_reconcile_one_live_trade`, `_reconcile_live_group`, `_compute_per_side_payout`, ticker-level audit)
-- `app/watcher.py` (`poll_live_fills` task; live trigger gating in `fire_live_order_for_waiting_trade`)
-- `app/main.py` (`poll_live_fills` task launch; BRAIN_SEED_REQUIRED gate)
-- `app/web.py` (`/health` adds `live_trading_active` field)
-- `app/dashboard_data.py` and `app/dashboard_render.py` (live/paper badge rendering, live-era-only filter)
-- `app/config.py` (`live_trading`, `kalshi_api_base_url`, `hard_size_cap_pct`, `daily_loss_kill_pct`, `live_max_open_orders` fields)
-
-Plus two Live-only files with no Paper Kev equivalent: `app/live_trader.py` (order placement orchestrator) and `app/live_trading_safety.py` (pre-flight gates). Every divergence in the carve-out files MUST gate on `settings.live_trading` or a `live_*` symbol. Unguarded drift is a bug; the project periodically diffs the bots to catch it.
-
-**Patch-mirroring discipline.** Any patch to a mirrored file ships to BOTH repos in the same operator session. Recent examples: the v2.1.4 timeout / retry tune (90s → 120s, 4 → 5 retries) and the v1.7.7 → v2.1.0 strategy backport (edge clamp + Rule 6d-hard expansion). Patches that touch only carve-out files ship to one repo only.
-
-**Realized_stats inheritance and the D+14 cliff.** Live Kev inherited Paper Kev's `realized_stats` corpus on fork. The 14-day rolling window means the inherited seed decays out around 2026-05-19; from that point Live Kev operates from its own ~149+ post-fork sample. The right behavior at the cliff is an open architect decision (carry forward static factors, blend, or accept the cohort flip).
-
-**Playbook sync.** Operator-driven via the v2.1.4 sync script (`sync_playbook_from_paper.py` in Live Kev's `scripts/`). Pulls Paper Kev's most-recent playbook revision, verifies the anchor section's md5 matches the verified-immutable hash `92ab79330411fbd6e4c00e399703fe81`, and inserts a new revision into Live Kev's DB with `edit_type='operator_sync_from_paper'`. The reflector and compactor remain enabled on Live Kev post-sync; the script does not freeze the playbook.
-
-**When to break parity.** Only when explicitly architected under a new V20-class shim — i.e. a documented spec that names the file, the gate condition, and the test invariants, with `V20_LIVE_TRADING_SPEC.md` as the canonical example. No silent parity breaks. The byte-mirror invariant is the cheapest available guarantee that the brain is the same on both bots; once broken silently, divergence accumulates and confidence in cross-bot pooling collapses.
+Bots hold the Anthropic API key and are the only place in the platform where LLM calls happen. The current BTC bot is paper-only research; if a future strategy in any market needs to fire real Kalshi orders, that's a fresh architecture decision and a separate spec.
 
 ---
 
@@ -232,7 +183,6 @@ Plus two Live-only files with no Paper Kev equivalent: `app/live_trader.py` (ord
 | QC Collector | 1 | LIVE | `Kujaku-ai/kujaku-data-qc` | (internal) |
 | Charting Calcs (ICT) | 2a | LIVE | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
 | Paper Kev | 2b | LIVE (paper-only research) | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
-| Live Kev | 2b | LIVE (real money) | `Kujaku-ai/kevbot-kalshi15min-btc` | `kevbot-btc.kujaku.ai` |
 | Public Website | 3 | Built, awaiting cutover review | `Kujaku-ai/kujaku-web` | (staging) |
 
 All services deploy to Railway, each as its own service, each with its own env vars and lifecycle.
@@ -248,8 +198,6 @@ Services do not import each other's code. They communicate only via:
 2. **JSON APIs over HTTP.** Each service exposes a small `/api/*` surface for other services (or the frontend) to consume. See each service's spec for its exact endpoints.
 
 3. **No other channels.** No shared Python modules. No message queues (yet). No direct function calls. If a new dependency is needed, it goes through the API.
-
-The bot-fork pair is a deliberate exception to "no shared code": the byte-mirror invariant means Paper Kev and Live Kev share their brain modules by file content, not by import. They do not import each other's modules at runtime; the parity is enforced at commit-mirror time.
 
 ---
 
@@ -287,17 +235,8 @@ MASTER_KUJAKU/
 ├── bot-kalshi15min-btc/            ← Paper Kev (repo: kujaku-bot-kalshi15min-btc)
 │   ├── BOT.md
 │   ├── CLAUDE.md
-│   ├── app/                          (mirrored brain + paper-only carve-out)
+│   ├── app/
 │   ├── scripts/
-│   └── tests/
-├── kevbot-kalshi15min-btc/         ← Live Kev (repo: kevbot-kalshi15min-btc)
-│   ├── BOT.md
-│   ├── CLAUDE.md
-│   ├── FORK_NOTE.md                  (fork lineage record)
-│   ├── V20_LIVE_TRADING_SPEC.md      (historical fork spec, kept)
-│   ├── DASHBOARD_GRAPHS_SPEC.md      (active reference spec)
-│   ├── app/                          (mirrored brain + live-only carve-out)
-│   ├── scripts/                      (incl. sync_playbook_from_paper.py)
 │   └── tests/
 │
 ├── charting-calculations/          ← ICT indicators engine (Layer 2a)
@@ -324,9 +263,8 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 ## Naming & Conventions
 
 - **GitHub repo names:** `kujaku-{layer}-{market}` for Layer 1, `kujaku-bot-{strategy}-{market}` for Layer 2b, `kujaku-{role}` for cross-vertical services (e.g. `kujaku-web`). Layer 2a services: prefer `kujaku-analysis-{vertical}` or `kujaku-{role}` going forward; `charting-calculations` is a grandfathered exception.
-- **Bot fork prefix exception:** `kevbot-` (as in `kevbot-kalshi15min-btc`) is a grandfathered prefix deviation, preserved for the fork's identity continuity rather than retro-renamed to `kujaku-bot-kalshi15min-btc-live`. Treat it like the `charting-calculations` exception — historical, documented, not a pattern to copy. Future bot forks should adopt `{base-repo-name}-live` or a comparable structured suffix.
 - **Spec docs:** UPPERCASE role name, `.md` extension — `COLLECTOR.md`, `BOT.md`, `ANALYSIS.md`, `SITE.md` — lives at the repo root.
-- **Subdomains:** match the service role and market (`data-btc.`, `kalshi15min-btc.`, `kevbot-btc.`, `api.`).
+- **Subdomains:** match the service role and market (`data-btc.`, `kalshi15min-btc.`, `api.`).
 - **Env var prefixes:** ALL_CAPS, prefixed by the external system they integrate with (e.g. `KALSHI_TRADE_API_KEY`, `ANTHROPIC_API_KEY`, `LIVE_TRADING`).
 - **Database tables:** singular-context, plural-entity (`price_ticks`, `kalshi_snapshots`, `trade_plans`). No per-service prefixes; the context is the database itself.
 
@@ -338,14 +276,16 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 - **Layer 1 BTC** — `kujaku-data-btc` live with Coinbase 1m OHLCV + Kraken fallback + Kalshi orderbook depth.
 - **Layer 1 QC** — `kujaku-data-qc` live (basket: IONQ, RGTI, QBTS, etc.).
 - **Layer 2a ICT** — `charting-calculations` live (FVG, liquidity, momentum, VWAP, trend extended to 30m + 4h, BOS/CHoCH, order blocks).
-- **Layer 2b Paper Kev** — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.7.7`. Strategy lab; thesis-first architecture (v1.5), risk-aware entry framework (v1.5.2), v1.6.x cleanup + analysis rebuild, v1.7.x sizing-overhaul (half-Kelly, expire-without-fill, realized-stats subsystem, SE-gated noise band, edge clamp).
-- **Layer 2b Live Kev** — `kevbot-kalshi15min-btc` live at `kevbot-btc.kujaku.ai`, tagged `v2.1.5`. Forked from Paper Kev v1.7.6 on 2026-05-05; real-money trading on KXBTC15M.
+- **Layer 2b Paper Kev** — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.7.9`. Strategy lab; thesis-first architecture (v1.5), risk-aware entry framework (v1.5.2), v1.6.x cleanup + analysis rebuild, v1.7.x sizing-overhaul (half-Kelly, expire-without-fill, realized-stats subsystem, SE-gated noise band, edge clamp), v1.7.8/v1.7.9 dashboard observability + Claude Communication panel redesign.
+
+**Decommissioned:**
+- **Layer 2b Live Kev** — `kevbot-kalshi15min-btc` (real-money fork of Paper Kev) decommissioned 2026-05-09. See "Decommissions" section below.
 
 **Built, awaiting cutover review:**
 - **Layer 3** — `kujaku-web`, public-facing frontend. Astro scaffold built (`site/dist/` exists); SITE.md authored. Cutover prompt prepared; awaiting operator green-light.
 
 **Current phase:**
-- Live Kev observation window (post-v2.1.5). Paper Kev continuing as research lab. Cross-bot pooling validated; D+14 realized_stats inheritance cliff (~2026-05-19) under architect review.
+- Paper Kev continuing as standalone research lab. Real-money trading on this strategy paused until further notice; any future real-money work is a fresh architecture decision and a separate spec.
 
 **After that:**
 - Additional Layer 2a indicators as they earn their place.
@@ -377,10 +317,9 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 
 - A service that genuinely needs shared state across markets (rare; must justify why a JSON API isn't enough)
 - A truly tiny shared helper (e.g. Kalshi auth logic) extracted as a library — acceptable, but the library must not import application code from any service
-- A service whose name pre-dates a naming convention (e.g. `charting-calculations` not using the `kujaku-` prefix, or `kevbot-` instead of `kujaku-bot-…-live`); document the exception, don't propagate it
-- Bot duplication for paper/live separation, as in the Paper Kev / Live Kev fork model documented above
+- A service whose name pre-dates a naming convention (e.g. `charting-calculations` not using the `kujaku-` prefix); document the exception, don't propagate it
 
-**Code duplication is not a reason to deviate.** The architecture deliberately accepts duplication in exchange for isolation. The byte-mirror invariant in the bot-fork pair is the one explicit exception to "services don't share code" — and it is enforced as a *file-content* invariant, not as a runtime import.
+**Code duplication is not a reason to deviate.** The architecture deliberately accepts duplication in exchange for isolation. Services share data via JSON API, never by importing each other's modules.
 
 ---
 
@@ -440,6 +379,63 @@ Brief record of major architectural decisions and milestones. Append new entries
 - Generic schema chosen (`source`/`asset`/`quote`) so future exchanges plug in without migrations.
 - Pattern A (one repo per market) chosen over monolith-with-subfolders.
 - Coinbase is the reference BTC feed for now; basis vs BRTI to be measured empirically before considering composite or licensed feed.
+
+---
+
+## Decommissions
+
+Append new entries at the top.
+
+**2026-05-09 — Live Kev (`kevbot-kalshi15min-btc`) decommissioned in
+full.**
+
+- **What.** Real-money fork of Paper Kev (forked 2026-05-05 at Paper
+  v1.7.6 / commit `27f0578`; final tag `v2.1.7` / commit `98b6f56`).
+  Removed: Railway service `kevbot-kalshi15min-btc` from project
+  `patient-renewal`, GitHub repo `Kujaku-ai/kevbot-kalshi15min-btc`,
+  DNS record `kevbot-btc.kujaku.ai`, local working tree
+  `MASTER_KUJAKU/kevbot-kalshi15min-btc/`, the `app/kalshi_client.py`
+  byte-mirror file from Paper Kev, and the `cryptography`
+  dependency Paper Kev only carried for byte-mirror parity.
+- **Why.** Per `AUDIT_paper_vs_live_v1.md` findings (audit closed
+  2026-05-09):
+  - **C-1.** Reconcile drift on Live, sign-biased negative
+    (cumulative −$14.82 across 164 settled trades, 18 negative : 3
+    positive : 143 zero diffs).
+  - **C-2.** Reconcile-CRITICAL kill engaged four times in four days
+    (v2.0.2 → v2.0.3, v2.1.0 → v2.1.1, v2.1.3 → v2.1.4, and
+    v2.1.7's 5027/5028 ticker-aggregate residual which never got
+    patched). The kill switch was doing its job; the underlying
+    balance-attribution model had structural fragility.
+  - **C-3.** Decision-quality gap from `realized_stats` and playbook
+    drift: 9 of 18 realized-stats slices > 10% off Paper, Live
+    playbook 1,634 chars longer than Paper at the divergence
+    snapshot, paired primary-trade win rate Paper 61.8% vs Live
+    51.5% on n=68 (10.3 pp gap), counterfactual −$1,659 on Live's
+    bankroll. Decomposed ~10pp of the −12.3% Live drawdown.
+  Operator decision: stop bleeding real money on this strategy.
+  Paper Kev continues as a research lab; the real-money flip waits
+  for a strategy that's been validated stable and a reconcile
+  codebase that isn't producing novel failure modes weekly.
+- **What stays.** `kujaku-bot-kalshi15min-btc` (Paper Kev) continues
+  as a standalone research bot on the v1.x strategy stream. The
+  fork model is gone — Layer 2b is "one bot per market-family ×
+  strategy" again. No byte-mirror invariant; no carve-outs; no
+  cross-bot knowledge channels (realized_stats inheritance / D+14
+  cliff / playbook sync).
+- **Final Kalshi state at decommission.** Final balance $833.45
+  cash, $0 portfolio, 0 positions, 0 resting orders. Operator's
+  cash disposition (withdraw / leave / split) recorded separately
+  in `LIVE_KEV_DECOMMISSION_AUDIT_v1.md` Step 2D.
+- **Anthropic API key** assigned to Live Kev: kept (not revoked)
+  unless operator explicitly chose to revoke. Distinct from Paper
+  Kev's key.
+- **Discord webhook** Live posted to: still configured operator-side;
+  harmless (just stops being called).
+- **Reference.** Full destruction map, spec-deviation ratifications,
+  per-step verification, and reversibility map: see
+  `MASTER_KUJAKU/LIVE_KEV_DECOMMISSION_AUDIT_v1.md`. Audit findings
+  that informed the decision: see `MASTER_KUJAKU/AUDIT_paper_vs_live_v1.md`.
 
 ---
 
