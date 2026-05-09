@@ -7,3 +7,10 @@ sandbox/
 # Sibling projects (own repos, own lifecycles)
 charting-calculations/
 site/
+
+# Paper-vs-Live audit (v1) — local SQLite dumps + intermediate JSON. Never commit.
+audit_artifacts/
+
+# Python bytecode
+__pycache__/
+*.pyc
