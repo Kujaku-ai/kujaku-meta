@@ -1457,6 +1457,195 @@ Push happens after architect signal at this checkpoint." rule for
 architect signal before pushing `decommission-live-kev` to
 MASTER_KUJAKU `main`.
 
+**CHECKPOINT 2G closed by architect 2026-05-09 (relay).** All 4
+commits + surprise findings ratified; signal to push 2G then proceed
+to 2H in one flow.
+
+### Step 2G push — MASTER_KUJAKU main
+
+**Pre-push state.**
+
+```
+$ git -C MASTER_KUJAKU rev-parse decommission-live-kev
+701a7510e30f6e8efcacbb5dd2df34644c3cf8f6
+
+$ git -C MASTER_KUJAKU rev-parse origin/main
+5f6794551bbf8b2f922943dd1de835a5f205910d   ← pre-push remote main
+```
+
+**Action.** Switch to main → ff-only merge `decommission-live-kev`
+→ push.
+
+```
+$ git -C MASTER_KUJAKU checkout main && git pull --ff-only origin main
+Already up to date.
+
+$ git -C MASTER_KUJAKU merge --ff-only decommission-live-kev
+Updating 5f67945..701a751
+Fast-forward
+ 6 files changed, 2024 insertions(+), 71 deletions(-)
+ create mode 100644 LIVE_KEV_DECOMMISSION_AUDIT_v1.md
+ create mode 100644 LIVE_KEV_DECOMMISSION_AUDIT_v1_SPEC.md
+
+$ git -C MASTER_KUJAKU push origin main
+To https://github.com/Kujaku-ai/kujaku-meta.git
+   5f67945..701a751  main -> main
+```
+
+**Post-push verification (GitHub API):**
+
+```json
+{
+  "sha": "701a7510e30f6e8efcacbb5dd2df34644c3cf8f6",
+  "msg": "docs(decommission): track session working document",
+  "date": "2026-05-09T04:59:49Z"
+}
+```
+
+All 4 commits visible on `Kujaku-ai/kujaku-meta` `main`:
+`701a751`, `5d3966e`, `dfe409f`, `71afd62`. ✓
+
+### Step 2H — Paper deploy-verify
+
+**Pre-condition.** 2G pushed.
+
+**Pre-deploy Paper /health (sanity, before merge):**
+
+```json
+{
+  "status": "ok",
+  "paper_mode": true,
+  "last_decision_ts_utc": "2026-05-09T05:02:43.130223+00:00",
+  "last_decision_age_s": 99,
+  "collector_reachable": true,
+  "open_trades_count": 1,
+  "pending_entries_count": 1,
+  "portfolio_value": 13381.53,
+  "reflector_enabled": true
+}
+```
+
+**Action.** ff-merge + push Paper main.
+
+```
+$ git -C bot-kalshi15min-btc checkout main && git pull --ff-only origin main
+Already up to date.
+
+$ git -C bot-kalshi15min-btc merge --ff-only remove-live-kev-deadcode
+Updating f9b11d0..ea047c3
+Fast-forward
+ 6 files changed, 47 insertions(+), 1661 deletions(-)
+ delete mode 100644 app/kalshi_client.py
+ delete mode 100644 tests/test_kalshi_client.py
+
+$ git -C bot-kalshi15min-btc push origin main
+To https://github.com/Kujaku-ai/kujaku-bot-kalshi15min-btc.git
+   f9b11d0..ea047c3  main -> main
+```
+
+**Push timestamp.** `2026-05-09T05:04:38Z`. Railway auto-deploys
+from this push.
+
+**Post-deploy verification.**
+
+GitHub API confirms `ea047c3` on Paper `main`; all 4 Step-2F commits
+visible: `ea047c3`, `f0ac3a1`, `0ae935e`, `52f2e0e`. ✓
+
+Railway container restart event (from `railway logs --deployment`):
+
+```
+Mounting volume on: /var/lib/containers/.../vol_dhjy7zhjnmmnqm6h
+Starting Container
+Kujaku bot starting v1.7.9 (v1.5) on port 8080
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+```
+
+Container started cleanly at v1.7.9 — **no ImportError, no
+ModuleNotFoundError, no kalshi_client / cryptography mention.**
+
+**Bot startup log (from `bot_log` table, post-deploy):**
+
+```
+05:05:17.96Z startup    Kujaku bot starting | version=v1.7.9 strategy_version=v1.5 | model=claude-sonnet-4-6 | collector=https://data-btc.kujaku.ai | paper_mode=True | port=8080
+05:05:18.01Z startup    Collector reachable: status=ok
+05:05:18.72Z startup    Anthropic reachable: auth verified
+05:05:18.96Z startup    stats_cache warmed via startup recompute
+05:05:18.96Z startup    playbook seed: 41 revision(s) in DB
+05:05:18.99Z startup    Started: scheduler
+05:05:18.99Z startup    Started: watcher
+05:05:18.99Z startup    Started: force_fill_sweeper
+05:05:19.00Z startup    Started: settler
+05:05:19.00Z startup    Started: playbook_compactor
+05:05:19.00Z startup    Started: heartbeat
+05:05:19.00Z startup    Started: reflector
+05:05:19.00Z startup    Started: realized_stats_compute
+05:05:26.88Z realized_stats v1.7.5 realized stats computed: tiers=5 tier_thesis=9 fill_premium=4 total=18
+```
+
+All 8 forever-tasks started, both Anthropic + collector reachable,
+stats cache warmed, playbook seed verified. **Time from push to
+"Application startup complete": ~40 seconds.**
+
+**Post-deploy decision cycle:**
+
+| event | bot_log id | ts (UTC) | details |
+|---|---|---|---|
+| pre-deploy decision 3513 fired | 34154-34159 | 05:02:43 | window 05:00-05:15Z, primary 5642 waiting break_above 80391.54 |
+| trade 5643 (hypothesis) filled | 34160 | 05:02:54 | NO break_below 64¢ (pre-deploy) |
+| **app stop** | 34161 | 05:05:15 | "All tasks stopped. Closing DB." |
+| **app start** | 34162 | 05:05:17 | "Kujaku bot starting v1.7.9" — runs on `ea047c3` |
+| **post-deploy fill 5642** | 34177 | 05:10:37 | YES break_above 31¢ (the pre-deploy waiting trade fired post-deploy via watcher's normal lifecycle) |
+| **new window 05:15Z opens** | 34178 | 05:15:50 | "new window live after 50.7s; settling for 30s" |
+| **post-deploy decision 3514 fired** | 34179-34185 | 05:16:20 → 05:17:50 | review 1/2 of window 05:15-05:30Z; primary 5644 waiting break_above 80360, hypothesis 5645 waiting break_below 80300 |
+| **post-deploy fill 5644** | 34186 | 05:17:53 | YES break_above 63¢ (post-deploy entry filled cleanly) |
+
+`/api/decisions?limit=5` confirms decisions 3510-3514; decision 3514
+carries strategy_version `v1.5` and runs the same v1.7.x strategy
+logic (Rule 6f value-bet flip in the entry rationale).
+
+**Post-deploy ERROR/WARN scan (`bot_log` since 04:00Z):**
+
+```
+id 34093 (04:24:29) WARN claude  decision 3508: PRIMARY BLOCKED — very_expensive tier (Rule 5d-hard).
+id 34070 (04:10:38) WARN claude  decision 3506: PRIMARY BLOCKED — very_expensive tier (Rule 5d-hard).
+```
+
+**Two WARN rows total, both PRE-deploy, both expected validator
+firings (Rule 5d-hard blocks primaries on very_expensive tier).
+ZERO post-deploy ERROR/WARN.** No `ImportError`,
+`ModuleNotFoundError`, `kalshi_client`, `cryptography`,
+`live_order_id`, or `live_fill_status` mention anywhere in
+post-deploy log.
+
+**Time-to-first-post-deploy-decision:** push at 05:04:38Z → app
+startup-complete at ~05:05:18Z → first decision in a NEW post-deploy
+window (3514, window 05:15-05:30Z) at 05:17:50Z. Total ~13 minutes,
+window-cadence-bound (the previous decision 3513 had already
+consumed the 05:00-05:15Z window's review slot pre-deploy).
+
+**Trade-status counts post-deploy (`trades` table on Paper):**
+
+| status | count |
+|---|---|
+| settled | 3,386 |
+| expired | 1,318 |
+| filled | 3 (5642, 5643, 5644) |
+| waiting | 1 (5645, hypothesis) |
+
+All open trades behave normally; no orphans.
+
+**No revert needed.** Paper deploy verified clean end-to-end.
+
+**Sandbox cleanup.** `_2h_paper_check.py` removed.
+
+**CHECKPOINT 2H.** Holding for architect signal before Step 2I
+(Railway service deletion — first PERMANENT step). Step 2I
+pre-condition includes the operator's still-pending Kalshi cash
+disposition.
+
 
 
 
