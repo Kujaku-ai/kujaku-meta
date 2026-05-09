@@ -8,12 +8,7 @@ sandbox/
 charting-calculations/
 site/
 
-# Paper-vs-Live audit (v1) — local SQLite dumps + intermediate JSON. Never commit.
 audit_artifacts/
-
-# Live Kev decommission archive — local SQLite snapshots from the kevbot Railway
-# volume captured during destruction. Never commit; multi-hundred-MB binary blobs.
-archive/
 
 # Python bytecode
 __pycache__/

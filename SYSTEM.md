@@ -278,14 +278,11 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 - **Layer 2a ICT** — `charting-calculations` live (FVG, liquidity, momentum, VWAP, trend extended to 30m + 4h, BOS/CHoCH, order blocks).
 - **Layer 2b Paper Kev** — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.7.9`. Strategy lab; thesis-first architecture (v1.5), risk-aware entry framework (v1.5.2), v1.6.x cleanup + analysis rebuild, v1.7.x sizing-overhaul (half-Kelly, expire-without-fill, realized-stats subsystem, SE-gated noise band, edge clamp), v1.7.8/v1.7.9 dashboard observability + Claude Communication panel redesign.
 
-**Decommissioned:**
-- **Layer 2b Live Kev** — `kevbot-kalshi15min-btc` (real-money fork of Paper Kev) decommissioned 2026-05-09. See "Decommissions" section below.
-
 **Built, awaiting cutover review:**
 - **Layer 3** — `kujaku-web`, public-facing frontend. Astro scaffold built (`site/dist/` exists); SITE.md authored. Cutover prompt prepared; awaiting operator green-light.
 
 **Current phase:**
-- Paper Kev continuing as standalone research lab. Real-money trading on this strategy paused until further notice; any future real-money work is a fresh architecture decision and a separate spec.
+- Paper Kev continuing as the strategy research lab.
 
 **After that:**
 - Additional Layer 2a indicators as they earn their place.
@@ -326,15 +323,6 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 ## Session Log
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
-
-**2026-05-08 — Documentation refresh.**
-- BOT.md schemas, file structures, env-var blocks brought back into sync with code reality across both Paper Kev and Live Kev. The fork model formalized in a new section of this doc (`Bot Duplication & Fork Model`). Spec-doc graveyard pruned: shipped V15 / V152 / V177 / V211 / V215 transition specs, the V161-V176 patch specs, and the v1.5.2 / v1.6.x / v1.7.x audit drawer all removed from the three repos. Stale `data/` clone (3 PRs behind, no unique work) deleted; `data-btc/` is now the sole BTC collector working tree on disk. `kalshi15min-btc.kujaku.ai/health`: paper-mode True. `kevbot-btc.kujaku.ai/health`: live_trading_active=True.
-
-**2026-05-07 — Live Kev v2.1.4 + parity playbook sync.**
-- Live Kev v2.1.4: per-position reconcile rewrite (retired balance-delta arithmetic in the per-row path; cross-side bug class now structurally impossible). Gate normalization: `hard_size_cap_pct` 0.05 → 0.10, `live_max_open_orders` 1 → 5. Mirror patch on Paper Kev for the matching brain-side cleanups. Operator-driven playbook sync from Paper Kev → Live Kev via `sync_playbook_from_paper.py`; anchor hash `92ab79330411fbd6e4c00e399703fe81` preserved. v2.1.5 followed same day with live-trading reliability fixes (Phase 1: immediate-entry sentries; Phase 2: max-open-orders sentry; Phase 3: KalshiRateLimitError retry classification; Phase 4: Kalshi HTTP timing instrumentation, byte-mirrored to Paper Kev).
-
-**2026-05-05 — Live Kev v2.0.0: real money on the line.**
-- `kevbot-kalshi15min-btc` forked from `kujaku-bot-kalshi15min-btc` at commit `27f0578` / tag `v1.7.6` on 2026-05-05. Live trading I/O layer stood up: authenticated Kalshi trading client (RSA-PSS signing), `live_trader.place_order_live` orchestrator with pre-flight safety gates, async fill reconciliation, settlement reconciliation against real Kalshi balance, three percentage-based safety mechanisms (HARD_SIZE_CAP_PCT, DAILY_LOSS_KILL_PCT, LIVE_MAX_OPEN_ORDERS), one-shot `seed_for_live_trading.py` script. Service deployed at `kevbot-btc.kujaku.ai`. Paper Kev continues as research lab.
 
 **2026-04-30 to 2026-05-06 — Paper Kev v1.7.x sizing overhaul.**
 - v1.7.3: half-Kelly sizing replacing the v1.5.2 bucketed Rule 5a ladder; tier-specific safety factors; per-trade and per-portfolio caps; per-tier anti-tilt (`sizing_state` table); hard-skip very_expensive primary.
@@ -379,63 +367,6 @@ Brief record of major architectural decisions and milestones. Append new entries
 - Generic schema chosen (`source`/`asset`/`quote`) so future exchanges plug in without migrations.
 - Pattern A (one repo per market) chosen over monolith-with-subfolders.
 - Coinbase is the reference BTC feed for now; basis vs BRTI to be measured empirically before considering composite or licensed feed.
-
----
-
-## Decommissions
-
-Append new entries at the top.
-
-**2026-05-09 — Live Kev (`kevbot-kalshi15min-btc`) decommissioned in
-full.**
-
-- **What.** Real-money fork of Paper Kev (forked 2026-05-05 at Paper
-  v1.7.6 / commit `27f0578`; final tag `v2.1.7` / commit `98b6f56`).
-  Removed: Railway service `kevbot-kalshi15min-btc` from project
-  `patient-renewal`, GitHub repo `Kujaku-ai/kevbot-kalshi15min-btc`,
-  DNS record `kevbot-btc.kujaku.ai`, local working tree
-  `MASTER_KUJAKU/kevbot-kalshi15min-btc/`, the `app/kalshi_client.py`
-  byte-mirror file from Paper Kev, and the `cryptography`
-  dependency Paper Kev only carried for byte-mirror parity.
-- **Why.** Per `AUDIT_paper_vs_live_v1.md` findings (audit closed
-  2026-05-09):
-  - **C-1.** Reconcile drift on Live, sign-biased negative
-    (cumulative −$14.82 across 164 settled trades, 18 negative : 3
-    positive : 143 zero diffs).
-  - **C-2.** Reconcile-CRITICAL kill engaged four times in four days
-    (v2.0.2 → v2.0.3, v2.1.0 → v2.1.1, v2.1.3 → v2.1.4, and
-    v2.1.7's 5027/5028 ticker-aggregate residual which never got
-    patched). The kill switch was doing its job; the underlying
-    balance-attribution model had structural fragility.
-  - **C-3.** Decision-quality gap from `realized_stats` and playbook
-    drift: 9 of 18 realized-stats slices > 10% off Paper, Live
-    playbook 1,634 chars longer than Paper at the divergence
-    snapshot, paired primary-trade win rate Paper 61.8% vs Live
-    51.5% on n=68 (10.3 pp gap), counterfactual −$1,659 on Live's
-    bankroll. Decomposed ~10pp of the −12.3% Live drawdown.
-  Operator decision: stop bleeding real money on this strategy.
-  Paper Kev continues as a research lab; the real-money flip waits
-  for a strategy that's been validated stable and a reconcile
-  codebase that isn't producing novel failure modes weekly.
-- **What stays.** `kujaku-bot-kalshi15min-btc` (Paper Kev) continues
-  as a standalone research bot on the v1.x strategy stream. The
-  fork model is gone — Layer 2b is "one bot per market-family ×
-  strategy" again. No byte-mirror invariant; no carve-outs; no
-  cross-bot knowledge channels (realized_stats inheritance / D+14
-  cliff / playbook sync).
-- **Final Kalshi state at decommission.** Final balance $833.45
-  cash, $0 portfolio, 0 positions, 0 resting orders. Operator's
-  cash disposition (withdraw / leave / split) recorded separately
-  in `LIVE_KEV_DECOMMISSION_AUDIT_v1.md` Step 2D.
-- **Anthropic API key** assigned to Live Kev: kept (not revoked)
-  unless operator explicitly chose to revoke. Distinct from Paper
-  Kev's key.
-- **Discord webhook** Live posted to: still configured operator-side;
-  harmless (just stops being called).
-- **Reference.** Full destruction map, spec-deviation ratifications,
-  per-step verification, and reversibility map: see
-  `MASTER_KUJAKU/LIVE_KEV_DECOMMISSION_AUDIT_v1.md`. Audit findings
-  that informed the decision: see `MASTER_KUJAKU/AUDIT_paper_vs_live_v1.md`.
 
 ---
 
