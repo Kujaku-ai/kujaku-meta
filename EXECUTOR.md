@@ -49,7 +49,7 @@ Public name when deployed: `portfolio-001.kujaku.ai`.
 
 - Run 24/7 on Railway as a single containerized service.
 - Poll `https://kalshi15min-btc.kujaku.ai/api/trades?status=filled&limit=50` every 10 seconds. Track `last_seen_paper_trade_id` in its own DB. For each newly-filled Paper trade with `id > last_seen_paper_trade_id`, attempt to mirror it onto Kalshi.
-- Mirror **every** Paper-placed trade with `trade_type ∈ {primary, primary_scale, hypothesis}`. No filtering by trade type, fill age, or any other Paper-side property. Paper is the brain; the executor is the hand.
+- Mirror every Paper-placed trade with `trade_type ∈ {primary, primary_scale}`. Hypothesis trades (`trade_type='hypothesis'`) are **SKIPPED** per operator ruling 2026-05-10 — Paper flags hypothesis as 0.1% learning trades that don't meaningfully affect portfolio P&L; mirroring adds noise without value. No filtering by fill age or any other Paper-side property. Paper is the brain; the executor is the hand.
 - Fetch live Kalshi portfolio value (cash balance + value of open positions) before each routing decision, with a 30-second in-memory cache. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. If `target_contracts < 1`, persist a `paper_trades` row with `skip_reason='size<1'` (math floor; never round up). No cap clipping, no portfolio floor, no max-trade ceiling.
 - Place a Kalshi limit order at the current Kalshi ask for the requested side. Order type: `limit`.
 - Maintain a SQLite database recording every Paper trade observed, every Kalshi order placed (with full Kalshi response), order lifecycle events, settlement outcomes, and per-investor P&L attribution.
@@ -66,7 +66,7 @@ Public name when deployed: `portfolio-001.kujaku.ai`.
 **DOES NOT:**
 
 - Make trading decisions. Run an LLM. Maintain a playbook. Compute sizing from first principles. Re-derive Paper's anti-tilt or half-Kelly. Second-guess Paper's `size_pct`.
-- Filter trades by `trade_type`, fill age, portfolio floor, daily-loss threshold, hard contract cap, or hard dollar cap. The executor mirrors every Paper-placed trade in `trade_type ∈ {primary, primary_scale, hypothesis}` regardless of size, age, or other property. The only operator control is the manual kill switch.
+- Filter trades by fill age, portfolio floor, daily-loss threshold, hard contract cap, or hard dollar cap. The executor mirrors every Paper-placed `primary` and `primary_scale` trade regardless of size, age, or other property. The one `trade_type` filter is `hypothesis`, which is unconditionally skipped per operator ruling 2026-05-10 (not a runtime gate; not configurable). The only runtime operator control is the manual kill switch.
 - Auto-pause from any source. There is no circuit-breaker task. There is no auto-pause-on-loss, no auto-pause-on-floor, no auto-pause anything. If a guard rail belongs anywhere, it belongs in Paper (the brain).
 - Mirror trades from anything other than `kalshi15min-btc.kujaku.ai`. Connect to any exchange other than Kalshi. Trade any market other than KXBTC15M.
 - Run any of Paper's background tasks (window scheduler, watcher, force-fill sweeper, playbook compactor, reflector, realized-stats compute). Those are Paper's responsibility.
@@ -131,6 +131,11 @@ Paper Kev (/api/trades)  ──poll every 10s──>  trade_poller
                                           unseen rows (id > cursor)
                                                     │
                                                     ▼
+                                          trade_type='hypothesis'?
+                                            yes → skip_reason='hypothesis_skipped'
+                                            no  → continue
+                                                    │
+                                                    ▼
                                           fetch live Kalshi portfolio
                                           (cached 30s)
                                                     │
@@ -174,7 +179,7 @@ CREATE TABLE paper_trades (
     paper_decision_id     INTEGER NOT NULL,
     seen_at_ts_utc        TEXT    NOT NULL,
     eligible              INTEGER NOT NULL,              -- 0/1; whether we attempted to mirror
-    skip_reason           TEXT,                          -- NULL if eligible, else "size<1" | "kalshi_rejected"
+    skip_reason           TEXT,                          -- NULL if eligible, else "size<1" | "kalshi_rejected" | "hypothesis_skipped"
     paper_window_ticker   TEXT    NOT NULL,
     paper_side            TEXT    NOT NULL,              -- "YES" or "NO"
     paper_size_pct        REAL    NOT NULL,
@@ -298,7 +303,8 @@ Runs every `TRADE_POLL_SECONDS` (default 10). Single iteration:
 
 `process_one_paper_trade(row)`:
 
-1. Insert a `paper_trades` row (always — eligible or not). `eligible` and `skip_reason` filled in below. **No filtering by `trade_type`, fill age, or any other Paper-side property** — every Paper-placed trade in `{primary, primary_scale, hypothesis}` is mirrored.
+1. Insert a `paper_trades` row (always — eligible or not). `eligible` and `skip_reason` filled in below.
+1a. **Hypothesis filter (operator ruling 2026-05-10).** If `paper_trade_type == 'hypothesis'`, mark `eligible=0, skip_reason='hypothesis_skipped'`, write an INFO `bot_log` row, and return. This is the only `trade_type` filter; no filtering by fill age or any other Paper-side property. Mirroring is restricted to `primary` and `primary_scale`. The check runs **before** the portfolio / orderbook fetches so a skipped hypothesis trade costs zero Kalshi network calls.
 2. Fetch live Kalshi portfolio (cached 30s). Persist a `portfolio_snapshots` row at every fetch boundary. On Kalshi unreachable, mark `eligible=0, skip_reason='kalshi_rejected'`, return.
 3. Fetch current Kalshi ask for the side (single Kalshi REST call; do NOT reuse Paper's stored `fill_price_cents`). On Kalshi unreachable or invalid ask, mark `eligible=0, skip_reason='kalshi_rejected'`, return.
 4. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. **No cap clipping.** If `target_contracts < 1`, mark `eligible=0, skip_reason='size<1'`, return. Math floor only — never round up; never re-decide what Paper sized.
@@ -685,7 +691,7 @@ If `DISCORD_WEBHOOK_URL` is empty, all senders silently no-op.
 
 - `test_kalshi_client.py` — RSA-PSS signing matches a known-good vector; every endpoint round-trips against `aioresponses`.
 - `test_routing.py` — `size<1` boundary cases (size_pct=0.1 producing < 1 contract; portfolio = $0 short-circuit; ask out of 1..100 range).
-- `test_trade_poller.py` — idempotent under restart; cursor advances correctly; respects kill switch; mirrors hypothesis trades (no filtering).
+- `test_trade_poller.py` — idempotent under restart; cursor advances correctly; respects kill switch; **skips `trade_type='hypothesis'` rows with `skip_reason='hypothesis_skipped'` and an INFO bot_log row** (operator ruling 2026-05-10).
 - `test_settler.py` — cap-table snapshot at settlement; cross-check divergence creates `reconciliation_events`; fallback path activates after 30 minutes.
 - `test_investors.py` — config validation (sum-to-100, name uniqueness, percent range); reconcile-on-startup behavior; attribution math.
 
