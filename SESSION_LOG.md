@@ -86,3 +86,60 @@ Five new architect-decision items surfaced during build were ruled on:
 
 The existing report sections 0–8 remain unchanged; the addendum is
 append-only.
+
+---
+
+## 2026-05-09 — Phase 0 deploy gate waived (proceed-to-Phase-1)
+
+**Expected sequencing.** After the partial Phase 0 build report shipped, the
+recovery path on file (Phase 0 bypass-mode entry above, "Recovery path" section)
+required the operator to complete `EXECUTOR_PHASE_0_DEPLOY_RUNBOOK.md`
+Steps 1–8, paste back the live `/health` JSON + dashboard checklist, and
+trigger Claude Code to author a deploy-verification addendum to
+`EXECUTOR_PHASE_0_REPORT.md`. Phase 1 prompt drafting was scheduled to follow
+the addendum.
+
+**Operator quote(s) verbatim.**
+
+> can we skip this for now ... i would like to skip this - come back to this later
+
+**Claude Code interpretation.** Did not interpret directly — instruction was
+relayed to architect for ruling, since "skip" of a real-money deploy gate is
+above the implementer's authority and the prior deploy-verification recovery
+path was an architect-issued constraint, not an operator-issued one.
+
+**Architect post-hoc ruling.** Phase 0 deploy gate waived. Proceed to Phase 1
+build immediately. Operator deploys Phase 0 + Phase 1 jointly when ready to
+return to the deploy step. Real-money safety is unaffected: Phase 0's safety
+belt is `kalshi_client.place_limit_order` raising `NotImplementedError`, and
+Phase 1 will only enable order placement under explicit architect prompt.
+
+Two follow-on tasks queued in the same architect turn:
+
+1. Reformat `EXECUTOR_PHASE_0_DEPLOY_RUNBOOK.md` Step 4 env-var population
+   into a single Railway raw-editor copy-paste block, with
+   `KALSHI_PRIVATE_KEY_PEM` flagged as a separate manual-entry callout. Cross-
+   referenced env var listings in `EXECUTOR.md` and `.env.example` already
+   match the copy-paste shape and need no change. Committed on `kujaku-meta`
+   as `docs(executor): switch deploy runbook env vars to copy-paste format`.
+2. This session-log entry, committed on `kujaku-meta` as
+   `docs(meta): log deploy-deferral exchange`.
+
+**Recovery path.**
+
+1. Phase 1 build proceeds against the existing `executor-portfolio-001` repo
+   under a separate architect prompt (not yet issued at the time of this
+   entry).
+2. Operator at deploy time follows the (now copy-paste-formatted) Step 4 to
+   provision Railway env vars in one paste plus the separate PEM entry, then
+   walks the rest of the runbook.
+3. When the operator pastes the live `/health` JSON post-joint-deploy, Claude
+   Code appends a `## 9. Deploy verification addendum (yyyy-mm-dd)` section
+   to `EXECUTOR_PHASE_0_REPORT.md` covering the Phase 0 verification items
+   that were deferred (live `/health` JSON, dashboard panel checklist, live
+   Kalshi `/portfolio/balance` cash figure, first 5 `bot_log` rows, custom-
+   domain TLS confirmation). Append-only — sections 0–8 of the existing
+   report stay frozen.
+4. The Phase 1 deploy verification (whatever Phase 1 introduces — likely a
+   live-order-placement smoke test) is scoped to the Phase 1 report, not
+   appended to the Phase 0 report.
