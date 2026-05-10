@@ -207,3 +207,75 @@ Phase 1.4 will use for the actual `place_limit_order` POST failure.
    attribution, daily reconciler, and joint Phase 0 + Phase 1 deploy on
    top of the cleaned scaffold. The deploy step uses the renamed
    `MASTER_KUJAKU/EXECUTOR_DEPLOY_RUNBOOK.md`.
+
+---
+
+## 2026-05-10 — Phase 1.10 deploy-day production crash (NameError in `_run_all_services`)
+
+**Expected sequencing.** Operator pastes the bulk env block into Railway →
+Variables → Raw Editor and `KALSHI_PRIVATE_KEY_PEM` separately. Railway
+redeploys. Startup log emits the documented banner (DB init → cap-table
+validate → three reachability probes → six "Started: <task>" lines →
+"Uvicorn running on …"). `/health` returns 200. Operator pastes the
+`/health` JSON back; Claude Code appends the deploy-verification
+addendum to both Phase 0 and Phase 1 reports.
+
+**What failed.** The startup banner crashed inside `_run_all_services`
+with `NameError: name '_TASK_NAMES_STUB' is not defined`. The Phase 1.7
+cleanup that retired the stub-task scaffolding deleted
+`_TASK_NAMES_STUB` from module scope but left one survivor: a
+string-format reference inside `_run_all_services` (line ~260) that
+joined the deleted tuple into a "[Phase 1 stubs WARN-logged for: …]"
+log message. Python defers name resolution until call time. The unit
+suite covered each `_run_startup_checks` failure mode and the
+`_TASK_NAMES_LIVE` shape via `test_six_tasks_total_all_live_no_circuit_breaker`,
+but no test exercised `_run_all_services` end-to-end (uvicorn would
+otherwise bind a port). The dead reference therefore never executed
+during pytest — it executed for the first time on Railway boot.
+
+**Root cause.** Phase 1.7 cleanup leftover. When the stub-task scaffold
+was deleted, the deletion was scoped to the module-level constant and
+the helper function `_phase_1_stub_task`, but the launch-banner
+diagnostic that consumed `_TASK_NAMES_STUB` was missed. Detection gap:
+no end-to-end smoke test of `_run_all_services`.
+
+**Fix.** Commit `8a3e684` on `Kujaku-ai/executor-portfolio-001` main,
+`fix(main): remove dangling _TASK_NAMES_STUB reference; add launch-banner
+smoke test`. Two changes:
+
+1. `app/main.py` — drop the stub-banner `insert_log` block. The
+   per-task `"Started: <name>"` loop already covers the live banner.
+   Same commit corrects the `_run_all_services` docstring's "seven
+   background tasks" leftover to "six".
+2. `tests/test_main.py` — add
+   `test_run_all_services_smoke_executes_without_dangling_names`. The
+   test patches `uvicorn.Server.serve` to return immediately, patches
+   each of the six task modules' `run_*` to a coroutine awaiting
+   cancellation, patches `db.close_db` to a no-op (so the conftest
+   `conn` fixture's own teardown can still close cleanly), then calls
+   `_run_all_services` end-to-end. Asserts each `"Started: <name>"`
+   landed and the shutdown log line landed. This forces Python to
+   evaluate every reference in the function body during pytest, so any
+   future dead-name reintroduction fails CI instead of Railway boot.
+
+Pytest result post-fix: 259 passed (was 258, +1 from the new
+regression).
+
+**Detection gap closed.** End-to-end coverage of `_run_all_services` now
+exists. The same monkeypatch pattern (uvicorn server-stub + task-runner
+stubs) generalizes to any future startup-orchestration test.
+
+**Recovery path.**
+
+1. Push to `executor-portfolio-001` main triggers Railway auto-redeploy.
+2. Operator watches Railway logs for the documented startup banner.
+3. On clean banner + `/health` 200, operator pastes back `/health` JSON
+   and dashboard checklist per `EXECUTOR_DEPLOY_RUNBOOK.md` Step 7.
+4. Claude Code appends `## 9. Deploy verification addendum` to
+   `MASTER_KUJAKU/EXECUTOR_PHASE_0_REPORT.md` (sections 0–8 frozen) and
+   a deploy-verification section to
+   `MASTER_KUJAKU/EXECUTOR_PHASE_1_REPORT.md`. Both capture: `/health`
+   JSON, dashboard panel sanity, first poll cycle in `bot_log`, first
+   real trade outcome (if observed by report time).
+5. Joint commit on `kujaku-meta`: `docs: phase 0 + phase 1 deploy
+   verification addenda`.
