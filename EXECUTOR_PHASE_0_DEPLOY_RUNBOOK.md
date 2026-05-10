@@ -50,37 +50,43 @@ Write them down. They go into Railway in step 4.
 
 ## Step 4 — Populate environment variables
 
-In the Railway service → `Variables` tab, click `+ New Variable` for each row.
+In the Railway service → `Variables` tab, click the `Raw Editor` toggle (top-right of the variables panel). This switches the panel to a `.env`-style text area that accepts a single bulk paste.
 
-**Required (no defaults — service won't start without these):**
+Paste the block below into the raw editor, replacing every `<...>` placeholder with your value from step 1 or step 2. The defaults shown for the polling cadences and order behavior rows are intentional — leave them as-is unless the architect tells you otherwise.
 
-| Name | Value |
-|---|---|
-| `KALSHI_API_KEY_ID` | (paste from step 1) |
-| `KALSHI_PRIVATE_KEY_PEM` | (paste full multi-line PEM from step 1, including BEGIN/END lines) |
-| `PAPER_API_BASE_URL` | `https://kalshi15min-btc.kujaku.ai` |
-| `COLLECTOR_BASE_URL` | `https://data-btc.kujaku.ai` |
-| `DATABASE_PATH` | `/data/executor.db` |
-| `MAX_TRADE_DOLLARS` | (your value from step 2) |
-| `MAX_TRADE_CONTRACTS` | (your value from step 2) |
-| `MAX_PORTFOLIO_FRACTION_PER_TRADE` | (your value from step 2) |
-| `MIN_PORTFOLIO_DOLLARS` | (your value from step 2) |
-| `DAILY_LOSS_CIRCUIT_BREAKER_PCT` | (your value from step 2) |
+```env
+KALSHI_API_KEY_ID=<paste-from-step-1>
+PAPER_API_BASE_URL=https://kalshi15min-btc.kujaku.ai
+COLLECTOR_BASE_URL=https://data-btc.kujaku.ai
+DATABASE_PATH=/data/executor.db
+MAX_TRADE_DOLLARS=<step-2-value>
+MAX_TRADE_CONTRACTS=<step-2-value>
+MAX_PORTFOLIO_FRACTION_PER_TRADE=<step-2-value>
+MIN_PORTFOLIO_DOLLARS=<step-2-value>
+DAILY_LOSS_CIRCUIT_BREAKER_PCT=<step-2-value>
+TRADE_POLL_SECONDS=10
+ORDER_WATCH_SECONDS=5
+SETTLEMENT_POLL_SECONDS=30
+PORTFOLIO_REFRESH_SECONDS=30
+HEARTBEAT_MINUTES=15
+MAX_FILL_AGE_SECONDS=60
+ORDER_LIMIT_TTL_SECONDS=30
+DISCORD_WEBHOOK_URL=
+```
 
-**Optional (defaults shown will be used if you leave them out):**
+Click `Update Variables` to apply.
 
-| Name | Default |
-|---|---|
-| `TRADE_POLL_SECONDS` | 10 |
-| `ORDER_WATCH_SECONDS` | 5 |
-| `SETTLEMENT_POLL_SECONDS` | 30 |
-| `PORTFOLIO_REFRESH_SECONDS` | 30 |
-| `HEARTBEAT_MINUTES` | 15 |
-| `MAX_FILL_AGE_SECONDS` | 60 |
-| `ORDER_LIMIT_TTL_SECONDS` | 30 |
-| `DISCORD_WEBHOOK_URL` | (empty; Discord pings disabled) |
-
-> ⚠️ **Triple-check `KALSHI_PRIVATE_KEY_PEM`.** It must include the literal BEGIN/END lines. Railway preserves multi-line values. If you accidentally paste only the body, Kalshi auth fails at startup and the process crashes.
+> ⚠️ **`KALSHI_PRIVATE_KEY_PEM` is intentionally NOT in the bulk paste above.** Multi-line PEM values do not round-trip cleanly through Railway's raw editor (quoting and line endings get rewritten). Set it as a separate variable through the standard variable form, where Railway preserves the multi-line value verbatim:
+>
+> 1. Switch the Variables panel back to the default (non-raw) view.
+> 2. Click `+ New Variable`.
+> 3. Name: `KALSHI_PRIVATE_KEY_PEM`.
+> 4. Value: paste the full multi-line PEM from step 1, including both
+>    `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----`
+>    lines and every newline between them.
+> 5. Save.
+>
+> **Triple-check the result.** It must include the literal BEGIN/END lines. If you accidentally paste only the body, or the line breaks get mangled, Kalshi auth fails at startup and the process crashes.
 
 After all variables are set, Railway redeploys automatically. Watch the logs:
 
