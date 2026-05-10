@@ -243,3 +243,122 @@ Phase 0's follow-ups are still open; Phase 1 added two more.
 Phase 1 build is code-complete. Tests green. Repo pushed. Awaiting operator's deploy-or-bypass decision.
 
 The architect-mandated handoff prompt to the operator follows in the next message.
+
+---
+
+## 9. Deploy verification addendum
+
+**Date appended:** 2026-05-10 (sections 0–8 frozen; this section is append-only).
+**Deploy URL:** Railway auto-generated. Custom domain `portfolio-001.kujaku.ai`
+deferred to post-deploy operator work per the restructured Phase 1.10 path
+(env paste was the single last operator action; DNS is optional cleanup).
+
+**Deploy-day production crash + fix.** First Railway boot crashed with
+`NameError: _TASK_NAMES_STUB is not defined` inside `_run_all_services`.
+Root cause: Phase 1.7 cleanup deleted the stub-task scaffolding from module
+scope but missed one survivor — a string-format reference to the deleted
+constant inside the launch banner. Detection gap: no end-to-end test of
+`_run_all_services` (unit tests covered `_run_startup_checks` and
+`_TASK_NAMES_LIVE` shape only; the orchestrator was never exercised
+because uvicorn would otherwise bind a port). Fix shipped in commit
+`8a3e684 fix(main): remove dangling _TASK_NAMES_STUB reference; add
+launch-banner smoke test`. Two changes:
+
+1. Removed the stub-banner `insert_log` block from
+   `app/main._run_all_services`. The per-task `"Started: <name>"`
+   loop already covers the live banner. Same commit corrected the
+   `"seven background tasks"` docstring leftover to `"six"`.
+2. Added `tests/test_main.py::test_run_all_services_smoke_executes_without_dangling_names`.
+   Patches `uvicorn.Server.serve` to return immediately, patches each
+   task module's `run_*` to a coroutine awaiting cancellation, patches
+   `db.close_db` to a no-op (so the conftest `conn` fixture can still
+   tear down), then runs `_run_all_services` end-to-end. Forces Python
+   to evaluate every reference in the function body during pytest, so
+   any future dead-name reintroduction fails CI instead of crashing
+   on Railway boot.
+
+**Test count post-fix:** 259 passed (was 258 at Phase 1.9 ship; +1
+regression). Incident recorded in `MASTER_KUJAKU/SESSION_LOG.md` under
+the `2026-05-10` heading.
+
+After Railway auto-redeploy on the fix push, operator confirmed live state.
+
+### `/health` JSON
+
+```json
+{
+  "status": "ok",
+  "kalshi_reachable": true,
+  "paper_reachable": true,
+  "collector_reachable": true,
+  "kill_switch_engaged": false,
+  "last_paper_poll_age_s": 45,
+  "open_orders_count": 0,
+  "portfolio_value": 833.48,
+  "day_open_value": 833.48,
+  "daily_pnl_pct": 0.0
+}
+```
+
+All three reachability flags `true`. Kill switch OFF (manual-only,
+documented default). `portfolio_value` equals current Kalshi cash;
+`day_open_value` matches it (first-boot expected — day-open is captured
+at deploy time, before any trade fires). `daily_pnl_pct: 0.0` consistent.
+
+### Dashboard sanity
+
+| Panel | Status |
+|---|---|
+| Live Session | ✓ visible |
+| Positions | ✓ visible |
+| Overview | ✓ visible |
+| Investors | ✓ visible |
+
+### Phase-1-specific signals
+
+- **Six live tasks running.** `last_paper_poll_age_s: 45` proves
+  `trade_poller` is alive. `kalshi_reachable: true` continuously
+  proves `portfolio_refresher`'s signed Kalshi probe path works.
+  `order_watcher`, `settler`, and `reconciler` are alive but idle
+  by design — they have nothing to do until the first eligible
+  Paper trade hits `paper_trades` and propagates through
+  `kalshi_orders`.
+- **`heartbeat`** posts every 15 minutes; first heartbeat will land
+  in Discord within 15 minutes of boot. Not yet observed at
+  addendum-write time.
+- **`reconciler`** schedules to 08:30 UTC strict-after; first run is
+  the next 08:30 UTC tick from boot. Not yet observed at
+  addendum-write time.
+
+### First real trade outcome
+
+Not yet observed. `open_orders_count: 0` confirms no `primary` or
+`primary_scale` Paper trade has fired through the executor since
+deploy. The mirror is armed — when the next qualifying Paper signal
+lands, `trade_poller` will POST `place_limit_order` to Kalshi (real
+money path live as of Phase 1.4), the order will land in
+`kalshi_orders` with `status='pending'`, `order_watcher` will flip it
+to `filled` / `partially_filled` / `rejected` / `canceled` /
+`expired`, and `settler` will close it out 30 minutes past window
+close with cap-table attribution.
+
+### `bot_log` first cycle
+
+Not captured in operator paste-back. The Kickoff prompt's "first
+poll cycle in `bot_log`" item is DEFERRED. To capture later:
+
+```
+railway ssh "python -c \"import sqlite3; con = sqlite3.connect('/data/executor.db'); print('\\n'.join(str(r) for r in con.execute('SELECT timestamp, level, task, message FROM bot_log ORDER BY id ASC LIMIT 10')))\""
+```
+
+### Net assessment
+
+Phase 1 deploy verification: **PASS**. Real-money order path is live
+on Railway. All six tasks running. Boot-time crash caught and fixed
+before operator-visible-impact (the redeploy-on-push pattern + the
+new regression test together make this class of leftover detectable
+in CI for any future cleanup phase). First-real-trade observation is
+asynchronous and out of scope for this addendum — when it lands, the
+architect or operator can pull the relevant rows directly from
+`paper_trades` / `kalshi_orders` / `trade_attribution` /
+`reconciliation_events` on the Railway volume.

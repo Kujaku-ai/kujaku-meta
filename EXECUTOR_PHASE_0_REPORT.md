@@ -276,3 +276,91 @@ Not blocking; for architect to triage:
 
 Build complete. Tests green. Repo pushed. Awaiting operator deploy paste-back
 to author the deploy-verification addendum.
+
+---
+
+## 9. Deploy verification addendum
+
+**Date appended:** 2026-05-10 (sections 0–8 frozen; this section is append-only).
+**Deploy URL:** Railway auto-generated. Custom domain `portfolio-001.kujaku.ai`
+DNS is deferred post-deploy operator work per the restructured Phase 1.10 path.
+
+**Pre-verification correction.** First Railway boot crashed with
+`NameError: _TASK_NAMES_STUB is not defined` — a Phase 1.7 cleanup leftover
+inside `_run_all_services` that the unit suite missed because no test
+exercised the orchestrator end-to-end. Fix shipped in `executor-portfolio-001`
+commit `8a3e684 fix(main): remove dangling _TASK_NAMES_STUB reference; add
+launch-banner smoke test`. Same commit added a regression smoke test that
+forces Python to evaluate every reference in `_run_all_services` during
+pytest. Test count after fix: 259 passed (was 258 at Phase 1 ship).
+Incident captured in `MASTER_KUJAKU/SESSION_LOG.md` `2026-05-10` entry.
+
+After Railway auto-redeploy on push, operator confirmed live state:
+
+### `/health` JSON
+
+```json
+{
+  "status": "ok",
+  "kalshi_reachable": true,
+  "paper_reachable": true,
+  "collector_reachable": true,
+  "kill_switch_engaged": false,
+  "last_paper_poll_age_s": 45,
+  "open_orders_count": 0,
+  "portfolio_value": 833.48,
+  "day_open_value": 833.48,
+  "daily_pnl_pct": 0.0
+}
+```
+
+All three reachability flags `true`, kill switch OFF (the documented default),
+`portfolio_value` equals the operator's current Kalshi cash balance, and
+`day_open_value` matches `portfolio_value` (expected on first boot — the
+day-open snapshot is captured at deploy time before any trade has fired).
+
+### Dashboard sanity
+
+| Panel | Status |
+|---|---|
+| Live Session | ✓ visible |
+| Positions | ✓ visible |
+| Overview | ✓ visible |
+| Investors | ✓ visible |
+
+### Live Kalshi connectivity
+
+`kalshi_reachable: true` proves the signed `/portfolio/balance` probe
+succeeded at startup. `KALSHI_PRIVATE_KEY_PEM` and `KALSHI_API_KEY_ID`
+are correctly populated in Railway env.
+
+### Polling loop liveness
+
+`last_paper_poll_age_s: 45` — `trade_poller` last hit Paper Kev `/trades`
+within the last 45 seconds at the moment of the `/health` snapshot. Direct
+evidence the polling loop is running. **The first 5 `bot_log` rows from
+the live deploy were not captured in this paste-back** — operator's
+return is the `/health` JSON + dashboard checklist only. The Kickoff
+prompt's "first 5 bot_log rows" item remains DEFERRED. Recommended
+next step: `railway ssh "python -c \"import sqlite3; con =
+sqlite3.connect('/data/executor.db'); print(list(con.execute('SELECT
+timestamp, level, task, message FROM bot_log ORDER BY id ASC LIMIT
+5')))\""` whenever the architect or operator wants the verbatim
+boot sequence.
+
+### First real trade
+
+Not yet observed at addendum-write time. `open_orders_count: 0` and
+`portfolio_value == day_open_value` indicate no `primary` or
+`primary_scale` Paper trade has fired through the executor since deploy.
+This is expected if the current KXBTC15M window has not yet produced a
+qualifying signal. The mirror is armed — when the next eligible Paper
+trade lands, `trade_poller` will POST to Kalshi and the row will appear
+in `paper_trades` + `kalshi_orders`.
+
+### Net assessment
+
+Phase 0 deploy verification: **PASS**. Service is live on Railway, all
+startup checks satisfied, dashboard renders, polling loop active. The
+first-real-trade signal will arrive asynchronously and is out of scope
+for this addendum.
