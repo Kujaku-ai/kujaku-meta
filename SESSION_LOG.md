@@ -579,3 +579,119 @@ unless a new failure mode surfaces.
 n=7 fills is noted as a Phase 2 investigation item. Sample is too
 small to characterise a steady-state distribution; recheck after
 ~30 fills.
+
+---
+
+## 2026-05-10 — limit-to-market switch (architect ruling)
+
+**Trigger.** Architectural correction. The limit-at-ask placement
+pattern can miss when the ask moves between orderbook fetch (sizing)
+and order POST. Pure mirror = guaranteed fill is non-negotiable for
+a real-money executor whose sole job is to express Paper's
+positions. Pricing logic belongs in Paper (the brain), not in the
+executor (the hand).
+
+**Operator quote verbatim:**
+
+> "no limit orders just pure market enter when paper enters a trade
+> ... pure execution - the limits are built in to paper kev"
+
+**Architect ruling.** Switch executor from `type='limit'` at the
+current Kalshi ask → `type='market'` with a never-trigger 99¢
+per-contract cap. Paper owns price logic; executor expresses
+positions, not preferences. Slippage stays as observability,
+never a gate.
+
+**Probe verification.** Architect authorized one signed probe POST
+to determine the exact Kalshi market-order body shape. Two probes
+were used in practice — the first returned a diagnostic 400, the
+second confirmed the corrected shape works:
+
+  PROBE 1 — `POST /trade-api/v2/portfolio/orders`
+  ```json
+  {"ticker": "KXBTC15M-26MAY101630-30", "action": "buy", "side": "yes",
+   "count": 1, "type": "market", "client_order_id": "probe-market-..."}
+  ```
+  ↦ HTTP 400
+  ```json
+  {"error":{"code":"invalid_order","details":"exactly one of yes_price,
+   no_price, yes_price_dollars, or no_price_dollars should be provided"}}
+  ```
+  No real-money movement.
+
+  PROBE 2 — same body + `"yes_price": 99` added
+  ↦ HTTP 201
+  ```json
+  {"order":{"order_id":"a5891fa0-ced4-409a-8540-08fcbd29cf02",
+   "status":"executed","fill_count_fp":"1.00","initial_count_fp":"1.00",
+   "remaining_count_fp":"0.00","taker_fill_cost_dollars":"0.240000",
+   "taker_fees_dollars":"0.020000","yes_price_dollars":"0.9900",
+   "no_price_dollars":"0.0100","type":"limit", ...}}
+  ```
+  Filled 1 contract @ 24¢ ask + 2¢ fee = $0.26 spent.
+
+**Findings.**
+- Kalshi REQUIRES one of `yes_price` / `no_price` / `yes_price_dollars`
+  / `no_price_dollars` even on `type='market'`. The price field IS
+  the per-contract cap.
+- Setting the cap to 99¢ (max binary trading price; 1–99¢ range)
+  means the cap effectively never triggers; orders fill at the live
+  ask.
+- `buy_max_cost` is NOT needed; the required price field already
+  serves as the per-contract cap.
+- Response shape is identical to limit-order response;
+  `_extract_order_id` works unchanged.
+- HTTP 201 (not 200) for create — current `200 ≤ status < 300`
+  branch handles uniformly.
+- **Curiosity**: Kalshi echoes `"type": "limit"` in the response
+  regardless of input — server-side normalization. Pinned in a
+  regression test (`test_place_market_order_kalshi_201_response_shape`).
+
+**Implementation.** Three commits.
+
+1. `Kujaku-ai/executor-portfolio-001` `bceccf9
+   refactor(kalshi_client,trade_poller): market orders instead of
+   limit-at-ask`. Replaced `place_limit_order` with
+   `place_market_order` (clean replacement, no dead code). Body
+   constants: `_MARKET_PRICE_CAP_CENTS = 99`. `trade_poller.process_one_paper_trade`
+   drops the `limit_price_cents` argument from the placement call;
+   the orderbook fetch (step 3) is preserved for SIZING only. The
+   `kalshi_orders.limit_price_cents` DB column still stores the ask
+   at sizing time as the slippage reference (column name historical;
+   not renamed to avoid a real-money DB schema migration). New
+   regression test `test_place_market_order_kalshi_201_response_shape`
+   pins the live probe response. New `test_trade_poller_calls_place_market_order_with_market_body`
+   captures the POST body the trade_poller produces and asserts
+   `type='market'`, `yes_price=99` (NOT the live ask used for
+   sizing). 268 tests passed (was 266; +2 net).
+
+2. `Kujaku-ai/executor-portfolio-001` `5ccbef3 docs(executor): market
+   orders, not limit; pure mirror`. EXECUTOR.md sync. Edits: §What
+   This Project Does (trade-placement bullet), §Database Schema
+   (column comment), §The Polling Loop step 6, §The Routing Logic
+   (limit-at-ask paragraph + slippage paragraph), §Kalshi REST
+   Client endpoint table.
+
+3. `Kujaku-ai/kujaku-meta` `c282d02 docs(executor): market orders,
+   not limit; pure mirror`. Identical EXECUTOR.md edits — both
+   files stay byte-identical.
+
+**No backfill.** Existing `kalshi_orders` rows from the limit-at-ask
+path stay as-is — real money already moved. Going forward, new
+orders go via market.
+
+**Probe trade bookkeeping.** Probe order
+`a5891fa0-ced4-409a-8540-08fcbd29cf02` (1 YES @ 24¢ on
+`KXBTC15M-26MAY101630-30`) is a real Kalshi position that bypassed
+`trade_poller`, so it has no `paper_trades` / `kalshi_orders` row in
+the executor's DB. The 08:30 UTC reconciler (next run) will detect
+this drift on its diff against Kalshi's own positions — expected
+per "reconciler reports drift; operator decides". Total verification
+cost: $0.26 inc. fees.
+
+**Self-verification.** Railway auto-redeploys on push. CC
+self-verifies post-deploy: poll for next eligible Paper fill,
+confirm `kalshi_orders` row transitions `pending → filled`
+near-instantly (market orders fill faster than limit), and observed
+slippage may be higher than the prior 11¢ median (acceptable per
+the architectural ruling).
