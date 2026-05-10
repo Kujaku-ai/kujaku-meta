@@ -51,7 +51,7 @@ Public name when deployed: `portfolio-001.kujaku.ai`.
 - Poll `https://kalshi15min-btc.kujaku.ai/api/trades?status=filled&limit=50` every 10 seconds. Track `last_seen_paper_trade_id` in its own DB. For each newly-filled Paper trade with `id > last_seen_paper_trade_id`, attempt to mirror it onto Kalshi.
 - Mirror every Paper-placed trade with `trade_type ∈ {primary, primary_scale}`. Hypothesis trades (`trade_type='hypothesis'`) are **SKIPPED** per operator ruling 2026-05-10 — Paper flags hypothesis as 0.1% learning trades that don't meaningfully affect portfolio P&L; mirroring adds noise without value. No filtering by fill age or any other Paper-side property. Paper is the brain; the executor is the hand.
 - Fetch live Kalshi portfolio value (cash balance + value of open positions) before each routing decision, with a 30-second in-memory cache. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. If `target_contracts < 1`, persist a `paper_trades` row with `skip_reason='size<1'` (math floor; never round up). No cap clipping, no portfolio floor, no max-trade ceiling.
-- Place a Kalshi limit order at the current Kalshi ask for the requested side. Order type: `limit`.
+- Place a Kalshi **market** order for the requested side. Order type: `market`. Architect ruling 2026-05-10: pure mirror = guaranteed fill — Paper Kev's strategy handles all price logic; the executor expresses positions, not preferences. Kalshi requires a per-contract price field (`yes_price` / `no_price`) even on market orders; the executor sets it to 99¢ (max binary price) so the cap never triggers and the order fills at the live ask, regardless of ask movement between orderbook fetch and placement.
 - Maintain a SQLite database recording every Paper trade observed, every Kalshi order placed (with full Kalshi response), order lifecycle events, settlement outcomes, and per-investor P&L attribution.
 - Poll Kalshi every 5 seconds for status updates on each pending Kalshi order until terminal (filled / cancelled / expired / rejected).
 - Settle each filled Kalshi position when its window resolves. Settlement source is the same `data-btc.kujaku.ai/api/kalshi/settlements` endpoint Paper uses, cross-checked against Kalshi's own `/portfolio/positions` endpoint for consistency.
@@ -203,7 +203,7 @@ CREATE TABLE kalshi_orders (
     window_ticker            TEXT    NOT NULL,           -- copied from paper for query convenience
     side                     TEXT    NOT NULL,
     target_contracts         INTEGER NOT NULL,
-    limit_price_cents        INTEGER NOT NULL,           -- ask at placement time
+    limit_price_cents        INTEGER NOT NULL,           -- ask at sizing time (slippage reference; column name historical — post-2026-05-10 placements are market orders, not limit-at-ask)
     portfolio_value_at_route REAL    NOT NULL,           -- live Kalshi total when sized
     expiration_ts_utc        TEXT    NOT NULL,
     kalshi_order_id          TEXT,                       -- from Kalshi response; NULL until accepted
@@ -309,7 +309,7 @@ Runs every `TRADE_POLL_SECONDS` (default 10). Single iteration:
 3. Fetch current Kalshi ask for the side (single Kalshi REST call; do NOT reuse Paper's stored `fill_price_cents`). On Kalshi unreachable or invalid ask, mark `eligible=0, skip_reason='kalshi_rejected'`, return.
 4. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. **No cap clipping.** If `target_contracts < 1`, mark `eligible=0, skip_reason='size<1'`, return. Math floor only — never round up; never re-decide what Paper sized.
 5. Mark `eligible=1`.
-6. Place the Kalshi order via `kalshi_client.place_limit_order(...)`. On success, persist a `kalshi_orders` row with `status='pending'` and the Kalshi response. On Kalshi failure (4xx, 5xx after retry, timeout), persist with `status='rejected'`, `kalshi_order_id=NULL`, and update the `paper_trades` row's `skip_reason='kalshi_rejected'`.
+6. Place the Kalshi order via `kalshi_client.place_market_order(...)`. The order body uses `type='market'` with a never-trigger 99¢ per-contract cap; the live ask from step 3 is used for sizing only, not for the order body. On success, persist a `kalshi_orders` row with `status='pending'` and the Kalshi response. On Kalshi failure (4xx, 5xx after retry, timeout), persist with `status='rejected'`, `kalshi_order_id=NULL`, and update the `paper_trades` row's `skip_reason='kalshi_rejected'`.
 7. Optionally fetch the parent decision once via `GET /api/decisions?limit=N` to extract `primary.validator_warnings` and `size_rationale`; store on the `paper_trades` row for dashboard display only. This is a best-effort enrichment; failure is non-fatal.
 
 **Idempotency:** the polling cursor + UNIQUE constraint on `kalshi_orders.paper_trade_id` makes the loop safe under restarts and partial failures. A crash between (1) and (6) leaves a `paper_trades` row marked `eligible=1, kalshi_order_id NULL`; on restart, the trade is past `last_seen` and will not be re-attempted. **This is intentional**: the executor never retries an order placement that may or may not have hit Kalshi. A crash at the order-placement boundary is a manual-resolution event surfaced to the operator via dashboard / reconciler.
@@ -327,9 +327,9 @@ That's the entire computation. No `min()` calls. No cap clipping. No portfolio f
 
 If `target_contracts < 1`: skip (logged, persisted as `skip_reason='size<1'`). The executor never rounds up to 1 — that would inflate small trades disproportionately. **`size<1` is a math floor, not a decision.**
 
-The executor places a **limit order at the current Kalshi ask** for the requested side. At Kalshi's binary-contract semantics this resolves quickly: the order either fills at the ask (or better), or sits in the book until cancelled by Kalshi or by the order_watcher's eventual sweep. v1 does not specify a custom expiration_ts.
+The executor places a **market order** for the requested side, with `count = target_contracts` and `type='market'` (architect ruling 2026-05-10: pure mirror = guaranteed fill). Kalshi requires one of `yes_price` / `no_price` / `yes_price_dollars` / `no_price_dollars` even on market orders — the field functions as the per-contract cap. The executor sets it to 99¢ (max binary price), so the cap effectively never triggers and the order fills at whatever the live ask is, regardless of ask movement between the orderbook fetch (sizing) and order placement. The current ask drives sizing only; it is not the limit price.
 
-**Slippage:** `slippage_cents = current_kalshi_ask_cents - paper.fill_price_cents`. Recorded on the `kalshi_orders` row; surfaced on the dashboard. v1 takes whatever the live ask is; v2 may add a slippage tolerance gate.
+**Slippage:** `slippage_cents = fill_price_cents - paper.fill_price_cents` (executor's actual Kalshi fill vs. Paper's recorded fill). Recorded on the `kalshi_orders` row; surfaced on the dashboard. **Observability only — never a gate.** Wider slippage on market orders vs. limit-at-ask is the accepted cost of guaranteed fill; Paper owns the entry-price decision and the executor mirrors regardless.
 
 ---
 
@@ -437,7 +437,7 @@ Private key loaded from env `KALSHI_PRIVATE_KEY_PEM` (the PEM-encoded RSA privat
 | `GET`  | `/trade-api/v2/portfolio/balance` | Live cash balance (numerator of portfolio value). |
 | `GET`  | `/trade-api/v2/portfolio/positions` | Live open positions (used for `open_exposure_dollars` and as settlement cross-check). |
 | `GET`  | `/trade-api/v2/markets/{ticker}/orderbook` | Current bid/ask for the ticker; the executor's source for `current_kalshi_ask_cents`. |
-| `POST` | `/trade-api/v2/portfolio/orders` | Place a limit order. |
+| `POST` | `/trade-api/v2/portfolio/orders` | Place a market order (`type='market'` with `yes_price`/`no_price=99` never-trigger per-contract cap). |
 | `GET`  | `/trade-api/v2/portfolio/orders/{order_id}` | Check order status. |
 
 Base URL hardcoded in `app/kalshi_client.py`:
