@@ -488,3 +488,94 @@ bookkeeping classification, not the placement itself.
 eligible Paper fill (under the now-released kill state) routes
 correctly through `place_limit_order`, `order_watcher`, and
 `settler` end-to-end.
+
+---
+
+## 2026-05-10 — hypothesis-trade filter (operator ruling)
+
+**Trigger.** With the executor in sustained operation post-parser-fix,
+the architect ran a read-only audit on Railway via `railway ssh`
+(captured in `EXECUTOR_TRADES_NOT_TAKEN_AUDIT_2026-05-10.md`,
+`5cdcce4`). Findings:
+
+- 28 paper_trades since deploy. 7 eligible → all `'filled'`. 21
+  ineligible (17 `'kalshi_rejected'` confined to the pre-parser-fix
+  window 6180–6205; 4 `'size<1'` post-fix).
+- **14 of the 28 (50%) were `paper_trade_type='hypothesis'`** —
+  2 filled real Kalshi orders, 4 dropped on `size<1`, 8 misclassified
+  as `kalshi_rejected` by the pre-fix parser.
+- Slippage on the 7 fills wide-but-tolerable (median 11¢, max 21¢,
+  one favourable −4¢; n=7 too small to characterise yet).
+
+**Operator ruling.** Quote verbatim:
+
+> "yes primary and primary scales, just not hypothesis"
+
+Hypothesis trades are 0.1% / $1.00 notional learning trades that don't
+meaningfully affect portfolio P&L — mirroring adds noise without
+value. The filter belongs in the executor (the hand), not in Paper
+(the brain) — Paper continues to publish hypothesis fills; the
+executor unconditionally skips them.
+
+**Implementation.** Two commits + two doc commits.
+
+1. `Kujaku-ai/executor-portfolio-001` `57c9008 feat(routing): skip
+   hypothesis trades per operator ruling`. Adds an early-return
+   step 1a in `process_one_paper_trade` (immediately after the
+   `paper_trades` insert, before the portfolio fetch): if
+   `pt['trade_type'] == 'hypothesis'`, mark `eligible=0,
+   skip_reason='hypothesis_skipped'`, write an INFO `bot_log` row,
+   return. Zero Kalshi network calls for skipped hypothesis trades.
+   `app/db.py` adds a public constant
+   `PAPER_TRADE_SKIP_REASONS = ('kalshi_rejected', 'size<1',
+   'hypothesis_skipped')` as the documented vocabulary (no CHECK
+   constraint — silent retroactive constraint changes don't enforce
+   on existing rows in a long-running real-money DB).
+   `test_hypothesis_trade_is_mirrored` renamed to
+   `test_skip_hypothesis_trade_type` and flipped: assertions check
+   `eligible_count=0`, `placement_attempts_count=0`,
+   `skipped_by_reason['hypothesis_skipped']=1`, no `kalshi_orders`
+   row, INFO `bot_log` row. Implicit assertion: no Kalshi mocks
+   registered — `aioresponses` raises `ConnectionError` on any
+   network call, pinning step-1a's pre-fetch ordering. Two
+   vocabulary clean-ups in `test_db.py` and
+   `test_dashboard_render.py` (bare `'hypothesis'` skip_reason →
+   `'hypothesis_skipped'`). 266 tests passed (was 266; rename
+   keeps count flat).
+
+2. `Kujaku-ai/executor-portfolio-001` `e2d191c docs(executor):
+   hypothesis trades are skipped, not mirrored`. EXECUTOR.md sync.
+   Edits: §What This Project Does (trade_type bullet), §Does Not Do
+   (filter bullet), §Database Schema (paper_trades skip_reason
+   vocabulary), §Data Flow (ASCII diagram gains a hypothesis-filter
+   node), §The Polling Loop (`process_one_paper_trade` gains step
+   1a, runs before any Kalshi network call), §Tests
+   (`test_trade_poller` coverage gate).
+
+3. `Kujaku-ai/kujaku-meta` `a173f56 docs(executor): hypothesis trades
+   are skipped, not mirrored`. Identical EXECUTOR.md edits — the
+   two files stay byte-identical.
+
+**Audit baseline (cited per architect prompt).** Before the filter,
+14 hypothesis trades had been mirrored: 4 became `size<1` skips, 8
+became `kalshi_rejected` (pre-parser-fix), 2 became real Kalshi
+placements that filled (`paper_trade_id=6206, 6208`; both settled
+LOSS via the backfill recovery, $46.77 cash out attributed 50/50
+across Investor_A and Investor_B). Plus a third hypothesis fill at
+`paper_trade_id=6213` ($0.83) included in the same backfill.
+
+**No retroactive backfill.** Real Kalshi orders that already filled
+on hypothesis trades remain on the books. They are real-money
+positions; reverting is out of scope.
+
+**Self-verification.** Railway auto-redeploys on git push. CC
+self-verifies post-deploy under bypass: poll `paper_trades` for new
+rows where `paper_trade_type='hypothesis'` and assert
+`skip_reason='hypothesis_skipped'` and zero `kalshi_orders`
+insertions for those `paper_trade_id`s. No architect prompt needed
+unless a new failure mode surfaces.
+
+**Slippage observation deferred.** Audit median 11¢ / max 21¢ on
+n=7 fills is noted as a Phase 2 investigation item. Sample is too
+small to characterise a steady-state distribution; recheck after
+~30 fills.
