@@ -49,20 +49,16 @@ Public name when deployed: `portfolio-001.kujaku.ai`.
 
 - Run 24/7 on Railway as a single containerized service.
 - Poll `https://kalshi15min-btc.kujaku.ai/api/trades?status=filled&limit=50` every 10 seconds. Track `last_seen_paper_trade_id` in its own DB. For each newly-filled Paper trade with `id > last_seen_paper_trade_id`, attempt to mirror it onto Kalshi.
-- Filter mirror candidates by `trade_type ∈ {primary, primary_scale}` only. **Hypothesis trades are skipped** — they are 0.1% paper-mode learning trades that exist solely for Paper's reasoning. The spec is explicit: hypothesis = brain noise, not real-money signal.
-- Filter out stale fills: if `fill_ts_utc` is older than `MAX_FILL_AGE_SECONDS` (default 60s) at the moment of polling, skip and log INFO. The lag between Paper's fill and the executor's attempt is the executor's slippage budget; beyond that we don't enter.
-- Fetch live Kalshi portfolio value (cash balance + value of open positions) before each routing decision, with a 30-second in-memory cache. Compute `target_dollars = (size_pct / 100) * live_portfolio_value`. Apply hard caps (`MAX_TRADE_DOLLARS`, `MAX_TRADE_CONTRACTS`, `MAX_PORTFOLIO_FRACTION_PER_TRADE`). Compute `target_contracts = floor(target_dollars / (fill_price_cents / 100))`. If `target_contracts < 1`, skip and log.
-- Place a Kalshi limit order at the current Kalshi ask for the requested side. Order type: `limit`, `expiration_ts` set 30 seconds in the future (operator-tunable via `ORDER_LIMIT_TTL_SECONDS`). If the order does not fill within the TTL, Kalshi cancels it; the executor records the cancellation and does not retry.
+- Mirror **every** Paper-placed trade with `trade_type ∈ {primary, primary_scale, hypothesis}`. No filtering by trade type, fill age, or any other Paper-side property. Paper is the brain; the executor is the hand.
+- Fetch live Kalshi portfolio value (cash balance + value of open positions) before each routing decision, with a 30-second in-memory cache. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. If `target_contracts < 1`, persist a `paper_trades` row with `skip_reason='size<1'` (math floor; never round up). No cap clipping, no portfolio floor, no max-trade ceiling.
+- Place a Kalshi limit order at the current Kalshi ask for the requested side. Order type: `limit`.
 - Maintain a SQLite database recording every Paper trade observed, every Kalshi order placed (with full Kalshi response), order lifecycle events, settlement outcomes, and per-investor P&L attribution.
-- Poll Kalshi every 5 seconds for status updates on each pending Kalshi order until terminal (filled / cancelled / expired).
+- Poll Kalshi every 5 seconds for status updates on each pending Kalshi order until terminal (filled / cancelled / expired / rejected).
 - Settle each filled Kalshi position when its window resolves. Settlement source is the same `data-btc.kujaku.ai/api/kalshi/settlements` endpoint Paper uses, cross-checked against Kalshi's own `/portfolio/positions` endpoint for consistency.
 - Attribute settled P&L to the active investor cap table. Snapshot the cap table at settlement time into `trade_attributions` so historical attribution survives later cap-table changes.
 - Maintain an investor cap table loaded from `investors.json` at the repo root. Schema validated at startup (sum of `share_pct` values must equal 100.0 within ±0.001 tolerance). Cap-table changes are deploy events: edit `investors.json`, commit, push, redeploy.
-- Run a daily reconciliation pass at 08:30 UTC: compare every Paper trade marked settled (via Paper's `/api/trades?status=settled`) against the executor's settled rows. Drift posts to Discord at WARN.
-- Observe three operator-tunable circuit breakers, all auto-pause-only (operator must manually resume):
-  - `MIN_PORTFOLIO_DOLLARS` — pause if live portfolio value drops below this.
-  - `DAILY_LOSS_CIRCUIT_BREAKER_PCT` — pause if today's realized P&L drops below `-X%` of the day-open portfolio value.
-  - File-based `KILL` switch at `/data/KILL` (operator can `touch` it via Railway shell).
+- Run a daily reconciliation pass at 08:30 UTC: compare every Paper trade marked settled (via Paper's `/api/trades?status=settled`) against the executor's settled rows. Drift posts to Discord at WARN. **Observational only — never auto-corrects.**
+- Provide a **manual-only** kill switch (file-based `/data/KILL` + HTTP `POST /control/stop`). The operator engages and releases it; nothing in the executor engages it automatically.
 - Serve a JSON API (`/api/*`) and a responsive operator dashboard (`GET /`) with four panels: Live Session, Positions, Overview, Investors. No JavaScript beyond the partial-refresh runtime lifted from Paper's `dashboard_render.py`.
 - Log its own errors and heartbeats. Optional Discord webhook for heartbeat (15-min cadence) and reconciliation summaries.
 - Provide kill-switch endpoints (`POST /control/stop`, `POST /control/resume`).
@@ -70,12 +66,14 @@ Public name when deployed: `portfolio-001.kujaku.ai`.
 **DOES NOT:**
 
 - Make trading decisions. Run an LLM. Maintain a playbook. Compute sizing from first principles. Re-derive Paper's anti-tilt or half-Kelly. Second-guess Paper's `size_pct`.
-- Mirror hypothesis trades. Mirror trades from anything other than `kalshi15min-btc.kujaku.ai`. Connect to any exchange other than Kalshi. Trade any market other than KXBTC15M.
+- Filter trades by `trade_type`, fill age, portfolio floor, daily-loss threshold, hard contract cap, or hard dollar cap. The executor mirrors every Paper-placed trade in `trade_type ∈ {primary, primary_scale, hypothesis}` regardless of size, age, or other property. The only operator control is the manual kill switch.
+- Auto-pause from any source. There is no circuit-breaker task. There is no auto-pause-on-loss, no auto-pause-on-floor, no auto-pause anything. If a guard rail belongs anywhere, it belongs in Paper (the brain).
+- Mirror trades from anything other than `kalshi15min-btc.kujaku.ai`. Connect to any exchange other than Kalshi. Trade any market other than KXBTC15M.
 - Run any of Paper's background tasks (window scheduler, watcher, force-fill sweeper, playbook compactor, reflector, realized-stats compute). Those are Paper's responsibility.
 - Have a paper-mode toggle. The executor is real-money-only by design. There is no `paper_mode` flag, no env var, no module constant. The Kalshi base URL is hardcoded to production. To test against demo Kalshi, swap the base URL constant (single-line edit) and redeploy — there is no runtime knob.
 - Maintain a self-edited config or playbook. The investor cap table is the only mutable config and changes only via git commit + redeploy.
 - Auto-correct detected divergences between Paper's settled trades and the executor's records. Reconciliation reports drift; the operator decides.
-- Auto-decommission. Circuit breakers pause; they do not wind down. The operator decommissions by deleting the Railway service, removing GoDaddy DNS, and deleting the GitHub repo. No `decommission.py` script exists.
+- Auto-decommission. The kill switch pauses placement; it does not wind down. The operator decommissions by deleting the Railway service, removing GoDaddy DNS, and deleting the GitHub repo. No `decommission.py` script exists.
 - Present a public-facing website, support user accounts, run any auth on the dashboard (it sits behind a Railway-issued URL with no public surface), or expose the Kalshi API key via any endpoint.
 - Forward Paper's full `response_json` to the dashboard. The "why" of each trade is Paper's domain. The executor shows "what" — side, size, entry price, P&L.
 
@@ -90,31 +88,29 @@ One Railway service. One Python process. Async tasks plus a FastAPI server, all 
 ```
 Railway Service (single container, single Python process)
 │
-├── asyncio tasks (run forever):
+├── asyncio tasks (run forever) — six total:
 │   ├── trade_poller()           → every 10s; GETs Paper's /api/trades?status=filled&limit=50
-│   │                              → for each unseen + eligible row, calls route_one_trade()
+│   │                              → for each unseen row, mirrors onto Kalshi
 │   ├── order_watcher()          → every 5s; checks status of every pending Kalshi order
-│   │                              → marks filled/cancelled/expired in DB
+│   │                              → marks filled/cancelled/expired/rejected in DB
 │   ├── settler()                → every 30s; polls data-btc settlements
 │   │                              → settles executor positions, attributes P&L per cap table
 │   ├── portfolio_refresher()    → every 30s; refreshes live Kalshi portfolio cache
-│   │                              → also recomputes day-open value at 00:00 UTC for circuit breaker
-│   ├── circuit_breaker_watch()  → every 60s; checks MIN_PORTFOLIO_DOLLARS and DAILY_LOSS
-│   │                              → engages kill switch on breach
+│   │                              → also recomputes day-open value at 00:00 UTC
 │   ├── reconciler()             → daily at 08:30 UTC; compares Paper settled vs executor settled
-│   │                              → posts drift summary to Discord
+│   │                              → posts drift summary to Discord (observational only)
 │   └── heartbeat()              → every 15min; Discord ping with status snapshot
 │
 ├── FastAPI server:
 │   ├── GET  /                   → HTML operator dashboard
 │   ├── GET  /api/dashboard_context → JSON for partial refresh
 │   ├── GET  /health             → JSON liveness probe
-│   ├── GET  /api/portfolio      → current portfolio value + day-open + circuit breaker status
+│   ├── GET  /api/portfolio      → current portfolio value + day-open
 │   ├── GET  /api/positions      → open + pending positions
 │   ├── GET  /api/investors      → cap table + per-investor current value + per-investor realized P&L
 │   ├── GET  /api/recent_trades  → recent settled + open positions for the dashboard
-│   ├── POST /control/stop       → engage kill switch
-│   └── POST /control/resume     → release kill switch
+│   ├── POST /control/stop       → engage kill switch (manual)
+│   └── POST /control/resume     → release kill switch (manual)
 │
 └── SQLite database at /data/executor.db (Railway persistent volume)
 ```
@@ -127,7 +123,12 @@ Railway Service (single container, single Python process)
 Paper Kev (/api/trades)  ──poll every 10s──>  trade_poller
                                                     │
                                                     ▼
-                                          [unseen + eligible?]
+                                          [kill switch engaged?]
+                                            yes → return early
+                                            no  → continue
+                                                    │
+                                                    ▼
+                                          unseen rows (id > cursor)
                                                     │
                                                     ▼
                                           fetch live Kalshi portfolio
@@ -135,15 +136,18 @@ Paper Kev (/api/trades)  ──poll every 10s──>  trade_poller
                                                     │
                                                     ▼
                                           compute target_contracts
-                                          (size_pct × portfolio + caps)
+                                          (paper.size_pct × portfolio / ask)
                                                     │
                                                     ▼
-                                          POST Kalshi /portfolio/orders
-                                          (signed RSA-PSS with PEM)
+                                          target < 1?
+                                            yes → skip_reason='size<1'
+                                            no  → POST Kalshi /portfolio/orders
                                                     │
                                                     ▼
                                           insert kalshi_orders row
-                                          (status='pending')
+                                          (status='pending' on success,
+                                           'rejected' + skip_reason='kalshi_rejected'
+                                           on Kalshi failure)
                                                     │
                                           ┌────────┴───────┐
                                           ▼                ▼
@@ -152,7 +156,8 @@ Paper Kev (/api/trades)  ──poll every 10s──>  trade_poller
                                     flips order        on settlement,
                                     to filled /        attribute P&L
                                     cancelled /        per cap table
-                                    expired
+                                    expired /
+                                    rejected
 ```
 
 ---
@@ -169,7 +174,7 @@ CREATE TABLE paper_trades (
     paper_decision_id     INTEGER NOT NULL,
     seen_at_ts_utc        TEXT    NOT NULL,
     eligible              INTEGER NOT NULL,              -- 0/1; whether we attempted to mirror
-    skip_reason           TEXT,                          -- NULL if eligible, else "hypothesis"|"stale"|"size<1"|"killed"|"caps"|"insufficient_balance"|...
+    skip_reason           TEXT,                          -- NULL if eligible, else "size<1" | "kalshi_rejected"
     paper_window_ticker   TEXT    NOT NULL,
     paper_side            TEXT    NOT NULL,              -- "YES" or "NO"
     paper_size_pct        REAL    NOT NULL,
@@ -237,7 +242,7 @@ CREATE TABLE trade_attributions (
 CREATE INDEX idx_trade_attributions_investor ON trade_attributions(investor_name);
 
 -- Portfolio value snapshots; written by portfolio_refresher every 30s.
--- The 00:00 UTC entry per day is the day-open baseline for the daily-loss circuit breaker.
+-- The 00:00 UTC entry per day is the day-open baseline used by the dashboard / heartbeat for daily P&L display.
 CREATE TABLE portfolio_snapshots (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     ts_utc          TEXT    NOT NULL,
@@ -285,7 +290,7 @@ CREATE TABLE reconciliation_events (
 
 Runs every `TRADE_POLL_SECONDS` (default 10). Single iteration:
 
-1. If `kill_switch.is_killed()`, return early.
+1. If `kill_switch.is_killed()`, return early. **This is the only early-return condition.**
 2. `last_seen = SELECT COALESCE(MAX(paper_trade_id), 0) FROM paper_trades`.
 3. `GET https://kalshi15min-btc.kujaku.ai/api/trades?status=filled&limit=50` (10s timeout). On error, log WARN and return.
 4. Filter response client-side: keep rows with `id > last_seen`.
@@ -293,37 +298,30 @@ Runs every `TRADE_POLL_SECONDS` (default 10). Single iteration:
 
 `process_one_paper_trade(row)`:
 
-1. Insert a `paper_trades` row (always — eligible or not). `eligible` and `skip_reason` filled in below.
-2. Filter eligibility:
-   - If `row.trade_type == 'hypothesis'`: mark `eligible=0, skip_reason='hypothesis'`. Return.
-   - If `(now - row.fill_ts_utc) > MAX_FILL_AGE_SECONDS`: mark `eligible=0, skip_reason='stale'`. Return.
-   - If `kill_switch.is_killed()`: mark `eligible=0, skip_reason='killed'`. Return.
-3. Fetch live Kalshi portfolio (cached 30s). Persist a `portfolio_snapshots` row at every fetch boundary.
-4. Compute `target_dollars`, apply caps, compute `target_contracts`.
-   - If `target_contracts < 1`: mark `eligible=0, skip_reason='size<1'`. Return.
-   - If `target_dollars > cash`: mark `eligible=0, skip_reason='insufficient_balance'`. Return.
+1. Insert a `paper_trades` row (always — eligible or not). `eligible` and `skip_reason` filled in below. **No filtering by `trade_type`, fill age, or any other Paper-side property** — every Paper-placed trade in `{primary, primary_scale, hypothesis}` is mirrored.
+2. Fetch live Kalshi portfolio (cached 30s). Persist a `portfolio_snapshots` row at every fetch boundary. On Kalshi unreachable, mark `eligible=0, skip_reason='kalshi_rejected'`, return.
+3. Fetch current Kalshi ask for the side (single Kalshi REST call; do NOT reuse Paper's stored `fill_price_cents`). On Kalshi unreachable or invalid ask, mark `eligible=0, skip_reason='kalshi_rejected'`, return.
+4. Compute `target_contracts = floor((paper.size_pct / 100) × live_portfolio_value / (current_kalshi_ask_cents / 100))`. **No cap clipping.** If `target_contracts < 1`, mark `eligible=0, skip_reason='size<1'`, return. Math floor only — never round up; never re-decide what Paper sized.
 5. Mark `eligible=1`.
-6. Fetch current Kalshi ask for the side (single Kalshi REST call; do NOT reuse Paper's stored `fill_price_cents`). If ask is unavailable or stale, log WARN, mark `eligible=0, skip_reason='no_ask'`, return.
-7. Place the Kalshi order via `kalshi_client.place_limit_order(...)`. Record full response into `kalshi_orders`.
-8. Optionally fetch the parent decision once via `GET /api/decisions?limit=N` to extract `primary.validator_warnings` and `size_rationale`; store on the `paper_trades` row for dashboard display only. This is a best-effort enrichment; failure is non-fatal.
+6. Place the Kalshi order via `kalshi_client.place_limit_order(...)`. On success, persist a `kalshi_orders` row with `status='pending'` and the Kalshi response. On Kalshi failure (4xx, 5xx after retry, timeout), persist with `status='rejected'`, `kalshi_order_id=NULL`, and update the `paper_trades` row's `skip_reason='kalshi_rejected'`.
+7. Optionally fetch the parent decision once via `GET /api/decisions?limit=N` to extract `primary.validator_warnings` and `size_rationale`; store on the `paper_trades` row for dashboard display only. This is a best-effort enrichment; failure is non-fatal.
 
-**Idempotency:** the polling cursor + UNIQUE constraint on `kalshi_orders.paper_trade_id` makes the loop safe under restarts and partial failures. A crash between (1) and (7) leaves a `paper_trades` row marked `eligible=1, kalshi_order_id NULL`; on restart, the trade is past `last_seen` and will not be re-attempted. **This is intentional**: the executor never retries an order placement that may or may not have hit Kalshi. A crash at the order-placement boundary is a manual-resolution event.
+**Idempotency:** the polling cursor + UNIQUE constraint on `kalshi_orders.paper_trade_id` makes the loop safe under restarts and partial failures. A crash between (1) and (6) leaves a `paper_trades` row marked `eligible=1, kalshi_order_id NULL`; on restart, the trade is past `last_seen` and will not be re-attempted. **This is intentional**: the executor never retries an order placement that may or may not have hit Kalshi. A crash at the order-placement boundary is a manual-resolution event surfaced to the operator via dashboard / reconciler.
 
 ---
 
-## The Routing Logic (sizing translation + caps)
+## The Routing Logic (sizing translation, no caps)
 
 ```
-target_dollars = (paper_trade.size_pct / 100.0) * live_portfolio_value
-target_dollars = min(target_dollars, MAX_TRADE_DOLLARS)
-target_dollars = min(target_dollars, MAX_PORTFOLIO_FRACTION_PER_TRADE * live_portfolio_value)
+target_dollars   = (paper_trade.size_pct / 100.0) * live_portfolio_value
 target_contracts = floor(target_dollars / (current_kalshi_ask_cents / 100.0))
-target_contracts = min(target_contracts, MAX_TRADE_CONTRACTS)
 ```
 
-If `target_contracts < 1`: skip (logged, persisted as `skip_reason='size<1'`). The executor never rounds up to 1 — that would inflate small trades disproportionately.
+That's the entire computation. No `min()` calls. No cap clipping. No portfolio floor. No max-trade ceiling. The executor mirrors what Paper sized, scaled to the live portfolio.
 
-The executor places a **limit order at the current Kalshi ask** with `expiration_ts = now + ORDER_LIMIT_TTL_SECONDS` (default 30s). At Kalshi's binary-contract semantics this resolves quickly: the order either fills at the ask (or better) within TTL, or expires and is cancelled by Kalshi.
+If `target_contracts < 1`: skip (logged, persisted as `skip_reason='size<1'`). The executor never rounds up to 1 — that would inflate small trades disproportionately. **`size<1` is a math floor, not a decision.**
+
+The executor places a **limit order at the current Kalshi ask** for the requested side. At Kalshi's binary-contract semantics this resolves quickly: the order either fills at the ask (or better), or sits in the book until cancelled by Kalshi or by the order_watcher's eventual sweep. v1 does not specify a custom expiration_ts.
 
 **Slippage:** `slippage_cents = current_kalshi_ask_cents - paper.fill_price_cents`. Recorded on the `kalshi_orders` row; surfaced on the dashboard. v1 takes whatever the live ask is; v2 may add a slippage tolerance gate.
 
@@ -466,18 +464,9 @@ PAPER_API_BASE_URL=https://kalshi15min-btc.kujaku.ai
 # data-btc settlement source — required
 COLLECTOR_BASE_URL=https://data-btc.kujaku.ai
 
-# Operational
+# Operational — required
 DATABASE_PATH=/data/executor.db          # Railway persistent volume
 PORT=8080                                # Railway sets automatically
-
-# Sizing caps — operator-set, NO defaults shipped (force explicit configuration)
-MAX_TRADE_DOLLARS=                       # hard $ cap per trade
-MAX_TRADE_CONTRACTS=                     # hard contract count cap per trade
-MAX_PORTFOLIO_FRACTION_PER_TRADE=        # 0.0–1.0; e.g. 0.20 = 20% of portfolio max per trade
-
-# Circuit breakers — operator-set, NO defaults shipped
-MIN_PORTFOLIO_DOLLARS=                   # auto-pause floor
-DAILY_LOSS_CIRCUIT_BREAKER_PCT=          # auto-pause when today's realized P&L < -X% of day-open
 
 # Polling cadences — defaults shown, operator may override
 TRADE_POLL_SECONDS=10
@@ -486,15 +475,11 @@ SETTLEMENT_POLL_SECONDS=30
 PORTFOLIO_REFRESH_SECONDS=30
 HEARTBEAT_MINUTES=15
 
-# Order behavior
-MAX_FILL_AGE_SECONDS=60                  # skip Paper fills older than this
-ORDER_LIMIT_TTL_SECONDS=30               # how long Kalshi limit orders live before auto-cancel
-
 # Discord — optional
 DISCORD_WEBHOOK_URL=
 ```
 
-**Cap variables ship with NO defaults.** The executor refuses to start if any of `MAX_TRADE_DOLLARS`, `MAX_TRADE_CONTRACTS`, `MAX_PORTFOLIO_FRACTION_PER_TRADE`, `MIN_PORTFOLIO_DOLLARS`, or `DAILY_LOSS_CIRCUIT_BREAKER_PCT` is unset. Real-money operations require explicit operator decisions on every guard rail.
+The executor has **no** sizing-cap, circuit-breaker, fill-age, or order-TTL env vars. The original Phase 0 spec carried those as Phase 0 over-engineering; Phase 1 strips them. The only operator control is the manual kill switch (`POST /control/stop` or `touch /data/KILL`).
 
 ---
 
@@ -513,7 +498,6 @@ Mirrors Paper's discipline (`bot-kalshi15min-btc/BOT.md` §"Error Handling Rules
 9. **Startup checks** (each logged; failures crash the process — different from Paper, because real money makes silent unreachability dangerous):
    - SQLite writable at `DATABASE_PATH`.
    - `investors.json` valid; cap table sums to 100.0.
-   - All cap and circuit-breaker env vars set.
    - Paper `/health` reachable (one test call).
    - data-btc `/health` reachable (one test call).
    - Kalshi `/portfolio/balance` reachable (one signed test call). **Crashes on auth failure.**
@@ -522,26 +506,28 @@ Mirrors Paper's discipline (`bot-kalshi15min-btc/BOT.md` §"Error Handling Rules
 
 ## Kill Switch
 
+**Manual-only.** Nothing in the executor engages or releases the kill switch automatically. It is an operator tool, not an auto-pause mechanism. There is no circuit-breaker task. There is no auto-pause-on-loss. There is no auto-pause-on-anything.
+
 Two mechanisms, either one trips it:
 
 1. **File-based:** `/data/KILL`. Operator can `railway ssh` and `touch /data/KILL`. Checked at the top of `trade_poller`'s every iteration.
 2. **HTTP:** `POST /control/stop`. In-process flag; idempotent.
 
+**Default OFF at startup.** The in-process flag initializes to `False`; `/data/KILL` exists only if the operator created it.
+
 What "killed" prevents:
 
-- Starting any new order placement (trade_poller short-circuits).
-- The circuit breakers from posting to "auto-pause"; they post to "remain killed".
+- Starting any new order placement (trade_poller short-circuits at the top of each iteration).
 
 What "killed" does NOT prevent:
 
 - `order_watcher` continuing to update status of pending Kalshi orders. (We must continue tracking orders that are already in flight.)
-- `settler` continuing to settle filled positions. (Same reasoning as Paper: P&L must be recorded.)
+- `settler` continuing to settle filled positions. (P&L must be recorded.)
 - The dashboard remaining responsive.
 - Heartbeat continuing to ping Discord.
+- The reconciler running its daily 08:30 UTC drift check.
 
 Removing the file OR `POST /control/resume` re-enables the executor. The file takes precedence: if `/data/KILL` exists, resume HTTP is a no-op.
-
-**Auto-pause from circuit breakers** sets the in-process flag, NOT the file flag, so operator HTTP resume is sufficient. Operator should investigate before resuming. The dashboard renders the auto-pause reason prominently.
 
 ---
 
@@ -568,12 +554,11 @@ executor-portfolio-001/                  ← repo root
 │   ├── collector_client.py              ← wraps GETs to data-btc.kujaku.ai (lifted pattern from Paper)
 │   ├── kalshi_client.py                 ← signed POST/GET to Kalshi REST; auth helpers
 │   ├── trade_poller.py                  ← the polling task
-│   ├── routing.py                       ← target-contracts math, caps, eligibility filters
+│   ├── routing.py                       ← target-contracts math (no caps, no filters)
 │   ├── order_watcher.py                 ← order-status sweep
 │   ├── settler.py                       ← settlement + cross-check + cap-table attribution
 │   ├── portfolio_refresher.py           ← live Kalshi balance polling + day-open snapshot
-│   ├── circuit_breaker.py               ← MIN_PORTFOLIO_DOLLARS + DAILY_LOSS guards
-│   ├── reconciler.py                    ← daily 08:30 UTC drift check
+│   ├── reconciler.py                    ← daily 08:30 UTC drift check (observational)
 │   ├── heartbeat.py                     ← Discord pings
 │   ├── kill_switch.py                   ← file + flag checking
 │   ├── web.py                           ← FastAPI app: /, /health, /api/*, /control/*
@@ -594,7 +579,6 @@ executor-portfolio-001/                  ← repo root
 │   ├── test_order_watcher.py
 │   ├── test_settler.py
 │   ├── test_investors.py
-│   ├── test_circuit_breaker.py
 │   ├── test_reconciler.py
 │   ├── test_dashboard_data.py
 │   ├── test_dashboard_render.py
@@ -613,8 +597,8 @@ The reference implementation for module style is **Paper's `app/db.py`** — num
 |---|---|---|
 | GET  | `/`                       | HTML dashboard (four panels). |
 | GET  | `/api/dashboard_context`  | Full JSON for the dashboard's partial-refresh runtime. |
-| GET  | `/health`                 | `{status, kalshi_reachable, paper_reachable, collector_reachable, kill_switch_engaged, auto_pause_reason, last_paper_poll_age_s, open_orders_count, portfolio_value, day_open_value, daily_pnl_pct}`. |
-| GET  | `/api/portfolio`          | `{cash_dollars, open_exposure_dollars, total_value_dollars, day_open_dollars, daily_pnl_dollars, daily_pnl_pct, fetched_ts_utc}`. |
+| GET  | `/health`                 | `{status, kalshi_reachable, paper_reachable, collector_reachable, kill_switch_engaged, last_paper_poll_age_s, open_orders_count, portfolio_value, day_open_value, daily_pnl_pct}`. |
+| GET  | `/api/portfolio`          | `{cash_dollars, open_exposure_dollars, total_value_dollars, day_open_dollars, daily_pnl_dollars, daily_pnl_pct, fetched_ts_utc}`. (Reports values; does not gate on them.) |
 | GET  | `/api/positions`          | `{open: [...], pending: [...]}`; both include the corresponding paper_trades + kalshi_orders fields. |
 | GET  | `/api/investors`          | `{investors: [{name, share_pct, current_value_dollars, realized_pnl_dollars}]}`. |
 | GET  | `/api/recent_trades`      | Recent settled and active orders, newest-first, default `limit=50`. |
@@ -647,7 +631,7 @@ Portfolio summary bar:
 - Total portfolio value
 - Day-open value
 - Daily P&L (dollars + percent)
-- Circuit-breaker status (each guard: green if ok, yellow if approaching threshold, red if breached)
+- Kill-switch state (manual ON / OFF)
 
 ### Panel 4: Investors
 
@@ -686,7 +670,6 @@ Posters:
 
 - `heartbeat()` task — every 15min, posts the heartbeat status string (alive marker + portfolio + open orders + day P&L + kill state).
 - `reconciler()` task — once daily at 08:30 UTC, posts the drift summary.
-- `circuit_breaker_watch()` — posts a single ping when a breaker engages.
 
 If `DISCORD_WEBHOOK_URL` is empty, all senders silently no-op.
 
@@ -701,11 +684,10 @@ If `DISCORD_WEBHOOK_URL` is empty, all senders silently no-op.
 **Required test coverage** (each is a failing-build gate):
 
 - `test_kalshi_client.py` — RSA-PSS signing matches a known-good vector; every endpoint round-trips against `aioresponses`.
-- `test_routing.py` — every branch of the eligibility filter; cap math edge cases (size_pct=0.1 producing < 1 contract; portfolio = $0 short-circuit; cap binding behavior).
-- `test_trade_poller.py` — idempotent under restart; cursor advances correctly under concurrent inserts; respects kill switch.
+- `test_routing.py` — `size<1` boundary cases (size_pct=0.1 producing < 1 contract; portfolio = $0 short-circuit; ask out of 1..100 range).
+- `test_trade_poller.py` — idempotent under restart; cursor advances correctly; respects kill switch; mirrors hypothesis trades (no filtering).
 - `test_settler.py` — cap-table snapshot at settlement; cross-check divergence creates `reconciliation_events`; fallback path activates after 30 minutes.
 - `test_investors.py` — config validation (sum-to-100, name uniqueness, percent range); reconcile-on-startup behavior; attribution math.
-- `test_circuit_breaker.py` — each breaker fires at its threshold; auto-pause is recoverable.
 
 CI: GitHub Actions on `main`, runs `pytest -q`. Failure blocks merge.
 
@@ -719,7 +701,7 @@ CI: GitHub Actions on `main`, runs `pytest -q`. Failure blocks merge.
 2. In Railway, create new project (or add a service to `patient-renewal`) → "Deploy from GitHub repo" → select the repo.
 3. Railway auto-detects Python, installs `requirements.txt`, runs `Procfile`.
 4. **Add a volume** mounted at `/data`. Without this, the SQLite file wipes on deploy.
-5. **Variables tab:** add every env var from `.env.example`. Triple-check `KALSHI_API_KEY_ID` and `KALSHI_PRIVATE_KEY_PEM` are set. Set every cap and circuit-breaker variable explicitly — startup will fail otherwise.
+5. **Variables tab:** add every env var from `.env.example`. Triple-check `KALSHI_API_KEY_ID` and `KALSHI_PRIVATE_KEY_PEM` are set.
 6. Deploy. Watch logs until you see:
    ```
    Database initialized at /data/executor.db
@@ -731,7 +713,6 @@ CI: GitHub Actions on `main`, runs `pytest -q`. Failure blocks merge.
    Started: order_watcher
    Started: settler
    Started: portfolio_refresher
-   Started: circuit_breaker_watch
    Started: reconciler
    Started: heartbeat
    Uvicorn running on http://0.0.0.0:8080
