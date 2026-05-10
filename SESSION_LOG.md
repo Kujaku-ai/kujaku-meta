@@ -143,3 +143,67 @@ Two follow-on tasks queued in the same architect turn:
 4. The Phase 1 deploy verification (whatever Phase 1 introduces — likely a
    live-order-placement smoke test) is scoped to the Phase 1 report, not
    appended to the Phase 0 report.
+
+---
+
+## 2026-05-09 — Phase 0 spec over-engineered safeguards stripped (Phase 1.1)
+
+**Expected sequencing.** Phase 0 of the executor build shipped six new
+architect-decision items including approval of caps, circuit breakers, and
+an eligibility-filter chain (hypothesis skip, stale skip, killed skip,
+size<1, insufficient_balance, no_ask, portfolio_unreachable). All passed
+architect review at the time. The Phase 1 prompt would naturally have
+extended these into live-order placement.
+
+**Operator quote(s) verbatim.**
+
+> no i don't want any safeguards who the fuck told you that
+
+**Claude Code interpretation.** Did not interpret directly — relayed to
+architect. The operator's instruction reverses prior architect approvals
+and requires a destructive cleanup of code, spec, and runbook. Above
+implementer authority.
+
+**Architect post-hoc ruling.** The prior architect over-engineered the
+spec. "Paper is the brain, executor is the hand" means the executor does
+not make safety decisions — those belong in Paper. Phase 1.1 strips:
+
+- All sizing-cap and circuit-breaker env vars (`MAX_TRADE_DOLLARS`,
+  `MAX_TRADE_CONTRACTS`, `MAX_PORTFOLIO_FRACTION_PER_TRADE`,
+  `MIN_PORTFOLIO_DOLLARS`, `DAILY_LOSS_CIRCUIT_BREAKER_PCT`).
+- The fill-age and order-TTL env vars (`MAX_FILL_AGE_SECONDS`,
+  `ORDER_LIMIT_TTL_SECONDS`).
+- The `circuit_breaker_watch` task (six tasks remain: trade_poller,
+  order_watcher, settler, portfolio_refresher, reconciler, heartbeat).
+- The hypothesis-skip, stale-skip, killed-skip eligibility filters in
+  `routing.is_eligible`. Hypothesis trades are now mirrored.
+- Cap-clipping math in `routing.compute_target_contracts`. The full
+  formula reduces to `floor((size_pct/100) × portfolio_value / (ask/100))`
+  with a single skip on `target_contracts < 1`.
+- The `auto_pause_reason` field from `/health`.
+
+The kill switch remains, **manual-only**. Default OFF at startup. No
+auto-engagement from any source.
+
+`paper_trades.skip_reason` allowed values shrink to `{"size<1",
+"kalshi_rejected"}`. Pre-placement Kalshi failures (portfolio fetch,
+orderbook fetch) map to `kalshi_rejected` in the same code path that
+Phase 1.4 will use for the actual `place_limit_order` POST failure.
+
+**Recovery path.**
+
+1. Phase 1.1 ships the strip across `kujaku-meta` (EXECUTOR.md, runbook
+   rename + shrink) and `executor-portfolio-001` (config, routing,
+   trade_poller, kill_switch, main, web, .env.example, EXECUTOR.md
+   mirror, tests).
+2. `place_limit_order` keeps raising `NotImplementedError` through the
+   end of 1.1 — the GATE the architect specified. Trade poller still
+   persists `phase0_dry_run` rows in 1.1; Phase 1.4 flips this to a
+   live POST and removes the dry-run path.
+3. Tests must be green at end of 1.1. Claude Code stops and asks the
+   architect for "OK proceed" before starting Phase 1.2 (real-money
+   `place_limit_order` implementation).
+4. Phases 1.2–1.10 layer real-money order placement, settlement,
+   attribution, daily reconciler, and joint Phase 0 + Phase 1 deploy on
+   top of the cleaned scaffold. The deploy step uses the renamed
+   `MASTER_KUJAKU/EXECUTOR_DEPLOY_RUNBOOK.md`.
