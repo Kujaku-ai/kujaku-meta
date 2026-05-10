@@ -279,3 +279,104 @@ stubs) generalizes to any future startup-orchestration test.
    real trade outcome (if observed by report time).
 5. Joint commit on `kujaku-meta`: `docs: phase 0 + phase 1 deploy
    verification addenda`.
+
+---
+
+## 2026-05-10 — Phase 1.10 deploy parser bug + audit-trail gap
+
+**Expected sequencing.** Operator deploys executor; first eligible Paper
+fill after deploy lands as a real Kalshi order with `kalshi_orders`
+status='pending'; the executor mirrors Paper at the configured polling
+cadence. /api/recent_trades grows with each successful placement.
+
+**What failed.** ~30 minutes after deploy, operator reported
+`/api/recent_trades=0`. Read-only diagnostic
+(`MASTER_KUJAKU/EXECUTOR_DEPLOY_DIAGNOSTIC_2026-05-10.md`, commit
+`d63b88a`) found 12 `paper_trades` rows existed with
+`skip_reason='kalshi_rejected'` and 0 `kalshi_orders` rows, with **zero
+trade_poller bot_log entries** since the post-NameError-fix boot at
+`15:52:57 UTC`. Two compounding bugs:
+
+1. **Parser shape mismatch** in `app/kalshi_client.get_orderbook`. The
+   pre-fix parser expected scalar `yes_bid` / `yes_ask` / `no_bid` /
+   `no_ask` keys nested under `"orderbook"`; Kalshi's actual response
+   wraps an `"orderbook_fp"` object containing `yes_dollars` /
+   `no_dollars` arrays of `[price_dollars_str, count_str]` tuples
+   (bid-side only). Every `book.get("yes_ask")` returned `None`. The
+   resulting `KalshiOrderbook.yes_ask` was always `None`. Verified
+   live by signed GET against `KXBTC15M-26MAY101315-15`.
+
+2. **Audit-trail gap** in `app/trade_poller.process_one_paper_trade`.
+   Step 3's ask validation branch silently rejected on `None` ask_cents
+   without writing to `bot_log`. The path persisted
+   `paper_trades.skip_reason='kalshi_rejected'` and returned. With no
+   bot_log signal, the bug looked like "Paper isn't trading" — when in
+   fact every Paper fill since deploy had been silently dropped at the
+   parser/validator boundary.
+
+**Root cause.** Fixture and parser were both wrong in lockstep —
+`tests/test_kalshi_client.py::test_get_orderbook_happy` mocked the same
+invented flat-scalar shape the parser expected, so the unit suite passed
+while production failed silently. The audit-trail gap (silent skip with
+no `bot_log` row) made the bug undiagnosable from the audit trail alone
+and required ground-truth probes against live Kalshi to find.
+
+**Recovery.** Single commit `0224ec5` on `Kujaku-ai/executor-portfolio-001`
+main: `fix(kalshi_client,trade_poller): parse Kalshi orderbook array shape;
+close audit-trail gap on silent skips`.
+
+1. **Parser corrected against verified live response.**
+   `get_orderbook` now reads `orderbook_fp.yes_dollars` /
+   `orderbook_fp.no_dollars` arrays. Implied asks derived as
+   `yes_ask_cents = 100 - max(no_bid_cents)` and symmetric for NO.
+   Bid prices convert dollar-strings to integer cents via
+   `Decimal`-floor (no float rounding noise); floor on the bid
+   auto-rounds the implied ask up — the right direction for an
+   executor that wants to MATCH the current ask. Missing
+   `orderbook_fp` key now raises `KalshiClientError` rather than
+   silently returning `None` — future shape drift fails loud.
+
+2. **Audit-trail logging added** to every previously-silent skip path
+   in `process_one_paper_trade`: invalid side → WARN; ask_cents
+   validation → WARN; size<1 → INFO. Existing logged paths (portfolio
+   fetch ERROR, orderbook fetch WARN, place_limit_order WARN)
+   unchanged. Goal: `bot_log` carries one row per touched paper trade.
+
+3. **Test fixtures aligned with production.**
+   `test_get_orderbook_happy` replaced with
+   `test_get_orderbook_handles_array_response_shape` (real shape,
+   pinned with the live snapshot). Added
+   `test_get_orderbook_empty_side_returns_none`,
+   `test_get_orderbook_yes_ask_derived_from_no_bids`, and
+   `test_get_orderbook_missing_orderbook_fp_raises`. The
+   `_mock_kalshi_orderbook` helper in `test_trade_poller.py` rewired
+   to emit the new shape while preserving the test interface.
+   Bot_log assertions added to all skip-path tests; new
+   `test_skip_kalshi_rejected_when_invalid_side` covers the
+   previously-untested branch.
+
+4. **12 missed trades accepted as permanent loss-of-opportunity.** Per
+   EXECUTOR.md ground rule "the executor never retries an order
+   placement that may or may not have hit Kalshi" and the architect's
+   2026-05-10 ruling, those 12 `paper_trades` rows stay with
+   `skip_reason='kalshi_rejected'`. The first eligible Paper fill
+   after Railway auto-redeploys this commit is the first real-money
+   order this executor places.
+
+**Test count post-fix:** 263 passed (was 259 at 1.10 deploy; +4 net
+new tests).
+
+**Detection gap closed.** Two layers:
+- **Real-money path:** every skip path in `process_one_paper_trade`
+  now writes a `bot_log` row. A silent skip cannot recur without a
+  schema change to the audit table.
+- **Schema drift:** `get_orderbook` now raises on missing
+  `orderbook_fp` rather than returning all-`None`. If Kalshi changes
+  the response shape again, the parser fails loud at the next probe
+  instead of silently dropping every trade.
+
+**Non-blocking UI follow-up.** Dashboard `<details>` "Recent skips"
+panel at `app/dashboard_render.py:182–185` loses `open` state on every
+partial-refresh tick. Documented in
+`EXECUTOR_DEPLOY_DIAGNOSTIC_2026-05-10.md` §7. Deferred to Phase 2
+frontend pass; not in scope for this commit.
