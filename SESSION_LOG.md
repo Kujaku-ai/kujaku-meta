@@ -380,3 +380,111 @@ panel at `app/dashboard_render.py:182–185` loses `open` state on every
 partial-refresh tick. Documented in
 `EXECUTOR_DEPLOY_DIAGNOSTIC_2026-05-10.md` §7. Deferred to Phase 2
 frontend pass; not in scope for this commit.
+
+---
+
+## 2026-05-10 — Phase 1.10 second parser bug (`get_order` _fp/_dollars shape) + backfill
+
+**Expected sequencing.** With the orderbook parser fixed (`0224ec5`),
+the next eligible Paper fill should land as a real Kalshi order with
+`kalshi_orders.status='pending'`, transition to `'filled'` via
+`order_watcher`, and settle via the `settler` task. Operator sees
+`/api/recent_trades` populating with real fills.
+
+**What failed.** Real Kalshi orders DID place and DID fully fill — but
+the executor classified them as `status='rejected'` with
+`filled_contracts=0, fill_price_cents=None`. Two real fills first
+landed (paper_trades `6206` and `6208`, $46.77 cash out across both);
+a third (`6213`, $0.83) landed during the gap between architect's fix
+prompt and the fix push. All three real Kalshi positions but
+zero-fill bookkeeping in the executor.
+
+Root cause: a sibling parser bug to the orderbook one. Pre-fix
+`app/kalshi_client.get_order` looked for integer `count` /
+`filled_count` / `avg_fill_price` / `taker_fill_cost` keys at
+`/portfolio/orders/{order_id}`. Kalshi's actual response uses
+string-typed `_fp` / `_dollars` fields:
+`initial_count_fp` / `fill_count_fp` / `remaining_count_fp` /
+`taker_fill_cost_dollars` / `maker_fill_cost_dollars` /
+`yes_price_dollars` / `no_price_dollars`. None of the legacy keys
+exist. Parser returned `count=0, filled_count=None,
+fill_avg_price_cents=None`.
+
+Downstream effect: `order_watcher._resolve_kalshi_state` saw
+`filled=0, fill_price=None`, fell through Branch 1 (still pending,
+status was `'executed'`) and Branch 2 (requires `filled > 0`),
+landed in Branch 3 (terminal-nonfill). The status map
+`_TERMINAL_NONFILL_KALSHI_STATUSES` doesn't have `'executed'`, so
+the `.get(..., 'rejected')` default fired silently. Executor
+classified all three real fills as `'rejected'`.
+
+Same fixture-and-parser-wrong-in-lockstep failure as the orderbook
+bug: pre-fix tests mocked the legacy integer shape, parser also
+expected it, tests passed while production produced the wrong
+result.
+
+**Recovery.** Two commits + one operator-script run.
+
+1. `Kujaku-ai/executor-portfolio-001` `dd2aad6 fix(kalshi_client,
+   order_watcher): parse Kalshi order _fp/_dollars shape; close
+   audit-trail gaps`. Rewrote `get_order` against the verified
+   shape (Decimal-floor counts; `fill_avg_cents` derived as
+   `round_half_up((taker + maker) * 100 / fill_count_fp)`; raises
+   `KalshiClientError` on missing `order` object). Added two
+   audit-trail WARN rows in `order_watcher.process_one_pending`:
+   one for NULL `kalshi_order_id` orphans, one for unrecognized
+   `kalshi_status` defaulted to `'rejected'`. Replaced
+   `tests/test_kalshi_client.py::test_get_order_*` fixture with
+   the real shape; added 4 new tests including a production
+   snapshot (`test_get_order_handles_fp_response_shape`). Rewired
+   `tests/test_order_watcher.py::_mock_kalshi_get_order` to emit
+   the new shape. Test count: 266 passed (was 263).
+
+2. `Kujaku-ai/executor-portfolio-001` `9725aca chore(scripts):
+   add backfill_orders.py for parser-misrouted rows`. Idempotent
+   one-shot operator script that flips `kalshi_orders.status='rejected'`
+   → `'pending'` for specified `paper_trade_id`s. Per architect
+   ruling, this is an authorized one-off recovery tool, not a
+   routine extension of `scripts/`; EXECUTOR.md ground rule 11
+   (v1 ships zero scripts) still stands for the general case.
+
+3. Backfill execution via `railway ssh "python scripts/backfill_orders.py
+   --paper-trade-ids 6206,6208,6213"`. All three flipped within
+   1 second; `order_watcher` transitioned all three to `'filled'`
+   in the next tick (~5 s later) with the correct fill data:
+
+   | row | filled / target | fill ¢ | slippage | fill $ | settled |
+   |---|---|---|---|---|---|
+   | 6206 | 104/104 | 4¢ | −4¢ | $4.16 | LOSS −$4.16 (collector) |
+   | 6208 | 84/84 | 49¢ | +4¢ | $41.16 | LOSS −$41.16 (collector) |
+   | 6213 | 1/1 | 78¢ | +5¢ | $0.78 | pending settlement |
+
+   `trade_attributions` populated by settler (50/50 cap table):
+   Investor_A −$22.66, Investor_B −$22.66 across the two settled
+   trades. Trade 6213 will settle at the next settler tick after
+   18:00 UTC window close.
+
+**Detection gap closed.** Two layers:
+
+- **Real-money path:** the audit-trail WARN added to
+  `process_one_pending` makes any future "unknown Kalshi status
+  defaulted to rejected" loud. Without that WARN, this bug pattern
+  (parser returns Nones → resolver hits the default-rejected map
+  fallback) would silently misclassify forever.
+- **Schema drift:** `get_order` now raises `KalshiClientError` on
+  missing `order` object — same loud-fail pattern as the orderbook
+  fix. Future Kalshi shape changes surface as boot-time WARN
+  rather than zero-fill silence.
+
+**Operator note.** `kill_switch_engaged` was `false` for the entire
+fix sequence; the operator did not engage despite the architect's
+explicit ruling. The cost of that decision was paper_trade 6213
+($0.83) becoming the third stuck row. Recovered cleanly via the
+backfill script. No real-money loss above the position size that
+Paper Kev had already routed; the parser bug only affected
+bookkeeping classification, not the placement itself.
+
+**Recovery path is closed.** No outstanding stuck rows. The next
+eligible Paper fill (under the now-released kill state) routes
+correctly through `place_limit_order`, `order_watcher`, and
+`settler` end-to-end.

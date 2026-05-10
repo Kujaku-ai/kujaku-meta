@@ -400,9 +400,160 @@ ruling. Suggested fix scope (single commit):
 
 ---
 
-## 8. Stop point
+## 8. Stop point — original verification
 
 Documented; not fixed. Architect to issue the next fix prompt for the
 `get_order` parser, the cap-table-attribution backfill question, and
 the kill-switch-pause-during-fix-deploy decision. No executor code
 modified this verification turn.
+
+---
+
+## 9. Fix shipped + backfill outcome (append-only, post-architect-prompt)
+
+**Date appended:** 2026-05-10 (sections 1–8 frozen; this section is
+append-only).
+**Architect ruling:** see chat 2026-05-10 — three rulings (operator
+engages kill, fix `get_order` parser, backfill 2 stuck rows). A 3rd
+stuck row was discovered between architect ruling and fix push.
+
+### 9.1 Fix commit
+
+`Kujaku-ai/executor-portfolio-001` `dd2aad6 fix(kalshi_client,order_watcher):
+parse Kalshi order _fp/_dollars shape; close audit-trail gaps`
+
+- `app/kalshi_client.get_order` rewritten against the verified
+  `_fp` / `_dollars` shape from §4 Probe A.
+  - Counts via `Decimal`-floor (no float noise).
+  - `fill_avg_price_cents` derived as
+    `round_half_up((taker + maker) * 100 / fill_count_fp)`.
+  - Missing `order` object now raises `KalshiClientError` —
+    same loud-fail-on-shape-drift pattern as the orderbook fix.
+  - Helpers `_decimal_or_none` / `_decimal_int_or_none` extracted.
+- `app/order_watcher.process_one_pending` audit-trail closures:
+  - WARN on NULL `kalshi_order_id` orphan (was silent).
+  - WARN on Branch 3 default-`'rejected'` for unrecognized
+    `kalshi_status` (the gap that hid the parser bug).
+- `tests/test_kalshi_client.py` get_order suite rewritten against
+  real shape; new tests:
+  `test_get_order_handles_fp_response_shape` (production snapshot),
+  `test_get_order_executed_full_fill`, `test_get_order_partial_fill`,
+  `test_get_order_missing_order_object_raises`.
+- `tests/test_order_watcher.py::_mock_kalshi_get_order` rewired to
+  emit the new shape (test interface preserved).
+- Test count post-fix: **266 passed** (was 263; +3 net).
+
+### 9.2 Backfill commit
+
+`Kujaku-ai/executor-portfolio-001` `9725aca chore(scripts): add
+backfill_orders.py for parser-misrouted rows`
+
+`scripts/backfill_orders.py` — idempotent, ABORT-on-error one-shot
+operator script. Flips `kalshi_orders.status='rejected'` →
+`'pending'`; `order_watcher`'s next 5 s tick picks up the row with
+the corrected parser. Per architect ruling, this is a one-off
+recovery tool, not a routine extension of `scripts/`.
+
+### 9.3 Third stuck row discovered
+
+Between the verification snapshot (§3) and the fix push, **a third
+real Kalshi fill landed and was misclassified**: paper_trade `6213`,
+1-contract YES at 78¢ ($0.78 cost + $0.02 fees) on
+`KXBTC15M-26MAY101400-00`. order_watcher's `bot_log` line 160 caught
+it via the audit-trail discipline added in `0224ec5`. Backfill
+target updated from `6206,6208` (architect's specified IDs) to
+`6206,6208,6213` to clean up all three.
+
+The kill switch was NOT engaged by the operator before the fix
+landed; this third row is the cost of the gap. Total real cash out
+across all three: $4.14 + $42.63 + $0.83 = **$47.60**. (Portfolio
+drop: $833.48 → $785.91 = $47.57. Diff $0.03 within fee precision.)
+
+### 9.4 Backfill execution
+
+Run via `railway ssh "python scripts/backfill_orders.py
+--paper-trade-ids 6206,6208,6213"`. Output:
+
+```
+paper_trade_id=6206: flipped
+paper_trade_id=6208: flipped
+paper_trade_id=6213: flipped
+```
+
+`bot_log` 185–187 captured the script's INFO entries. order_watcher
+picked up all three within 1 second (lines 188–190):
+
+```
+(188, '17:52:49.986', INFO, order_watcher, 'order 6b4d386c-... → filled (104/104 @ 4¢)')
+(189, '17:52:50.063', INFO, order_watcher, 'order 95f77ce6-... → filled (84/84 @ 49¢)')
+(190, '17:52:50.141', INFO, order_watcher, 'order 66a3f193-... → filled (1/1 @ 78¢)')
+```
+
+### 9.5 Post-backfill kalshi_orders state
+
+```
+(id, paper_trade_id, status, kalshi_order_id, target, limit, fill_price, filled, slippage, fill_dollars)
+(1, 6206, 'filled',  '6b4d386c-...', 104,  4,  4, 104, -4, 4.16)
+(2, 6208, 'filled',  '95f77ce6-...',  84, 49, 49,  84,  4, 41.16)
+(3, 6213, 'filled',  '66a3f193-...',   1, 78, 78,   1,  5, 0.78)
+```
+
+| Row | Paper fill | Exec fill | Slippage | Fill $ | Notes |
+|---|---|---|---|---|---|
+| 6206 | 8¢ | 4¢ | **−4¢** (favorable) | $4.16 | Got better than paper |
+| 6208 | 45¢ | 49¢ | +4¢ | $41.16 | Paid more than paper |
+| 6213 | 73¢ | 78¢ | +5¢ | $0.78 | Paid more than paper |
+
+### 9.6 Settlement + cap-table attribution
+
+`settler` fired in the same minute (lines 191–192):
+
+```
+(191, '17:53:10.020', INFO, settler, 'settled KXBTC15M-26MAY101330-30 (104c, LOSS): P&L=$-4.16 (method=collector)')
+(192, '17:53:10.021', INFO, settler, 'settled KXBTC15M-26MAY101345-45 (84c, LOSS): P&L=$-41.16 (method=collector)')
+```
+
+Trade 6206 and 6208 both **lost** — settled to opposite outcome.
+Total realized P&L: −$45.32. Trade 6213 will settle at the next
+settler tick after 18:00 UTC + 30 min = 18:30 UTC.
+
+`trade_attributions` rows generated by the settler:
+
+```
+(id, kalshi_order_id, investor_name, share_pct, attributed_pnl_dollars, snapshot_ts_utc)
+(1, 1, 'Investor_A', 50.0, -2.08,  '17:30:15.903...')
+(2, 1, 'Investor_B', 50.0, -2.08,  '17:30:15.903...')
+(3, 2, 'Investor_A', 50.0, -20.58, '17:45:16.003...')
+(4, 2, 'Investor_B', 50.0, -20.58, '17:45:16.003...')
+```
+
+Cap table at 50/50 split: Investor_A and Investor_B each took
+−$22.66 across the two settled trades.
+
+### 9.7 Final classification
+
+**HEALTHY — fix verified end-to-end + backfill complete.**
+
+- Parser fix: `get_order` reads the real Kalshi response shape
+  correctly. Three real fills landed in `kalshi_orders` with
+  `status='filled'`, accurate `filled_contracts`,
+  `fill_price_cents`, `fill_dollars`, `slippage_cents`.
+- Settlement: collector-derived `pnl_dollars` populated for the two
+  trades whose windows closed.
+- Cap-table attribution: 50/50 split persisted into
+  `trade_attributions` for both settled trades.
+- Audit trail: every status transition has a `bot_log` row. The
+  Phase-1.10-debugging audit-trail discipline is now load-bearing
+  in production — exactly the closure the architect intended.
+
+**Operator note.** `kill_switch_engaged: false` throughout the
+verification + fix + backfill sequence — operator did not engage.
+Cost of that decision was paper_trade 6213 ($0.83) becoming the
+third stuck row. Recovered cleanly via the same backfill script.
+The operator can release per the architect's resume command if
+they had engaged; currently no action needed (kill is already off).
+
+### 9.8 Stop point
+
+Sequence complete: parser fixed, three rows backfilled, settler ran,
+attributions written. Awaiting next architect prompt.
