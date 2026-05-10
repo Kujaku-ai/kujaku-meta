@@ -191,10 +191,12 @@ An executor consumes the JSON API of one Layer 2b service (the brain) and routes
 
 | Thing | Pattern | Example |
 |-------|---------|---------|
-| GitHub repo | `kujaku-executor-{label}` | `kujaku-executor-portfolio-001` |
-| Railway service | same as repo name | `kujaku-executor-portfolio-001` |
+| GitHub repo | `kujaku-executor-{label}` | `executor-portfolio-001` |
+| Railway service | same as repo name | `executor-portfolio-001` |
 | Subdomain | `{label}.kujaku.ai` | `portfolio-001.kujaku.ai` |
 | Spec doc | `EXECUTOR.md` | repo root |
+
+**Note the naming deviation:** `executor-portfolio-001` does not use the `kujaku-` prefix. Operator decision at deploy time; the `kujaku-executor-{label}` convention stands for future Layer 2c services.
 
 Executors hold real-money exchange credentials (API key + private key PEM). They never call an LLM. They never modify the brain's data. They are read-only consumers of one Layer 2b API and write-mostly producers against one exchange account.
 
@@ -210,7 +212,7 @@ Decommission is intentionally simple: delete the Railway service, remove the GoD
 | QC Collector | 1 | LIVE | `Kujaku-ai/kujaku-data-qc` | (internal) |
 | Charting Calcs (ICT) | 2a | LIVE | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
 | Paper Kev | 2b | LIVE (paper-only research) | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
-| Portfolio_001 | 2c | Planned (next deliverable) | `Kujaku-ai/kujaku-executor-portfolio-001` | `portfolio-001.kujaku.ai` |
+| Portfolio_001 | 2c | Planned (next deliverable) | `Kujaku-ai/executor-portfolio-001` | `portfolio-001.kujaku.ai` |
 | Public Website | 3 | Built, awaiting cutover review | `Kujaku-ai/kujaku-web` | (staging) |
 
 All services deploy to Railway, each as its own service, each with its own env vars and lifecycle.
@@ -268,7 +270,7 @@ MASTER_KUJAKU/
 │   ├── scripts/
 │   └── tests/
 │
-├── executor-portfolio-001/         ← Portfolio_001 (repo: kujaku-executor-portfolio-001)
+├── executor-portfolio-001/         ← Portfolio_001 (repo: executor-portfolio-001)
 │   ├── EXECUTOR.md
 │   ├── CLAUDE.md
 │   ├── investors.json
@@ -363,7 +365,7 @@ Brief record of major architectural decisions and milestones. Append new entries
 
 **2026-05-09 — Layer 2c introduced; Portfolio_001 spec written.**
 - SYSTEM.md updated to define Layer 2c (execution services): deterministic real-money order routers that consume a Layer 2b brain via its public API and route trades to an exchange account.
-- `EXECUTOR.md` master spec written and committed in `kujaku-meta` and in the new `kujaku-executor-portfolio-001` repo at scaffold time.
+- `EXECUTOR.md` master spec written and committed in `kujaku-meta` and in the new `executor-portfolio-001` repo at scaffold time.
 - First instance: Portfolio_001, consumes Paper Kev (`kalshi15min-btc.kujaku.ai`), routes to a single Kalshi account, supports a JSON-config investor cap table (50/50 placeholder for the first deploy).
 - Architectural learning encoded: Layer 2c eliminates decision drift between paper and live by construction. There is exactly one brain (Paper Kev) and one set of decisions; the executor mirrors verbatim and never re-decides.
 

@@ -1,7 +1,7 @@
 > # KALSHI EXECUTOR (real-money order router)
 >
 > **Service:** `portfolio-001.kujaku.ai`
-> **Repo:** `kujaku-executor-portfolio-001`
+> **Repo:** `executor-portfolio-001`
 > **Mode:** **Real-money trading.** Routes Paper Kev's filled paper trades onto a live Kalshi account using a Kalshi API key + private RSA PEM held by THIS service alone. **No LLM calls. No trading decisions. No learning loop.**
 > **Database:** `/data/executor.db` on Railway persistent volume.
 >
@@ -548,7 +548,7 @@ Removing the file OR `POST /control/resume` re-enables the executor. The file ta
 ## File Structure
 
 ```
-kujaku-executor-portfolio-001/           ← repo root
+executor-portfolio-001/                  ← repo root
 ├── EXECUTOR.md                          ← this file
 ├── CLAUDE.md                            ← session conventions for Claude Code
 ├── README.md                            ← short: what it is, deploy steps, kill-switch how-to
@@ -715,7 +715,7 @@ CI: GitHub Actions on `main`, runs `pytest -q`. Failure blocks merge.
 
 ### Part A — Railway service
 
-1. Create new GitHub repo `Kujaku-ai/kujaku-executor-portfolio-001`, private.
+1. Create new GitHub repo `Kujaku-ai/executor-portfolio-001`, private.
 2. In Railway, create new project (or add a service to `patient-renewal`) → "Deploy from GitHub repo" → select the repo.
 3. Railway auto-detects Python, installs `requirements.txt`, runs `Procfile`.
 4. **Add a volume** mounted at `/data`. Without this, the SQLite file wipes on deploy.

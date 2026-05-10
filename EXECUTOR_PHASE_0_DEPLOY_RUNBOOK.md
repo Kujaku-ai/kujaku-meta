@@ -2,7 +2,7 @@
 
 This runbook is for the operator. It walks through the manual steps Claude Code cannot perform: Railway service creation, environment variable population, GoDaddy DNS, and post-deploy verification.
 
-**Prerequisite:** Phases 0.1–0.9 have shipped. Claude Code has pushed all code to `Kujaku-ai/kujaku-executor-portfolio-001 main`. Tests are green. The repo's `EXECUTOR.md`, `CLAUDE.md`, `README.md`, and `investors.json` are visible on github.com.
+**Prerequisite:** Phases 0.1–0.9 have shipped. Claude Code has pushed all code to `Kujaku-ai/executor-portfolio-001 main`. Tests are green. The repo's `EXECUTOR.md`, `CLAUDE.md`, `README.md`, and `investors.json` are visible on github.com.
 
 **Phase 0 safety:** The kill switch is OFF by default in Phase 0. Real money is NOT at risk because `kalshi_client.place_limit_order` raises `NotImplementedError` — no real Kalshi orders can fire regardless of any other state. The polling loop runs and persists `phase0_dry_run` rows so you can see what would have been placed. This is intentional — it gives you live observation data while we build Phase 1.
 
@@ -40,7 +40,7 @@ Write them down. They go into Railway in step 4.
 ## Step 3 — Create the Railway service
 
 1. Open railway.app and select the `patient-renewal` project.
-2. Click `+ New` → `GitHub Repo`. Select `Kujaku-ai/kujaku-executor-portfolio-001`. Railway auto-detects Python.
+2. Click `+ New` → `GitHub Repo`. Select `Kujaku-ai/executor-portfolio-001`. Railway auto-detects Python.
 3. Wait for the first build. **It will fail** because env vars are missing. Expected.
 4. Click into the service → `Settings`.
 5. Under `Volumes`, click `+ Volume`. Mount path: `/data`. Size: 1 GB. Save.
