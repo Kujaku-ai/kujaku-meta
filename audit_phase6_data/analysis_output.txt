@@ -1,0 +1,115 @@
+
+==============================================================================
+§32 — SCALE-ENTRY DIRECTION CLASSIFICATION
+==============================================================================
+loaded 206 scale-entry decisions
+scale_entries with explicit side field: 0 (schema confirms scale inherits primary.side)
+
+total scale entries (rows): 206
+
+Direction distribution (all 206 scale entries):
+  CATCH-DIP   :   68 ( 33.0%)
+  CHASE       :  137 ( 66.5%)
+  AT-LEVEL    :    0 (  0.0%)
+  UNKNOWN     :    1 (  0.5%)
+
+Direction × primary_side:
+  YES: n=61  catch-dip=33 ( 54.1%)  chase=27 ( 44.3%)
+  NO: n=145  catch-dip=35 ( 24.1%)  chase=110 ( 75.9%)
+
+Direction × primary_tier:
+  very_cheap        : n=   0  catch-dip=  0 (  0.0%)  chase=  0 (  0.0%)
+  cheap             : n=  60  catch-dip=  9 ( 15.0%)  chase= 51 ( 85.0%)
+  middle            : n=  80  catch-dip= 24 ( 30.0%)  chase= 56 ( 70.0%)
+  expensive         : n=  65  catch-dip= 34 ( 52.3%)  chase= 30 ( 46.2%)
+  very_expensive    : n=   1  catch-dip=  1 (100.0%)  chase=  0 (  0.0%)
+
+Direction × thesis:
+  continuation  : n= 200  catch-dip= 68 ( 34.0%)  chase=131 ( 65.5%)
+  reversal      : n=   6  catch-dip=  0 (  0.0%)  chase=  6 (100.0%)
+
+Direction × scale_entry_strategy:
+  break_above              : n=  27  catch-dip=  0 (  0.0%)  chase= 27 (100.0%)
+  break_below              : n= 106  catch-dip=  1 (  0.9%)  chase=105 ( 99.1%)
+  pullback_and_hold        : n=  20  catch-dip= 15 ( 75.0%)  chase=  4 ( 20.0%)
+  pullback_and_reject      : n=  16  catch-dip= 16 (100.0%)  chase=  0 (  0.0%)
+  pullback_to              : n=  37  catch-dip= 36 ( 97.3%)  chase=  1 (  2.7%)
+
+Direction × primary_entry_strategy:
+  primary break_above   : n=  47  catch-dip= 20 ( 42.6%)  chase= 27 ( 57.4%)
+  primary break_below   : n= 101  catch-dip=  9 (  8.9%)  chase= 92 ( 91.1%)
+  primary immediate     : n=  58  catch-dip= 39 ( 67.2%)  chase= 18 ( 31.0%)
+
+delta_btc magnitude (USD distance scale.trigger from primary level):
+  CATCH-DIP: n=68  mean=$60.2  p50=$57.1  p90=$93.0  max=$151.3
+  CHASE: n=137  mean=$51.7  p50=$43.0  p90=$82.0  max=$160.0
+
+§32.B — Slippage by direction on n=5 executor scale-entry orders
+executor scale-entry orders: 5
+
+Per-order direction + slip:
+  oid=15  side=NO   trig_type=break_below    dir=CHASE        slip=  -3c
+  oid=18  side=NO   trig_type=break_below    dir=CHASE        slip=  +3c
+  oid=23  side=YES  trig_type=break_above    dir=CHASE        slip= +12c
+  oid=26  side=YES  trig_type=break_above    dir=CHASE        slip=  +8c
+  oid=33  side=NO   trig_type=break_below    dir=CHASE        slip= +13c
+
+  CHASE: n=5  mean=+6.60c  stdev=5.95c  range=[-3, 13]
+
+§32.C — pullback_and_reject (PAR) confluence-validated subset
+  PAR: n=16  catch-dip=16 (100.0%)  chase=0 (  0.0%)
+  non-PAR: n=190  catch-dip=52 ( 27.4%)  chase=137 ( 72.1%)
+
+==============================================================================
+§33.A — STRUCTURAL SPREAD HYPOTHESIS (yes_spread vs no_spread)
+==============================================================================
+snapshots: 119556
+usable snapshots: 106950  (skipped 12606 for missing/settled/illegal data)
+
+YES spread:  mean=1.02c  p50=1  p90=2c
+NO  spread:  mean=1.02c  p50=1  p90=2c
+NO − YES (mean spread asymmetry): +0.00c
+
+Spread by TTE bucket:
+bucket              n   yes_mean    no_mean     no-yes
+post-close     106950       1.02       1.02      +0.00
+
+Spread by moneyness band (via Kalshi implied prob):
+band          n   yes_mean    no_mean     no-yes
+OTM       21301       0.73       0.73      +0.00
+ATM       62504       1.23       1.23      +0.00
+ITM       23145       0.75       0.75      +0.00
+
+==============================================================================
+§33.B — MM INVENTORY IMBALANCE (side distribution)
+==============================================================================
+paper_decisions_14d: 2423
+Paper Kev decisions side distribution: {'YES': 1094, 'NO': 1329}
+Executor orders side distribution (n=37): {'NO': 18, 'YES': 19}
+
+kalshi_snaps_14d volume column (cumulative volume per snapshot):
+  mean: 124064  p50: 109170  max: 557768
+  (volume is *cumulative* on KXBTC15M tickers and is not a directional proxy on its own)
+
+==============================================================================
+§33.D — SLIP DECOMPOSITION BY SIDE (n=37 executor orders)
+==============================================================================
+side   n  stale_mean   d2s_mean  stf_mean  tot_mean
+YES   19       +4.11      +8.58     +0.05    +11.84
+NO    18      +13.06     +17.72     -0.06    +19.50
+
+Excess (NO − YES) by stage:
+  stale: NO=+13.06  YES=+4.11  excess=+8.95c
+  d2s  : NO=+17.72  YES=+8.58  excess=+9.14c
+  stf  : NO=-0.06  YES=+0.05  excess=-0.11c
+  tot  : NO=+19.50  YES=+11.84  excess=+7.66c
+
+==============================================================================
+§34 — PAR vs OTHER SCALE VARIANTS SLIPPAGE (n=5 executor subset)
+==============================================================================
+Per-trigger_type slip (scale-entry orders only, n=5):
+  break_below              : n=3  mean=+4.33c  range=[-3, 13]  values=[-3, 3, 13]
+  break_above              : n=2  mean=+10.00c  range=[8, 12]  values=[12, 8]
+
+All scale-exec trigger_types: {'break_below': 3, 'break_above': 2}
+PAR (pullback_and_reject) in executor scale orders: 0

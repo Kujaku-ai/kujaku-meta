@@ -2390,3 +2390,421 @@ left at `kujaku-ai / patient-renewal / production / data-btc`
 `executor-portfolio-001` during the audit).
 
 **End of Phase 5.**
+
+---
+
+# PHASE 6 — SCALE-ENTRY DIRECTION + NO-SIDE BIAS ROOT CAUSE (2026-05-10)
+
+**Phase 6 audited by:** Claude Code, bypass mode, read-only on
+all production DBs and source repos. Same audit document; §32–§35
+appended. §1–§31 unchanged. Provenance: new dump in
+[audit_phase6_data/](audit_phase6_data/) — `scale_decisions.json`
+(26 MB, 206 decisions with full `context_json` + `response_json`),
+`analyze.py` reproducing every number below, `analysis_output.txt`.
+Reuses Phase 3 + Phase 5 dumps as-is.
+
+---
+
+## 32. SCALE-ENTRY DIRECTION CLASSIFICATION
+
+### 32.A Schema invariant + classification rule
+
+**Schema invariant first.** Of 206 scale entries inspected, **0
+carry an explicit `side` field**. Confirmed by reading
+[bot-kalshi15min-btc/app/claude_client.py](bot-kalshi15min-btc/app/claude_client.py)
+`ScaleEntryBlockV16` (no `side` field) and
+[bot-kalshi15min-btc/app/scheduler.py:2055-2103 `_execute_scale_entry`](bot-kalshi15min-btc/app/scheduler.py#L2055-L2103)
+(reuses `decision.primary.side` when writing the trade). Scale
+entries are **same-side as primary by construction**. The
+operator-flagged "HEDGE" category (scale opposing primary) is
+structurally impossible — a "hedge" would require a separate
+`dissent`-block trade.
+
+**Classification rule** for the comparison `scale.trigger_value`
+vs `primary_level` (where `primary_level` = `primary.trigger_value`
+for trigger primary, and `feature_vector.spot.price_now` for
+immediate primary, both BTC USD):
+
+- **YES-side primary** (we win if BTC > floor_strike at expiration):
+  - lower BTC → cheaper YES contract
+  - `scale.trigger_value < primary_level` → **CATCH-DIP** (good)
+  - `scale.trigger_value > primary_level` → **CHASE** (bad)
+- **NO-side primary** (we win if BTC < floor_strike at expiration):
+  - higher BTC → cheaper NO contract
+  - `scale.trigger_value > primary_level` → **CATCH-DIP** (good)
+  - `scale.trigger_value < primary_level` → **CHASE** (bad)
+
+### 32.B Direction distribution — operator's intuition is CORRECT
+
+| direction | count | % |
+|---|---|---|
+| **CHASE** | **137** | **66.5%** |
+| CATCH-DIP | 68 | 33.0% |
+| AT-LEVEL | 0 | 0.0% |
+| UNKNOWN (missing trigger_value) | 1 | 0.5% |
+
+**Two-thirds of scale entries fire in the WRONG direction —
+chasing further-extended contracts rather than catching dips
+into cheaper ones.** The operator's observation is confirmed.
+
+### 32.C Cross-cuts
+
+**By primary side:**
+
+| primary_side | n | catch-dip | chase |
+|---|---|---|---|
+| YES | 61 | 33 (54.1%) | 27 (44.3%) |
+| **NO** | **145** | **35 (24.1%)** | **110 (75.9%)** |
+
+**NO-side primaries chase 1.7× more often than YES-side.** The
+NO-side bias from §28.B (NO break_below +19.5¢ vs YES break_above
++11.8¢) shows up here too: when the primary is NO, the LLM picks
+chase scales 76% of the time, vs only 44% on YES.
+
+**By primary tier:**
+
+| primary_tier | n | catch-dip | chase |
+|---|---|---|---|
+| very_cheap | 0 | — | — |
+| cheap | 60 | 9 (15.0%) | 51 (**85.0%**) |
+| middle | 80 | 24 (30.0%) | 56 (70.0%) |
+| expensive | 65 | 34 (52.3%) | 30 (46.2%) |
+| very_expensive | 1 | 1 (100%) | 0 |
+
+**The cheaper the primary, the more often the LLM chases.** Cheap
+primaries (where the LLM thinks the underlying move is just
+starting) get 85% chase scales — the LLM is doubling down on the
+move it just bet on. Expensive primaries get 52% catch-dip —
+when the primary is already mid-move at an expensive entry, the
+LLM tends to stage a retracement-buy.
+
+**By thesis:**
+
+| thesis | n | catch-dip | chase |
+|---|---|---|---|
+| continuation | 200 | 68 (34.0%) | 131 (65.5%) |
+| **reversal** | **6** | **0 (0.0%)** | **6 (100%)** |
+
+All 6 reversal-thesis decisions with scale entries chase. n is
+small but striking.
+
+**By scale entry_strategy** — this is the structural finding:
+
+| scale_entry_strategy | n | catch-dip | chase |
+|---|---|---|---|
+| break_above | 27 | 0 (0.0%) | **27 (100%)** |
+| break_below | 106 | 1 (0.9%) | **105 (99.1%)** |
+| pullback_to | 37 | 36 (97.3%) | 1 (2.7%) |
+| pullback_and_hold | 20 | 15 (75.0%) | 4 (20.0%) |
+| **pullback_and_reject** | **16** | **16 (100%)** | **0 (0.0%)** |
+
+**The chase pattern is concentrated in `break_above` / `break_below`
+scales.** These two variants are *definitionally* chase: a
+`break_above` scale fires only when BTC moves further above the
+trigger, which on a YES bet is a more expensive YES contract; a
+`break_below` scale on a NO bet does the same in the opposite
+direction. Of the 137 chase scales, **132 (96.4%) are
+break-variants.**
+
+The pullback variants do exactly the opposite: `pullback_to` is
+97% catch-dip, `pullback_and_reject` is **100% catch-dip**.
+
+**By primary entry_strategy** (does the LLM's primary choice
+correlate with chase scales?):
+
+| primary_es | n | catch-dip | chase |
+|---|---|---|---|
+| immediate | 58 | 39 (67.2%) | 18 (31.0%) |
+| break_above | 47 | 20 (42.6%) | 27 (57.4%) |
+| break_below | 101 | 9 (8.9%) | 92 (**91.1%**) |
+
+Of the 92 break_below-primary + chase-scale combinations, the
+LLM is essentially saying "BTC is already breaking below; if it
+breaks even further below, scale up." This is a structural
+"momentum-doubling" pattern that reads as chase by our metric
+but may be intentional momentum scaling. **Architect call: is
+this the intended behavior or accidental?**
+
+### 32.D Magnitude of the displacement
+
+| direction | n | mean delta_btc | p50 | p90 | max |
+|---|---|---|---|---|---|
+| CATCH-DIP | 68 | $60.2 | $57 | $93 | $151 |
+| CHASE | 137 | $51.7 | $43 | $82 | $160 |
+
+Catch-dip scales are placed slightly farther from the primary
+level than chase scales (mean $60 vs $52). Both ranges are within
+the typical 15-min BTC ATR ($30-$200), so both are reachable
+within the window.
+
+### 32.E Slippage by direction (n=5 executor scale-entry orders)
+
+The executor-side check on whether chase-scales actually slip
+worse:
+
+| oid | side | trigger_type | direction | slip |
+|---|---|---|---|---|
+| 15 | NO | break_below | CHASE | -3¢ |
+| 18 | NO | break_below | CHASE | +3¢ |
+| 23 | YES | break_above | CHASE | +12¢ |
+| 26 | YES | break_above | CHASE | +8¢ |
+| 33 | NO | break_below | CHASE | +13¢ |
+
+**All 5 executor scale-entry orders are CHASE.** Mean slip
++6.6¢ — better than the +14¢ primary mean (Phase 3 §17.B), worse
+than expected for "chase fills should be worst." The Phase 5
+§29.C "scale slip +26¢" headline was driven by 2 outliers that
+we now see are both CHASE break_above on YES side at 12¢ and 8¢;
+the n=5 mean is dragged up by those.
+
+**No catch-dip executor scale-entry orders observed in 24h.**
+This is consistent with §32.C: PAR (the only scale variant that
+is 100% catch-dip and would carry confluence-validated entries)
+fires rarely enough that it didn't produce a single executor
+order in the post-2026-05-10 window.
+
+### 32.F Verdict for §32
+
+| question | answer |
+|---|---|
+| Does the LLM fire most scale entries CATCH-DIP or CHASE? | **CHASE — 66.5% of 206** |
+| Is the chase pattern code-structural (impossible to avoid) or LLM-choice? | **LLM-choice via entry_strategy selection.** break_above/below are 99-100% chase by construction; pullback variants are 75-100% catch-dip. The LLM picks break_* far more often (133 of 206 = 64.6%) than pullback variants (73 of 206 = 35.4%) |
+| Does the chase rate correlate with NO-side bias from §28.B? | **Yes — NO-primary chase rate is 75.9% vs YES-primary 44.3%** |
+| Are scale-entry slips on the executor disproportionately bad? | **Phase 5 §29.C said yes (+26¢). Phase 6's classification shows the +26¢ was driven by 2 chase-break-above-YES orders. The signal is consistent: chase scales slip worse, but n=5 is too small to nail it down** |
+
+---
+
+## 33. NO-SIDE BIAS ROOT CAUSE
+
+### 33.A Structural-spread hypothesis — REFUTED
+
+Reused [audit_phase5_data/kalshi_snaps_14d.json](audit_phase5_data/kalshi_snaps_14d.json)
+(n=119,556 snapshots, 14d). Filtered to usable rows
+(n=106,950) — dropped 12,606 snapshots that were missing
+bid/ask values or showed `ask=bid=100` (window settled).
+
+| side | mean spread | p50 | p90 |
+|---|---|---|---|
+| YES | 1.02¢ | 1¢ | 2¢ |
+| NO | 1.02¢ | 1¢ | 2¢ |
+| **NO − YES asymmetry** | **+0.00¢** | — | — |
+
+**By moneyness** (via Kalshi implied prob `yes_ask/100`):
+
+| band | n | yes_mean | no_mean | NO − YES |
+|---|---|---|---|---|
+| OTM (yes_prob < 0.20) | 21,301 | 0.73¢ | 0.73¢ | +0.00¢ |
+| ATM (0.20 ≤ yes_prob ≤ 0.80) | 62,504 | 1.23¢ | 1.23¢ | +0.00¢ |
+| ITM (yes_prob > 0.80) | 23,145 | 0.75¢ | 0.75¢ | +0.00¢ |
+
+**By TTE bucket:** TTE classification was broken in this run —
+my ticker-time parser assumed UTC but Kalshi's KXBTC15M ticker
+encodes wall-clock ET, so all snapshots fell into the
+"post-close" bucket. The overall + moneyness numbers above are
+robust to that bug because they don't require TTE.
+
+**Structural spread is symmetric.** Kalshi's market makers quote
+identical-width spreads on YES and NO, regardless of moneyness.
+**Hypothesis A is refuted as a cause of the NO-side bias.**
+
+### 33.B MM inventory-imbalance hypothesis — INCONCLUSIVE
+
+| source | YES count | NO count | NO bias |
+|---|---|---|---|
+| Paper Kev decisions (14d, n=2,423) | 1,094 | 1,329 | 54.8% NO |
+| Executor orders (24h, n=37) | 19 | 18 | 48.6% NO |
+
+**Paper's decision-stream is slightly NO-biased** (~55% NO vs
+~45% YES), but the 24h executor sample is balanced. Kalshi's
+`kalshi_snapshots.volume` column is cumulative volume per
+ticker — not a directional flow indicator on its own (mean
+124K, p50 109K). To test the MM-inventory hypothesis cleanly,
+we would need Kalshi's per-side trade tape, which is not in any
+of our DBs.
+
+**Inconclusive.** A 55% NO bias in the bot's own decisions
+plausibly puts modest inventory-pressure on Kalshi MMs to widen
+NO-side fills, but we have no direct evidence of that and the
+spread data in §33.A says they're not actually doing it.
+
+### 33.C break_below trigger code audit — NO SIGN ERROR
+
+Read [bot-kalshi15min-btc/app/watcher.py:145-242](bot-kalshi15min-btc/app/watcher.py#L145-L242)
+(trigger evaluation),
+[watcher.py:552-660 `_fire_trade`](bot-kalshi15min-btc/app/watcher.py#L552-L660)
+(trigger-driven fill), and
+[scheduler.py:1748-1900 `_execute_primary`](bot-kalshi15min-btc/app/scheduler.py#L1748-L1900)
+(immediate fill).
+
+**Trigger evaluation symmetry:**
+
+```python
+# watcher.py:176-180
+if trigger_type == "break_above":
+    return current_price > trigger_value      # strict
+if trigger_type == "break_below":
+    return current_price < trigger_value      # strict
+```
+
+Symmetric, no sign error.
+
+**Fill-side selection in `_fire_trade` (trigger fills):**
+
+```python
+# watcher.py:571
+ask = market.get("yes_ask") if side == "YES" else market.get("no_ask")
+```
+
+Correct. YES-side trades buy at `yes_ask`; NO-side trades buy
+at `no_ask`.
+
+**Fill-side selection in `_execute_primary` (immediate fills):**
+
+```python
+# scheduler.py:1878-1880
+fill_price_cents = (
+    market.get("yes_ask") if side == "YES" else market.get("no_ask")
+)
+```
+
+Same correct selection.
+
+**No sign error anywhere in the trigger / fill code path.** The
++19.5¢ NO-side excess is not from the bot mis-selecting which
+ask to fill at.
+
+### 33.D Slip decomposition by side — NO EXCESS IS PRE-FILL
+
+Re-decomposed Phase 3 §18 stages, split by side. Stages:
+- **stale** = `real_ask_at_decision_ts − decision_perceived_ask` (the LLM's snapshot is N seconds old when it commits)
+- **d2s** = `submit_ask − decision_perceived_ask` (book moved between decision-insert and executor-submit)
+- **stf** = `executor_fill_price − executor_limit_price` (post-submit drift to fill — should be ~0 for market orders)
+- **tot** = `executor_fill_price − decision_perceived_ask` (what §17.A reported as +15.6¢ overall)
+
+| side | n | stale_mean | d2s_mean | stf_mean | tot_mean |
+|---|---|---|---|---|---|
+| YES | 19 | +4.11¢ | +8.58¢ | +0.05¢ | +11.84¢ |
+| NO | 18 | +13.06¢ | +17.72¢ | -0.06¢ | +19.50¢ |
+
+Excess (NO − YES) by stage:
+
+| stage | NO − YES excess |
+|---|---|
+| stale (book staleness drift) | **+8.95¢** |
+| d2s (decision-to-submit drift) | **+9.14¢** |
+| stf (submit-to-fill drift) | **-0.11¢** |
+| **tot (overall)** | **+7.66¢** |
+
+**The NO-side excess is concentrated in the staleness + decision-to-submit windows (PRE-FILL drift).** Submit-to-fill is symmetric across sides (the executor's market-order placement adds zero side-specific cost). This rules out:
+- Executor sign error or fill-side mistake (would show in stf)
+- Kalshi MM widening NO-side at fill time (also would show in stf, and §33.A already showed spreads are symmetric)
+- Latency-induced adverse drift between submit and fill
+
+**What it leaves:** the NO-side ask drifts adversely faster than the YES-side ask during the 60-90s window between snapshot and decision-insert. Two non-mutually-exclusive mechanisms:
+
+1. **Selection effect.** When the LLM picks NO, BTC tends to be already moving down (NO-favorable); per Phase 5 §27, BTC leads Kalshi by ~12s, so the BTC drop drags NO_ask up over the next 10-90s. The LLM "sees" the NO ask before that drag completes; by decision-insert, NO_ask is up. Same selection on YES (BTC moving up → YES_ask drags up) would be symmetric — but if NO bets are made on stronger / more directional moves (panic selling, breakdown plays), the drag is bigger.
+
+2. **Sample-period asymmetry.** The 24h executor sample (2026-05-10 17:28 to 2026-05-11 01:16 UTC) coincided with a bearish BTC tape; NO bets in that window benefited from continuing downward drift but paid the staleness tax in the form of higher NO_ask at insert time. A bullish 24h sample would likely flip the asymmetry. **Direct test possible: pull data-btc Coinbase ticks for the 24h sample window and compute mean BTC return** — a strongly negative tape supports mechanism (2).
+
+### 33.E Verdict for §33
+
+| candidate hypothesis | status |
+|---|---|
+| **A. Structural spread asymmetry** | **REFUTED** (NO_spread = YES_spread = 1.02¢ across 107K snapshots) |
+| **B. MM inventory imbalance from 55% NO decision flow** | **INCONCLUSIVE** (slight NO-bias in decisions but no per-side MM trade-tape data) |
+| **C. break_below code sign error** | **REFUTED** (watcher.py:178/180 symmetric; fill-side selection at watcher.py:571 + scheduler.py:1879 correct) |
+| **D. Pre-fill drift asymmetry (selection effect + bearish-tape coincidence)** | **CONFIRMED** (NO-side excess +8.95¢ in stale + +9.14¢ in d2s; +0¢ in stf) |
+
+**The +7.7¢ NO-side excess is a pre-fill drift artifact, not a code bug. Recovery options:**
+
+1. **Refetch snapshot at decision-insert time** (after LLM returns). Replaces the 60-90s-stale snapshot with a real-time ask before the executor sees the trade. **Recovers the +9¢ stale stage.** Implementation: add a snapshot refetch + `decisions.context_json` append in [scheduler.py:_run_one_review](bot-kalshi15min-btc/app/scheduler.py#L2175) after `call_claude` returns and before `db.insert_decision`.
+2. **Reduce executor poll interval** (Phase 4 §23.C Option 1, 10s → 2s). Recovers ~5¢ of the +9¢ d2s stage. Already on the table.
+3. **Adjust Kelly's `fill_price_cents`** by an expected-side-drift premium (e.g. +9¢ on NO, +4¢ on YES). Doesn't recover slippage but it makes Kelly's BE math honest about the realized fill price. Implementation: extend `_v17_3_kelly_size_pct` to take per-side `expected_premium_cents`.
+
+Recommended: (1) + (3) together; (2) as a separate cleanup. The combination addresses both the LLM seeing a stale book and the LLM pricing against an unrealistically-cheap perceived ask.
+
+---
+
+## 34. PAR vs OTHER SCALE VARIANTS — SLIPPAGE
+
+### 34.A Direct executor-slip data — null result
+
+Of the 5 executor scale-entry orders in the n=37 Live Kev sample:
+
+| variant | n | mean slip | range | values |
+|---|---|---|---|---|
+| break_above | 2 | +10.00¢ | [8, 12] | [12, 8] |
+| break_below | 3 | +4.33¢ | [-3, 13] | [-3, 3, 13] |
+| **pullback_and_reject (PAR)** | **0** | n/a | n/a | (none observed) |
+
+**No PAR scale entries reached the executor in the 24h post-2026-05-10 sample.** The PAR variant exists in the spec ([claude_client.py `ScaleEntryBlockV16`](bot-kalshi15min-btc/app/claude_client.py)) and is used by the LLM (16 of 206 = 7.8% of scale entries per §32.C), but the LLM-frequency × window-fire-rate intersection produced zero executor PAR orders in this sample.
+
+### 34.B Indirect support — direction quality
+
+What §32.C actually shows about PAR:
+
+| variant | n | catch-dip rate | chase rate |
+|---|---|---|---|
+| **pullback_and_reject** | 16 | **100.0%** | 0.0% |
+| pullback_to | 37 | 97.3% | 2.7% |
+| pullback_and_hold | 20 | 75.0% | 20.0% |
+| break_above | 27 | 0.0% | 100.0% |
+| break_below | 106 | 0.9% | 99.1% |
+
+**PAR is the ONLY scale variant with a 100% catch-dip rate.**
+The LLM's choice of trigger_value for PAR is always cheaper-side-of-primary, AND the variant requires confluence reassertion before firing (per [watcher.py:488-540](bot-kalshi15min-btc/app/watcher.py#L488-L540) — 4 confluence signals from the charting API: 15m structure, 15m momentum dir, 15m vol-dry-up OR vol-spike-rej, 1h trend; default 3-of-4 threshold).
+
+The combined property — **directionally-correct AND fundamentally-validated before firing** — is unique to PAR among the available variants. Phase 5 Decision 23(b) (tighten scale-entry prompt language to default to PAR only) is supported by §32.C + §34.B even without direct executor-slip evidence.
+
+### 34.C What would falsify "PAR is better"
+
+For PAR to actually be the better default once fired, it needs to (1) fire often enough to matter and (2) slip no worse than the structural minimum.
+
+(1) is unverifiable in the Phase 6 sample (n=0 fires in 24h). Possible reasons: PAR's confluence threshold is hard to satisfy (the LLM picks PAR but the watcher's Phase-3 confluence check rejects); the 16 PAR scale entries the LLM picked may have all been on windows where PAR's `pullback_to` zone was never reached.
+
+(2) is also unverifiable in the n=0 sample. The closest priors are pullback_to / pullback_and_hold rows in the executor's pre-Phase-3-window history — but those variants were removed from `ScaleEntryBlockV16` in v1.6.4 / v1.6.6 (Phase 1 §1) and any historical fills predate the limit-to-market switch. **No directly-comparable real-world data exists.**
+
+### 34.D Verdict for §34
+
+| question | answer |
+|---|---|
+| Is PAR slip lower than break_* slip on real executor data? | **Untestable at this sample size — n_PAR_executor=0** |
+| Is PAR directionally better than break_* by construction? | **Yes — 100% catch-dip vs 99-100% chase** |
+| Should v1.7.8 default to PAR-only for scale entries? | **Direction signal supports yes; slip signal cannot confirm. Operator/architect call** |
+
+---
+
+## 35. ARCHITECT DECISIONS NEEDED (Phase 6)
+
+Continuing numbering from Phase 1-5's items 1-25.
+
+| # | Decision | Affects v1.7.8 |
+|---|---|---|
+| 26 | **Scale-entry chase rate is 66.5% (137 of 206) — operator's intuition CONFIRMED.** The chase pattern is concentrated in `break_above`/`break_below` scale variants which are 99-100% chase by construction (§32.C). Three v1.7.8 patch directions: (a) prompt-side: revise system prompt's scale-entry guidance to discourage break_*-on-scale and prefer pullback variants; (b) Pydantic-side: add a soft validator that warns when `scale.entry_strategy in {break_above, break_below}` AND scale is on the same side as primary; (c) hard-block break_* scales entirely and force `pullback_*` variants. | direct ergonomic fix |
+| 27 | **`break_below` primary + `break_below` scale combo is 91.1% chase (n=92).** This is the LLM's structural "momentum-doubling" pattern on NO-side bets. **Architect call: is this intentional (scale up as NO-side breakdown continues) or accidental (the LLM defaulted to break_below because primary was break_below)?** If intentional, the chase metric here is misleading and the v1.7.8 prompt should formalize "momentum-add" as a distinct scale type. If accidental, the prompt should disambiguate: "scale entries should target the *opposite* direction of primary's trigger move, not extend it." | shape the scale-entry prompt design |
+| 28 | **NO-side bias root cause — REFUTED structural spread, INCONCLUSIVE MM inventory, REFUTED code sign error, CONFIRMED pre-fill drift asymmetry (§33.D).** The +7.7¢ NO-side excess is split +9¢ on staleness drift and +9¢ on d2s drift, with stf drift symmetric. Two recovery options on the table: (a) refetch snapshot at decision-insert time (recovers +9¢ stale), (b) reduce executor poll interval (Phase 4 #18, recovers +5¢ of d2s). **Combine both for v1.7.8?** Both are small implementation surfaces; combined recovery would meaningfully cut the NO-side excess. | direct slippage fix |
+| 29 | **Sample-period coincidence vs structural — needs disambiguation.** The 24h executor sample (n=37) was a bearish BTC tape; the +9¢ NO staleness drift could be a window-specific artifact. **Worth scoping a Phase 7 that runs the §33.D side-decomposition over a multi-week executor sample once the data accumulates.** Without that, we can't tell whether the bias is structural (v1.7.8 fix justified) or sample-specific (no fix needed; a bullish week would invert the asymmetry). | timing of v1.7.8 vs wait-and-collect |
+| 30 | **PAR scale variant has 100% catch-dip rate (n=16) but 0 executor fills in 24h.** The variant is directionally sound but its real-world slip cost is unmeasured. Recommendation: include a PAR-only-scale-entries soft default in v1.7.8 prompt language (Phase 5 #23 b), accept the n=0 evidence gap, and add executor-side telemetry to count PAR fires once the v1.7.8 prompt change increases PAR usage. | scale-entry default-variant choice |
+| 31 | **Kelly-side-aware fill price.** The current Kelly math at [claude_client.py:_v17_3_kelly_size_pct](bot-kalshi15min-btc/app/claude_client.py#L701) takes `fill_price_cents = BE × 100` directly. After Phase 6 §33.D, we know the realized fill carries a side-specific premium (+12¢ on YES, +20¢ on NO). v1.7.8 candidate: pass an `expected_premium_cents_by_side` to Kelly, derived from a 14-day rolling executor-side mean (analogous to the existing realized-tier-calibration mechanism). The LLM's `break_even_prob_at_entry` would then be priced against the realistic fill, not the LLM-perceived ask. Independent of any of the above. | makes Kelly honest about fill cost |
+
+---
+
+## 36. CLEANUP
+
+Phase 6 wrote one new dump and one analysis script to
+[audit_phase6_data/](audit_phase6_data/) — `scale_decisions.json`
+(26 MB; 206 decisions with full `context_json` + `response_json`),
+`analyze.py` (reproduces every §32-§34 number),
+`analysis_output.txt`. The intermediate `_raw_dump.txt` (the
+pre-parse Railway SSH output) is removed before committing.
+
+No production state mutated. No code changed in any service repo.
+No source-doc edits to BOT.md or SYSTEM.md. Read-only operations
+on Paper Kev `/data/bot.db` (one SELECT against `decisions`),
+read-only file reads of `bot-kalshi15min-btc/app/watcher.py`,
+`scheduler.py`, `claude_client.py`. Railway link state on
+operator's laptop is left at `kujaku-ai / patient-renewal /
+production / kujaku-bot-kalshi15min-btc` (was `data-btc` before
+Phase 6 began).
+
+**End of Phase 6.**
