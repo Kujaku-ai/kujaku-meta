@@ -595,4 +595,466 @@ hard gates needed for v2.0 launch.
 This audit is read-only. No code changed, no test runs, no DB
 queries. The only artifact created is this file at the repo root.
 
-**End of audit.**
+**End of Phase 1.**
+
+---
+
+# PHASE 2 — DATA + DEFERRED SECTIONS (2026-05-10)
+
+**Phase 2 audited by:** Claude Code (read-only). Same session as
+Phase 1. Sections below are appended; Phase 1 (§1–§9) is unchanged.
+
+---
+
+## 10. SLIPPAGE MEASUREMENT
+
+### 10.1 Halted before query — data-source diagnosis
+
+Per the discipline rule "If a queried column doesn't exist, halt
+and report — do not invent proxies without flagging," I am not
+running the queries from §10.A–C of the Phase 2 prompt. Two
+blockers:
+
+**Blocker A — Railway is not linked.**
+
+```
+$ railway status
+No linked project found. Run railway link to connect to a project
+```
+
+CLAUDE.md ([bot-kalshi15min-btc/CLAUDE.md](bot-kalshi15min-btc/CLAUDE.md) "Running live Railway ops")
+states the operator's laptop has Railway CLI linked to
+`kalshi15min-btc`; in this CWD (`MASTER_KUJAKU/`, the kujaku-meta
+repo root) no link exists. Linking from this CWD requires
+operator action and is not pre-authorized for me to perform.
+
+**Blocker B — the columns the prompt names live in three
+different DBs across three repos, and most of them are not in
+Paper Kev.**
+
+Cross-walking the metric names in §10.A against the Paper Kev
+schema in [bot-kalshi15min-btc/app/db.py:205-334](bot-kalshi15min-btc/app/db.py#L205-L334):
+
+| §10.A field | Lives in | Concrete location |
+|---|---|---|
+| `decision_price` (yes_ask the LLM saw) | **Paper Kev** | `decisions.context_json` TEXT blob, `market.yes_ask` / `market.no_ask` keys. NOT a column — embedded JSON. |
+| `intended_limit` (price the executor submitted) | **Executor** | `executor-portfolio-001` DB → `kalshi_orders.limit_price_cents` ([executor-portfolio-001/app/db.py:177](executor-portfolio-001/app/db.py#L177)) |
+| `fill_price` | both | Paper: `trades.fill_price_cents` (paper-fill at decision-time ask for immediate, watcher-tick ask for trigger). Executor: `kalshi_orders.fill_price_cents` (real Kalshi fill). |
+| `slip_intent` (intended_limit − decision_price) | **Executor** | derivable from `kalshi_orders.limit_price_cents` minus paired Paper Kev `decisions.context_json.market.yes_ask`. Requires cross-DB join. |
+| `slip_fill` (fill_price − decision_price) | depends | Paper-internal version exists (already aggregated as `realized_stats.avg_fire_premium_cents` for `break_above`/`break_below` only — see [bot-kalshi15min-btc/app/realized_stats.py](bot-kalshi15min-btc/app/realized_stats.py)). True executor slippage is `kalshi_orders.slippage_cents` ([executor-portfolio-001/app/db.py:187](executor-portfolio-001/app/db.py#L187)). |
+
+The Paper-Kev-internal "slippage" is **not the slippage v2.0 cares
+about.** Paper Kev's immediate-entry path fills at the same
+yes_ask the LLM saw — the gap is zero by construction. Paper Kev's
+trigger-entry path fills at the watcher-observed ask at trigger
+fire time — that gap is the "trigger fire premium" already
+surfaced in the prompt block built by
+[`_build_realized_calibration_section`](bot-kalshi15min-btc/app/claude_client.py#L2062-L2127)
+and used by the LLM today (see Phase 1 §2 "What gets sent on every
+decision call"). Whatever needs measuring for v2.0 is the
+**executor-side** slippage — intended_limit vs Kalshi's actual
+fill, which is `slippage_cents` on `kalshi_orders` and only
+exists in the Executor's DB.
+
+**Note also:** the Phase 2 prompt's §10A talks about
+"intended_limit (the price the executor submitted)" and §10C
+"realized price 45s after submission … sizing the cost of the
+current expire-without-fill policy." The "limit-to-market
+switch" of 2026-05-10 (commit c282d02 "docs(executor): market
+orders, not limit; pure mirror") changed the executor to submit
+**market orders** going forward, not limits. So `intended_limit`
+on `kalshi_orders` is being written as the prevailing ask at
+submit time (effectively the same shape as a passive limit, but
+historically and going forward the semantics differ). Operator
+should confirm what they want to measure here:
+- pre-2026-05-10 limit-era submits — historical only
+- post-2026-05-10 market-era submits — `slippage_cents` becomes
+  the cost of executor latency between paper-fill timestamp and
+  Kalshi-execution timestamp
+
+### 10.2 What can be answered from Paper Kev alone (no Executor data)
+
+If the architect explicitly OKs Paper-internal proxies, three
+things can be computed from `decisions` + `trades` once Railway
+is linked:
+
+| Metric | Source | Notes |
+|---|---|---|
+| Per-tier expire-rate at T-45s sweep (`fill_method='force_45s'` historical, `status='expired'` reason `'trigger_unfired_at_t45s'` post-v1.7.4) | `trades` row counts grouped by `entry_quality_tier` + `fill_method` + `status` | Already partly visible via `realized_stats` table for v1.7.5+ rows |
+| Trigger fire-time premium (`fill_price_cents` minus decision-time ask from `decisions.context_json`) for `fill_method='natural'` rows | `trades` JOIN `decisions` ON `decision_id`, JSON-extract `context_json.market.yes_ask` / `no_ask` | The `decisions.context_json` extraction is JSON-in-TEXT; SQLite's `json_extract()` works. Already aggregated in [`_build_realized_calibration_section`](bot-kalshi15min-btc/app/claude_client.py#L2090-L2106) for `break_above`/`break_below` only |
+| Per-trigger-type expire-vs-fill rate by tier and TTE bucket | `trades` JOIN `decisions` | Workable. TTE bucket needs `decisions.window_close_ts_utc - trades.created_ts_utc` |
+
+What CANNOT be answered from Paper Kev alone:
+- Anything involving the executor's submitted `limit_price_cents`
+- Anything involving the executor's actual Kalshi `fill_price_cents`
+- True slippage (intended vs realized at the venue)
+- Order-level expire / cancel / partial-fill rates from Kalshi
+
+### 10.3 Architect decision needed (DATA SOURCING)
+
+Before Phase 3 can run §10 queries, decide one of:
+1. **Paper-internal only.** Run the three Paper-Kev metrics above
+   as a baseline. Acknowledge: this measures "what Paper saw vs
+   what Paper paper-filled at" — not real slippage. Useful for
+   validating the trigger-fire-premium math already in the prompt;
+   not useful for executor-slippage v2.0 design.
+2. **Executor + Paper joined.** Link Railway to BOTH services.
+   Pull `kalshi_orders.slippage_cents`, join to Paper's
+   `decisions.context_json.market.yes_ask` via the
+   `paper_trade_id` foreign key. This produces the executor-side
+   slippage v2.0 cares about. **This is what the prompt is
+   architecturally asking for, even though it says "Paper Kev
+   production SQLite."**
+3. **Defer §10/§11 entirely** to a Phase 3 prompt that targets
+   the Executor's DB explicitly.
+
+I recommend (2) — the v2.0 slippage block will be useless if
+seeded from Paper-internal measurements that don't correspond
+to real fills.
+
+---
+
+## 11. BOOK STALENESS
+
+### 11.1 Halted — same blockers as §10
+
+Same Railway-not-linked blocker, plus this stack-of-DBs issue
+specific to §11:
+
+**§11.A asks for `book_age_at_prompt = decisions.created_at -
+kalshi_market_snapshot.fetched_at`.** Paper Kev has neither
+`decisions.created_at` (the column is `decisions.ts_utc`) nor a
+`kalshi_market_snapshot` table. The kalshi snapshot history lives
+in **data-btc**'s DB:
+[data-btc/app/db.py:20-39 `kalshi_snapshots`](data-btc/app/db.py#L20-L39)
+with `ts_utc` per snapshot row. **The age-at-prompt metric is
+only computable by joining Paper's `decisions.ts_utc` with
+data-btc's `kalshi_snapshots.ts_utc` for the same ticker.**
+
+Paper Kev's own architecture makes the age very small by
+construction:
+[`_gather_review_context`](bot-kalshi15min-btc/app/scheduler.py#L1666-L1719)
+fetches the active market live (one HTTP call) immediately
+before
+[`_build_user_prompt`](bot-kalshi15min-btc/app/scheduler.py#L1418)
+runs, and the decision is inserted shortly after the LLM call
+completes. The "stale book" risk is not Paper-side; it is the
+data-btc collector's snapshot freshness — the `ts_utc` field
+plumbed onto `KalshiActiveMarket` at
+[bot-kalshi15min-btc/app/collector_client.py:54-59](bot-kalshi15min-btc/app/collector_client.py#L54-L59)
+is the data-btc snapshot ingestion timestamp, and `app/features`
+already derives `kalshi_snapshot_age_s` from it (per the comment
+at that line) and surfaces it in the LLM's feature vector.
+
+**§11.B (price movement in the staleness window).** Same source
+problem — needs data-btc's `kalshi_snapshots` to compare snapshot-
+time prices against the next snapshot. Paper Kev does not
+retain its own snapshot history; only the JSON copy in
+`decisions.context_json` for the snapshot used at decision time.
+
+**§11.C (decision-to-submit latency).** Paper Kev has no
+`orders` table and submits no orders. The closest analog:
+- For immediate trades: `trades.fill_ts_utc` (the immediate
+  paper-fill timestamp, set by [`_execute_primary`](bot-kalshi15min-btc/app/scheduler.py#L1748)
+  immediately after `db.insert_trade`) ≈ `decisions.ts_utc`. The
+  delta is sub-second by construction.
+- For trigger trades: `trades.fill_ts_utc - trades.created_ts_utc`
+  is **wait time for the trigger to fire**, not submit latency.
+  These are seconds-to-minutes apart, not the metric the prompt
+  is asking about.
+
+True submit-latency (decision → executor sees → executor signs
+→ Kalshi accepts) is an **Executor metric**:
+`executor-portfolio-001` DB has
+[`paper_trades.seen_at_ts_utc`](executor-portfolio-001/app/db.py#L153)
+(when the executor observed the Paper trade) and
+[`kalshi_orders.placed_ts_utc`](executor-portfolio-001/app/db.py#L173)
+(when the executor signed and POSTed to Kalshi). The submit-
+latency the prompt is asking about is `placed_ts_utc - seen_at_ts_utc`
+on `kalshi_orders`.
+
+### 11.2 Architect decision needed
+
+Same as §10.3 — staleness is only meaningful with the
+data-btc + Paper join (for §11.A/B) and with the Executor
+DB (for §11.C). Confirm the data-source plan, then Phase 3
+can run the queries.
+
+---
+
+## 12. CURRENT ORDERBOOK VISIBILITY IN THE PROMPT
+
+Code-only section. No DB access required.
+
+### 12.1 Inventory
+
+Source of truth: `_USER_PROMPT_TEMPLATE_V15` at
+[bot-kalshi15min-btc/app/scheduler.py:1054-1097](bot-kalshi15min-btc/app/scheduler.py#L1054-L1097)
+and [`_build_user_prompt`](bot-kalshi15min-btc/app/scheduler.py#L1418-L1486).
+The KALSHI MARKET block reads (lines 1065-1068):
+
+```
+=== KALSHI MARKET ===
+YES bid/ask: {yes_bid} / {yes_ask} cents
+NO  bid/ask: {no_bid} / {no_ask} cents
+Volume: {volume} | Open interest: {open_interest}
+```
+
+Source: `KalshiActiveMarket` TypedDict at
+[bot-kalshi15min-btc/app/collector_client.py:39-59](bot-kalshi15min-btc/app/collector_client.py#L39-L59),
+populated from data-btc's `/api/kalshi/active` response.
+
+### 12.2 Field-by-field
+
+| Field shown to LLM | Source table.column | Snapshot age | Used elsewhere in prompt? |
+|---|---|---|---|
+| `yes_bid` | `data-btc.kalshi_snapshots.yes_bid` (top-of-book) via `/api/kalshi/active` | data-btc collects on its own polling cadence; freshness exposed as feature `kalshi_snapshot_age_s` derived from `KalshiActiveMarket.ts_utc` ([collector_client.py:54-59](bot-kalshi15min-btc/app/collector_client.py#L54-L59)) | yes — feature_vector_block (rendered by [features.render_feature_vector_for_prompt](bot-kalshi15min-btc/app/features.py)); also used by `payout_math.render_payout_math_block` |
+| `yes_ask` | same | same | yes — same paths plus realized-calibration block, soft-Rule-1 (BE source check) via Pydantic context (`yes_ask_cents`) |
+| `no_bid` | same | same | yes — same paths |
+| `no_ask` | same | same | yes — same paths plus realized-calibration block, soft-Rule-1 via Pydantic context (`no_ask_cents`) |
+| `volume` | `data-btc.kalshi_snapshots.volume` | same | no — KALSHI MARKET block only |
+| `open_interest` | `data-btc.kalshi_snapshots.open_interest` | same | no — KALSHI MARKET block only |
+| `last_price` | `data-btc.kalshi_snapshots.last_price` | same | available on `KalshiActiveMarket` but **not rendered** in the user prompt |
+| `floor_strike` | derived from ticker by `KalshiActiveMarket` | n/a (deterministic from ticker) | yes — WINDOW block, `payout_math` block, `decisions.floor_strike` column |
+
+### 12.3 What is NOT in the prompt
+
+| Field potentially available | Where | Why not in prompt |
+|---|---|---|
+| `yes_bid_size_fp` (top-of-book size on YES bid) | `data-btc.kalshi_snapshots.yes_bid_size_fp` ([data-btc/app/db.py:35](data-btc/app/db.py#L35)) | NOT plumbed into `KalshiActiveMarket` ([collector_client.py:39-59](bot-kalshi15min-btc/app/collector_client.py#L39-L59)). The data-btc API would need to return it; the TypedDict and the parsing in `get_active_markets` would need a column add |
+| `yes_ask_size_fp` (top-of-book size on YES ask) | `data-btc.kalshi_snapshots.yes_ask_size_fp` ([data-btc/app/db.py:36](data-btc/app/db.py#L36)) | same |
+| NO-side bid/ask sizes | not in the schema | data-btc would need a schema add |
+| Mid price | derivable | not surfaced as a named field; the LLM sees bid+ask |
+| Spread | derivable | same |
+| Depth beyond top-of-book (L2 book) | not in any kujaku service today | requires a new data-btc collector path against Kalshi's orderbook endpoint |
+| Per-snapshot latency between data-btc collection and what Paper sees | derivable from `KalshiActiveMarket.ts_utc` minus `decisions.ts_utc` | the raw value is in the `ts_utc` field on the TypedDict but is rendered to the LLM only via the derived `kalshi_snapshot_age_s` feature, not in the KALSHI MARKET block itself |
+| Recent quote history (5 / 10 / 30 ticks back) | available via `collector_client.get_kalshi_snapshots(ticker, since_ts, limit)` ([collector_client.py:262-296](bot-kalshi15min-btc/app/collector_client.py#L262-L296)) | not currently called from the prompt-build path; only the dashboard's `_v167_kalshi_snaps` consumes it |
+
+### 12.4 Implication for v2.0 design
+
+The Kalshi orderbook is exposed to the LLM as a **5-number
+top-of-book snapshot plus volume / open interest** — no depth, no
+size at quote, no recent quote history. A v2.0
+`{orderbook_depth_block}` would require additions in three
+places:
+
+1. **data-btc** — extend `kalshi_snapshots` schema (or add a
+   second snapshot table) with depth-of-book columns and surface
+   them in `/api/kalshi/active` (or a new
+   `/api/kalshi/orderbook/{ticker}` endpoint).
+2. **Paper Kev `collector_client`** — extend
+   `KalshiActiveMarket` (or add a `KalshiOrderBook` TypedDict)
+   and a parallel fetcher.
+3. **Paper Kev `scheduler._build_user_prompt`** — render the
+   new block adjacent to the existing KALSHI MARKET block.
+
+This is the architecture I sketched in Phase 1 §7.3 — Phase 2's
+audit confirms the proposal touches exactly those three layers.
+
+---
+
+## 13. DEFERRED BOT.md SECTIONS
+
+### 13.A Web Layer
+
+BOT.md "Web Layer" section is at lines 3276-3438 and describes:
+- `GET /` operator dashboard (4-panel layout, summary bar, JS
+  partial-refresh against `/api/dashboard_context`)
+- `GET /health`
+- `GET /api/portfolio` / `/api/decisions` / `/api/trades` /
+  `/api/stats` / `/api/current_window`
+- `GET /api/playbook*` (4 endpoints)
+- `POST /api/playbook/rollback/{n}`
+- `POST /control/stop` / `/control/resume`
+
+Actual route inventory ([bot-kalshi15min-btc/app/web.py](bot-kalshi15min-btc/app/web.py)
+greps): 24 routes total.
+
+**Drift findings:**
+
+| # | Status | Spec says | Code does |
+|---|---|---|---|
+| W1 | **D (medium)** | No mention of `/logs` page or `/api/logs` API | Phase 2 ships `/logs` standalone HTML page ([web.py:637-696](bot-kalshi15min-btc/app/web.py#L637-L696)) plus `/api/logs` (filter+cursor) at [web.py:565](bot-kalshi15min-btc/app/web.py#L565) and `/api/logs/sources` at [web.py:630](bot-kalshi15min-btc/app/web.py#L630). The page supports level + source + free-text + since/until + decision_id + trade_id + sort + limit + cursor + tail params. Standalone-page architecture is a deliberate split: dashboard keeps the quick-glance bot-log chip ([dashboard_data.py:1607-1632 `_render_bot_log_chip_html`](bot-kalshi15min-btc/app/dashboard_data.py#L1607-L1632)) at-a-glance; `/logs` is the troubleshooting surface (per code comment at [web.py:563](bot-kalshi15min-btc/app/web.py#L563)) |
+| W2 | **D (medium)** | `GET /` panel layout is "4 panels: Active Window, Positions, Claude Communication, Playbook" + "Small charts" below | Live dashboard composed by [`build_dashboard_context`](bot-kalshi15min-btc/app/dashboard_data.py) and rendered by [`dashboard_render.render_full_dashboard`](bot-kalshi15min-btc/app/dashboard_render.py). Per Phase 1 audit (`EXECUTOR_AUDIT_2026-05-09.md` finding #7), `app/templates/dashboard.html` is **vestigial** — the active page is built from f-strings in `dashboard_render.py` with the embedded `_JS` IIFE driving partial refreshes. Active dashboard sections (per `_build_rendered_lists` keys at [dashboard_data.py:3017-3300+](bot-kalshi15min-btc/app/dashboard_data.py#L3017-L3300)): summary bar (status badge, bot identity, reflector indicator, metrics row, bot-log chip, sparkline, continuation/reversal WR, consecutive-skips), Active Window (grid + review summary + reasoning), Positions (open trades, waiting triggers, recent settled), Claude Communication (recent decisions), Playbook (summary label, content, recent revisions), plus 7 charts (probability_calibration, win_rate_trend, signal_wr_bars, thesis_outcome_matrix, edge_scatter, portfolio sparkline, etc.) |
+| W3 | **D (medium)** | Spec describes JSON refresh as "scalars via textContent swap on `data-refresh-key` elements, list/HTML chunks via innerHTML swap on `data-refresh-list` elements" | Architecture is in place but **dual-rendering pattern**: `build_dashboard_context` populates both `context["formatted"]` (textContent swaps) and `context["rendered_lists"]` (innerHTML swaps) at [dashboard_data.py:4174-4176](bot-kalshi15min-btc/app/dashboard_data.py#L4174-L4176). However the JSON endpoint `/api/dashboard_context` at [web.py:377](bot-kalshi15min-btc/app/web.py#L377) calls **`build_v167_context`** ([dashboard_data.py:4230](bot-kalshi15min-btc/app/dashboard_data.py#L4230)) — a different function that returns header / overview / live_session / positions / sessions sections per its docstring. The legacy `build_dashboard_context` populates `rendered_lists` but is no longer invoked by the route (per code comment at [dashboard_data.py:4185-4186](bot-kalshi15min-btc/app/dashboard_data.py#L4185-L4186): "the existing build_dashboard_context is retained as a module-level function but is no longer called by the route; its Jinja2-era callers are dead code"). **Implication:** any panel whose JS code reads from `rendered_lists.<key>` won't be updated by the v167 refresh path. The spec has no language about this transition; the architect-flagged "frozen panels" / "build_v167_context → rendered_lists population issue" is real and stems from this split. Resolving it requires either (a) `build_v167_context` populating the legacy `rendered_lists` keys, or (b) the JS refresh path moving to read v167-shaped sections instead |
+| W4 | LOW | `POST /control/stop` / `/control/resume` only | Code adds `POST /control/compactor/fire` ([web.py:882](bot-kalshi15min-btc/app/web.py#L882)) and `POST /control/reflector/{stop,resume,fire}` ([web.py:967-977](bot-kalshi15min-btc/app/web.py#L967-L977)). Reflector control is separately documented in BOT.md's "Reflection Architecture" section but missing from the "Web Layer" listing |
+| W5 | LOW | `/health` JSON shape (line 3372-3383) lists 8 keys | Likely matches with additions; not deeply audited. The `degraded` / `killed` thresholds (`>20 min` / kill switch) are described accurately at the spec level |
+| W6 | LOW | `GET /api/decisions?limit=50` documented as "recent decisions" | Code at [web.py:454](bot-kalshi15min-btc/app/web.py#L454) accepts limit param; `GET /api/decision/{decision_id}/feature_vector` at [web.py:478](bot-kalshi15min-btc/app/web.py#L478) is a child detail-route not in spec |
+| W7 | LOW | Spec describes panel shapes from v1.4.x era (probability_bucket, dissent.trade fields) | Live dashboard reflects v1.5/v1.5.2 shape (thesis, confluence, scale entries). The mismatch is the same v1.4.x → v1.5+ drift documented in Phase 1 §1 — the dashboard renderers are current; the SPEC text is stale |
+
+### 13.B File Structure
+
+BOT.md "File Structure" tree at lines 3462-3553. Cross-walk
+against `glob bot-kalshi15min-btc/**/*.py` and `ls scripts/` /
+`ls tests/`.
+
+**`app/` directory:** complete match. All 28 .py files plus
+`stats/` subpackage and `static/` + `templates/` directories
+match. No drift.
+
+**`scripts/` directory:** complete match for the 9 listed
+scripts (reset_paper_state, reset_portfolio_only,
+reset_bot_to_v14, review_v14, audit_v14, migrate_to_v15,
+cleanup_pre_v16_logs, cleanup_all_warn_error, plus the
+`audits/` subdir). No drift.
+
+**`tests/` directory:** **D (low impact).** BOT.md spec lists
+12 test files. Actual repo has **38 test files** plus
+`conftest.py` (count from `ls`). Spec missing:
+test_chart_svg, test_charting_client, test_cleanup_pre_v16_logs,
+test_compactor_json, test_dashboard_graphs, test_dashboard_helpers,
+test_dashboard_render, test_features, test_force_fill_sweeper,
+test_heartbeat, test_kill_switch, test_logs_api, test_logs_page,
+test_main, test_migrate_to_v15, test_payout_math,
+test_payout_math_aggregation, test_realized_stats, test_reflector,
+test_reset_bot_to_v14, test_reset_paper_state, test_review_v14,
+test_rolling_stats, test_scheduler, test_settler,
+test_stat_strike_distance, test_web. Spec line 3540-3552 should
+either be marked "non-exhaustive" or refreshed. Low impact —
+nobody acts on this list — but the spec inaccuracy is real.
+
+### 13.C Reflection Architecture
+
+BOT.md "Reflection Architecture (v1.4.5a+)" lines 1796-2178
+describes:
+- Trader/researcher split (same model, separate sessions)
+- Researcher cadence: once daily at 14:00 UTC
+- Researcher reads last 200 settled primaries + paired
+  hypothesis trades + full `context_json` + current playbook +
+  30-day playbook revision history
+- Researcher temperature 0.4
+- Response shape: `observations[]`, `proposed_edits[]` (max 5),
+  `summary`
+- Researcher edits **bypass** the pattern-backing validator
+  used for trader micro-edits
+- Failure modes: JSON parse failure → log+Discord+skip;
+  individual edit fails validator → skip that edit, apply rest;
+  task crash → 300s backoff
+- Manual fire endpoints: `/control/reflector/{stop,resume,fire}`
+
+Actual implementation: [bot-kalshi15min-btc/app/reflector.py](bot-kalshi15min-btc/app/reflector.py)
+(1300 lines per Phase 1 wc) plus
+[bot-kalshi15min-btc/app/compactor.py](bot-kalshi15min-btc/app/compactor.py)
+(554 lines) for the daily 08:00 UTC compaction.
+
+**Drift findings:**
+
+| # | Status | Spec says | Code does |
+|---|---|---|---|
+| R1 | A/D | Researcher reads "last 200 settled primary trades" | Code matches: 200-row limit ([reflector.py:1-29 docstring](bot-kalshi15min-btc/app/reflector.py#L1-L29)). **Filter is now `strategy_version='v1.5' AND feature_vector_json IS NOT NULL`** (per Stage 2b), not v1.4.x. Spec line 1850 says "v1.4.x"; needs update |
+| R2 | **D (low)** | Spec describes a single-layer prompt body listing the trades | Code uses **two-layer prompt** (v1.5.0 Deploy 3-fix): a numeric-only SKELETON for every primary plus ~30 "interesting" trades with full qualitative detail (reasoning + dissent + self-critique). Spec doesn't mention skeleton/interesting split. Reason in code comment: keep prompt under 30K/min input-token ceiling. See [reflector.py:18-24 docstring](bot-kalshi15min-btc/app/reflector.py#L18-L24) |
+| R3 | A/D | `ResearcherObservation.evidence` is a free-text field | Code field constraint: `min_length=3, max_length=2000` ([reflector.py:84-88](bot-kalshi15min-btc/app/reflector.py#L84-L88)). The 500→2000 raise was a 2026-04-25 day-1 hotfix because Claude was citing concrete trade IDs + P&L which routinely exceeded 500 chars. Spec is silent on the constraint |
+| R4 | A | Pattern-backing bypass for researcher edits | Code matches: `playbook.apply_micro_edit_if_valid(source='reflection')` ([reflector.py:30-33 docstring](bot-kalshi15min-btc/app/reflector.py#L30-L33)) bypasses the pattern-backing check that gates trader micro-edits |
+| R5 | A | Manual fire endpoint | Code matches: [reflector.py:48-51 docstring](bot-kalshi15min-btc/app/reflector.py#L48-L51) describes `/control/reflector/fire` invoking `run_reflection_once` directly |
+| R6 | A | Researcher temperature 0.4 | Code matches: [reflector.py:25-26 docstring](bot-kalshi15min-btc/app/reflector.py#L25-L26) |
+| R7 | A | Cadence: once per UTC day at 14:00 | Code matches |
+| R8 | LOW | Researcher API call retry behavior | Spec line 1958-1962 describes "3-attempt retry with `_RETRY_HINT` append on failure". Code retry semantics in [`call_claude_research`](bot-kalshi15min-btc/app/claude_client.py#L2529): per [reflector.py:25-29](bot-kalshi15min-btc/app/reflector.py#L25-L29), "fail fast on RateLimitError (retrying burns more of the minute budget), retry with backoff on network errors, retry with a reminder hint on JSON-parse errors." More nuanced than spec's flat "3-attempt"; the rate-limit fast-fail is undocumented |
+
+**Compactor drift findings:**
+
+BOT.md "The Compaction Cycle (v1.4.2+)" at lines 1628-1733
+describes the daily 08:00 UTC pass.
+
+| # | Status | Spec says | Code does |
+|---|---|---|---|
+| C1 | A | Daily 08:00 UTC fire | [compactor.py:9-10 docstring](bot-kalshi15min-btc/app/compactor.py#L9-L10) + [compactor.py:93 `COMPACTION_UTC_HOUR=8`](bot-kalshi15min-btc/app/compactor.py#L93) match |
+| C2 | A | Anchor not shown to Claude (compactor edits body only); reassembles `_ANCHOR_SEED_MD + cleaned_new_body` | [compactor.py:13-24 docstring](bot-kalshi15min-btc/app/compactor.py#L13-L24) match |
+| C3 | A | `temperature=0.3` for compaction | Match (set inside `claude_client.call_claude_compaction`) |
+| C4 | A | Always posts Discord summary (or logs to bot_log if webhook unset), even on failure | [compactor.py:29-33 docstring](bot-kalshi15min-btc/app/compactor.py#L29-L33) match |
+| C5 | LOW | Spec doesn't explicitly call out the manual-fire endpoint | Code adds `/control/compactor/fire` at [web.py:882](bot-kalshi15min-btc/app/web.py#L882). Mirrors the reflector pattern |
+
+**Trader/Researcher channel rule (BOT.md Ground Rule 15):**
+"the trader and researcher do not talk directly. The playbook is
+the only channel." Reflector docstring [reflector.py:37-40](bot-kalshi15min-btc/app/reflector.py#L37-L40)
+re-asserts this. No drift.
+
+---
+
+## 14. DECISIONS.INPUT_TOKENS DISTRIBUTION
+
+### 14.1 Halted — same Railway blocker
+
+The query `SELECT input_tokens FROM decisions WHERE
+ts_utc >= datetime('now', '-14 days')` is straightforward and
+the column exists ([db.py:220](bot-kalshi15min-btc/app/db.py#L220)).
+But it requires Railway-linked DB access to a production SQLite
+that I cannot reach (`railway status` returns "No linked
+project found").
+
+This is the simplest of the four data-blocked sections. If the
+operator runs:
+
+```bash
+railway link              # interactively select bot-kalshi15min-btc
+railway ssh "python -c \"
+import sqlite3
+con = sqlite3.connect('/data/bot.db')
+con.row_factory = sqlite3.Row
+cur = con.execute('''
+    SELECT input_tokens
+    FROM decisions
+    WHERE ts_utc >= datetime('now', '-14 days')
+      AND input_tokens IS NOT NULL
+    ORDER BY input_tokens
+''')
+rows = [r['input_tokens'] for r in cur]
+n = len(rows)
+print(f'n={n}')
+if n:
+    print(f'min={rows[0]}  p50={rows[n//2]}  p90={rows[int(n*0.9)]}  p99={rows[int(n*0.99)]}  max={rows[-1]}')
+\""
+```
+
+…the result is a one-liner that goes straight into a §14
+update. No schema risk; column exists; query is read-only.
+
+Companion query for the >100K-token outliers + their cohort
+features:
+
+```sql
+SELECT id, ts_utc, input_tokens, review_index, time_since_open_seconds,
+       json_array_length(json_extract(context_json, '$.recent_trades')) AS rt_n,
+       length(context_json) AS ctx_bytes
+FROM decisions
+WHERE input_tokens > 100000
+ORDER BY input_tokens DESC
+LIMIT 50;
+```
+
+I have not run either; output stays empty until Railway is
+linked. Phase 3 can carry these through.
+
+### 14.2 Phase 1 §2 estimate (unchanged)
+
+For now the structural estimate from Phase 1 §2 stands:
+
+> Input (system + user): order of 8-15K tokens. The system
+> prompt alone is ~720 lines ≈ 5-7K tokens. User prompt varies
+> with playbook size (cap 3000 tokens), feature vector,
+> calibration block, K>1 review2 block.
+
+Real numbers replace these once the query runs.
+
+---
+
+## ARCHITECT DECISIONS NEEDED — Phase 2 summary
+
+(In addition to the four still-open items from Phase 1 §8.)
+
+| # | Decision | Affects |
+|---|---|---|
+| 5 | **Data sourcing for §10.** Paper-internal proxies only / Executor-joined / defer entirely. See §10.3. | §10, partly §11 |
+| 6 | **Authorize Railway link from this CWD.** Either link in this session and run §14 (low-risk read-only) + Paper-internal portions of §10 inline; or schedule a separate Railway-linked session. | §10, §11, §14 |
+| 7 | **Web Layer dashboard panels.** The `build_v167_context` / legacy-`rendered_lists` split (W3) means panels reading from `rendered_lists.<key>` are not refreshed by the live JSON endpoint. Two paths: (a) `build_v167_context` populates legacy keys for back-compat, (b) JS refresh moves to v167 sections. The architect's mention of "frozen panels" tracks this exactly — pick a path so Phase 3 can scope a fix. | dashboard refresh |
+| 8 | **Spec-rewrite scope.** Phase 1 documented HIGH drift in 4 BOT.md sections (force-fill sweeper, system prompt, sizing ladder, immediate-entry gate). Phase 2 adds the `/logs` page, `build_v167_context`/`rendered_lists` split, two-layer reflector prompt, and ResearcherObservation.evidence size as undocumented behavior. Total drift is broad enough that a spec-rewrite is its own work item. Decide whether v2.0 design starts from a spec-refresh or accepts code-as-truth for the v1.5.2-Stage-3+ surfaces. | follow-on work |
+
+---
+
+## 15. CLEANUP
+
+Phase 2 is read-only. No code changed, no test runs, no DB
+queries actually executed (all halted at the verify-source
+step). The only artifact change is this file (Phase 2 sections
+appended to Phase 1).
+
+**End of Phase 2.**
