@@ -1594,3 +1594,416 @@ strongest evidence a Live Kev service existed once and was
 decommissioned in favor of `executor-portfolio-001`.
 
 **End of Phase 3.**
+
+---
+
+# PHASE 4 — ARCHITECTURE CLEANUP + PAPER→EXECUTOR LINK (2026-05-10)
+
+**Phase 4 audited by:** Claude Code, bypass mode, read-only on
+all production DBs and source repos. No edits to BOT.md,
+SYSTEM.md, or any code — §22 is inventory only. Same audit
+document; §22–§25 appended. §1–§21 unchanged.
+
+---
+
+## 22. DOCUMENTATION DRIFT INVENTORY
+
+**Headline:** the Phase 4 prompt anticipated wider drift than what
+actually exists in the source docs. There is **no "Bot Duplication
+& Fork Model" section** in `SYSTEM.md`, **no "byte-mirror"
+discipline language** in `BOT.md` or `SYSTEM.md`, and **zero
+"kevbot" string references** in either source spec or in the
+Paper Kev codebase. The "byte-mirror" framing was something I
+introduced in **Phase 2 §10.1** when describing the spec drift
+discipline; it is not in any spec doc and predates only this audit
+file. The substantive drift that does exist is concentrated in
+SYSTEM.md and is small.
+
+### 22.A SYSTEM.md drift
+
+Specific edits needed (do NOT apply yet — separate review pass):
+
+| File:line | Status | Current text (verbatim, condensed) | Proposed replacement | Rationale |
+|---|---|---|---|---|
+| [SYSTEM.md:78](SYSTEM.md#L78) | **D (medium)** | "**Layer 2b (trading bots)** is where judgement lives. ... Trading bots may be paper-only research labs (Paper Kev) or real-money traders." | "...Trading bots are paper-only by current architecture. Real-money execution of a Layer 2b bot's published trades is delegated to a Layer 2c executor (see below); a Layer 2b service that called Kalshi's order endpoints directly would be a deviation." | Implies a real-money Layer 2b is allowed; current architecture delegates real-money to Layer 2c. SYSTEM.md:79-81 already describe Layer 2c as the fix; line 78 just needs to reflect that the delegation is the rule, not the option. |
+| [SYSTEM.md:182](SYSTEM.md#L182) | **D (medium)** | "Bots hold the Anthropic API key and are the only place in the platform where LLM calls happen. The current BTC bot is paper-only research; if a future strategy in any market needs to fire real Kalshi orders, that's a fresh architecture decision and a separate spec." | "Bots hold the Anthropic API key and are the only place in the platform where LLM calls happen. Bots are paper-only by current architecture; real-money order routing is delegated to a Layer 2c executor (see Convention below). Portfolio_001 is the first Layer 2c instance, mirroring Paper Kev." | The "fresh architecture decision and a separate spec" was Layer 2c, which is now built. The conditional wording predates that. |
+| [SYSTEM.md:215](SYSTEM.md#L215) | **D (high)** | `\| Portfolio_001 \| 2c \| Planned (next deliverable) \| Kujaku-ai/executor-portfolio-001 \| portfolio-001.kujaku.ai \|` | `\| Portfolio_001 \| 2c \| LIVE \| Kujaku-ai/executor-portfolio-001 \| executor-portfolio-001-production.up.railway.app \|` (or whatever live subdomain is in use) | Phase 3 §16.2 verified the executor has 37 filled orders in production since 2026-05-10. "Planned" is stale. |
+| [SYSTEM.md:81](SYSTEM.md#L81) | A (do not change) | "...(4) decision drift between a 'real-money fork' of a bot and its paper-mode parent — Layer 2c eliminates the fork by design, since one brain feeds the executor verbatim." | (no change) | This is the passage the operator may have been referencing as "Bot Duplication & Fork Model." Reading it carefully, **this sentence already documents the obsolete model AS obsolete** — it says Layer 2c eliminated the fork. No edit needed. |
+| [SYSTEM.md:79](SYSTEM.md#L79) | A | "Layer 2c (execution) is the dumb hand attached to Layer 2b's brain. A 2c service polls a 2b service's published trades and mirrors them onto a live exchange account." | (no change) | Accurately describes the current Paper→Executor handoff. |
+| [SYSTEM.md:184-203](SYSTEM.md#L184) | A | The full "Layer 2c Convention" section. | (no change — already correct) | Phase 1 §1 noted this section is accurate. |
+
+### 22.B BOT.md drift
+
+| File:line | Status | Current text | Proposed replacement | Rationale |
+|---|---|---|---|---|
+| (everywhere `paper_mode = True` is asserted) | A | E.g. lines 5, 837, 916, 982, 3375, 3663, 3724, 3743, 3971, 4530, 4576, 4690, 4723, 4728. | (no changes needed) | All these statements remain TRUE post-Layer-2c. Paper Kev IS paper-only by design; the executor is what places real orders. The architecture didn't change Paper Kev's role — it added a downstream service. |
+| (no occurrences of "byte mirror" / "kevbot" / "fork model") | n/a | n/a | n/a | The Phase 4 prompt anticipated these; grep across all 4730 lines returns zero hits. The two "fork" hits at line 4277 and 4316 are about a script-fork (audit_v15.py forked from audit_v14.py), unrelated. |
+
+**No BOT.md edits required for the architecture-cleanup pass.** The
+spec drift the architect should fix in BOT.md is the v1.5.2-Stage-3+
+content drift documented in Phase 1 §1, §6 — that's a separate
+work item from the Layer 2c framing.
+
+### 22.C Code-level grep results (read-only inventory)
+
+Patterns searched across `bot-kalshi15min-btc/`: `kevbot`,
+`byte.?mirror`, `byte mirror`, `kevbot-kalshi15min-btc`. Results:
+
+| pattern | hits in `bot-kalshi15min-btc/` |
+|---|---|
+| `kevbot` | 0 |
+| `byte mirror` / `byte-mirror` | 0 |
+| `kevbot-kalshi15min-btc` | 0 |
+| `KevBot` (CamelCase) | **0 in source code, 0 in BOT.md.** Found only in the executor's `executor-portfolio-001/app/static/dashboard.css:21` ("PAGE HEADER (KevBot brand + status)" — comment) and in two prior audit files (`V167_DASHBOARD_AUDIT.md`, `EXECUTOR_AUDIT_2026-05-09.md`) that flagged a `_BOT_DISPLAY_NAME = "KevBot"` constant in `dashboard_data.py:112` of an older version — but that constant no longer matches what's in the current code. The literal string "KevBot" does not appear in `bot-kalshi15min-btc/app/dashboard_data.py` today. |
+
+**Action implied: zero code changes.** The Paper Kev codebase
+contains no obsolete service identifiers. The only stale "KevBot"
+brand string in the platform sits in the executor's CSS file
+comment, which is cosmetic.
+
+### 22.D Other doc drift discovered while inventorying
+
+| Source | What | Why noted |
+|---|---|---|
+| `bot-kalshi15min-btc/CLAUDE.md` "Running live Railway ops" section | Lists three pre-authorized Railway flows — does not mention the linkage state required for cross-service queries. Phase 3 had to manually `railway link --project patient-renewal` and switch services 3 times. | If the operator runs more cross-service audits, an additional CLAUDE.md note (or a small wrapper script) would speed them up. Optional. |
+| `executor-portfolio-001/EXECUTOR.md:51` | "Poll `https://kalshi15min-btc.kujaku.ai/api/trades?status=filled&limit=50` every 10 seconds." | Phase 3 §17.D + Phase 4 §23.B confirm the 10s cadence is the dominant component of pickup latency (median 3.84s, 99th 9.32s, capped at 10s). Spec is accurate but the operator should know the cadence is now an explicit slippage knob. |
+| `executor-portfolio-001/EXECUTOR.md:52, 54, 332` | "Pure mirror = guaranteed fill" + "Slippage: ... Observability only — never a gate" | Phase 3 §17 found mean +15.6¢ adverse slippage. Spec language is accurate (slippage is observability, never a gate), but "guaranteed fill" is slightly misleading since the +15.6¢ mean is the unstated cost of guaranteed fill. The architect may want to add a footnote: "Guaranteed fill carries a typical +X¢ cost vs Paper-perceived ask; see Phase 3 §17 for the live distribution." |
+
+---
+
+## 23. PAPER → EXECUTOR LINK AUDIT
+
+### 23.A Handoff mechanism (code-level)
+
+**Paper Kev write path** (where the trigger is persisted):
+
+The "trigger" is a row in Paper's `trades` table written by
+[`scheduler._execute_primary`](bot-kalshi15min-btc/app/scheduler.py#L1748)
+(immediate fills),
+[`_execute_hypothesis`](bot-kalshi15min-btc/app/scheduler.py#L1936)
+(dissent fills), and
+[`_execute_scale_entry`](bot-kalshi15min-btc/app/scheduler.py#L2055)
+(scale entries). All three call
+[`db.insert_trade`](bot-kalshi15min-btc/app/db.py#L1235) and then
+either fill immediately via
+[`paper.apply_fill`](bot-kalshi15min-btc/app/paper.py#L97) (which
+sets `fill_ts_utc`) or leave the row `status='waiting'` for the
+[`watcher`](bot-kalshi15min-btc/app/watcher.py#L552-L660) to fill
+later when the trigger price is reached.
+
+The fields the executor reads:
+- `id`, `decision_id`, `window_ticker`, `side`, `size_pct`,
+  `size_dollars`, `status`, `trigger_type`, `trade_type`,
+  `fill_ts_utc`, `fill_price_cents`, `contracts`,
+  `entry_quality_tier`, `size_rationale`.
+- The HTTP surface is
+  [`GET /api/trades?status=filled&limit=N`](bot-kalshi15min-btc/app/web.py#L699-L728)
+  — a direct DB read with no caching layer (verified by reading
+  the route handler).
+
+**Executor pickup code:**
+[`trade_poller.run_trade_poller`](executor-portfolio-001/app/trade_poller.py#L661)
+loop, polled every
+[`settings.trade_poll_seconds=10`](executor-portfolio-001/app/config.py#L93)
+by default. Each tick:
+
+1. `last_seen = await db.get_max_paper_trade_id(conn)`
+   ([trade_poller.py:615](executor-portfolio-001/app/trade_poller.py#L615))
+   — cursor is `MAX(paper_trade_id) FROM paper_trades` (idempotency
+   contract per the module docstring lines 54-62).
+2. `paper_client.get_recent_filled_trades(base_url, since_id=last_seen, limit=poll_limit)`
+   ([trade_poller.py:618](executor-portfolio-001/app/trade_poller.py#L618))
+   — fetches `/api/trades?status=filled&limit=N`, returns rows
+   where `id > since_id` ([paper_client.py:177-218](executor-portfolio-001/app/paper_client.py#L177-L218)).
+3. For each new row, run the per-trade flow at
+   [trade_poller.py:1-63 (docstring)](executor-portfolio-001/app/trade_poller.py#L1-L63):
+   insert paper_trades row (always, with `seen_at_ts_utc=now`),
+   filter hypothesis (op ruling 2026-05-10), fetch portfolio +
+   orderbook, compute target_contracts, place market order on
+   Kalshi (sub-second), insert kalshi_orders row.
+
+**No webhook, no message queue, no push.** Pure pull-based
+polling at a 10-second interval.
+
+### 23.B Pickup-latency + submit-latency distributions
+
+Sample: same n=37 executor orders from Phase 3 (24h post limit-to-
+market switch, all `status='filled'`).
+
+The previously-published "p50=10.7s, p99=247s" headline in
+**Phase 3 §17.D was the FULL chain** (`decision.ts_utc → placed_ts_utc`).
+That number conflated three distinct stages, and **the Phase 4
+prompt asked for the right decomposition**. Here it is:
+
+**Stage 1: `d2pf` = decision_ts → paper_fill_ts** (Paper-internal: trigger wait or immediate-fill near-zero)
+
+| stat | value |
+|---|---|
+| n | 37 |
+| min | 0.70s (immediate fill) |
+| p50 | 4.73s |
+| p90 | 129.03s |
+| p99 | 243.79s |
+| max | 243.79s |
+| mean | 40.93s |
+
+This is **trigger-wait time** — the watcher legitimately waiting
+for the BTC price to reach `trigger_value`. Of 37, 16 had d2pf >5s
+(triggered fills); 21 were immediate (sub-1s). **This is not
+pickup latency, it's strategy semantics.** The 4-minute tail is a
+trigger that took 4 minutes to fire — exactly what the entry
+strategy was designed to do.
+
+**Stage 2: `pickup_latency` = paper_fill_ts → seen_at_ts_utc** (Paper /api/trades insert → executor poll-cycle observation)
+
+| stat | value |
+|---|---|
+| n | 37 |
+| min | 0.078s |
+| p50 | 3.838s |
+| p90 | 9.178s |
+| p99 | 9.323s |
+| **max** | **9.323s** |
+| mean | 4.530s |
+
+Histogram (1-second buckets):
+
+| bucket | n |
+|---|---|
+| [0, 1)s | 6 |
+| [1, 2)s | 2 |
+| [2, 3)s | 5 |
+| [3, 4)s | 6 |
+| [4, 5)s | 2 |
+| [5, 10)s | 16 |
+| ≥ 10s | 0 |
+
+**The pickup latency is uniformly distributed in [0, 10s] —
+exactly bounded by the 10-second poll interval.** Mean 4.5s
+matches the expected 5s of a uniform [0, 10] distribution. Zero
+samples exceed 10s, confirming no upstream queueing.
+
+**Stage 3: `submit_latency` = seen_at_ts_utc → placed_ts_utc** (executor portfolio-fetch + ask-fetch + sizing + Kalshi POST)
+
+| stat | value |
+|---|---|
+| n | 37 |
+| min | 0.124s |
+| p50 | 0.215s |
+| p90 | 0.262s |
+| p99 | 0.324s |
+| max | 0.324s |
+| mean | 0.220s |
+
+Histogram (1-second buckets):
+
+| bucket | n |
+|---|---|
+| [0, 1)s | **37** (all of them) |
+| ≥ 1s | 0 |
+
+**Executor-internal latency is sub-half-second on every order.**
+This includes the cached-30s Kalshi portfolio fetch, fresh ask
+fetch from Kalshi orderbook, sizing math, RSA-PSS signing, and
+the POST to Kalshi's order endpoint. Nothing here is fixable
+without changing Kalshi's API or removing the executor entirely.
+
+**Net: of the +15.6¢ mean adverse slippage in Phase 3 §17.A:**
+- The executor is responsible for ≤ 0.3s of latency.
+- The 10s poll cadence contributes ~0-9s of pickup variance,
+  averaging ~5s per order.
+- The 60s book staleness (Phase 3 §18.A) is the dominant cost.
+
+### 23.C Structural fix options
+
+For each option: code changes (file:line in both repos) +
+estimated impact on §23.B `pickup_latency` p99.
+
+#### Option 1 — Reduce poll interval
+
+**One-line change** at [executor-portfolio-001/app/config.py:93](executor-portfolio-001/app/config.py#L93):
+
+```python
+trade_poll_seconds: int = 1   # was 10
+```
+
+Or (more honest, since 1s is the minimum useful step):
+
+```python
+trade_poll_seconds: int = 2
+```
+
+Estimated impact:
+- pickup_latency p99: **9.3s → ~1.0s** (the new poll-interval
+  upper bound).
+- pickup_latency p50: **3.8s → ~0.5s**.
+- Cost: 10x more polls/day. At 86400s/day ÷ 10s × 10 = 86,400
+  polls/day vs current 8,640. Each poll is a single HTTP GET to
+  Paper's `/api/trades?status=filled&limit=50`. Paper's route
+  handler ([web.py:699-728](bot-kalshi15min-btc/app/web.py#L699-L728))
+  is a direct DB read with no cache; the cost is one SQLite SELECT
+  per poll. Trivial load on both services.
+- Risk: none. The cursor-based query (`id > since_id`) means most
+  polls return zero rows; high-frequency polling is wasted work
+  but not destructive.
+- Recovers ~5s of the +15.6¢ mean slippage. Linearly: if the
+  staleness-window ask drift averages ~10¢ over 60s, then ~5s of
+  pickup latency adds ~0.8¢. Modest gain.
+
+#### Option 2 — Push-based notification (Paper → Executor webhook)
+
+Larger change. Three pieces:
+
+1. **Paper-side write of webhook config:**
+   [bot-kalshi15min-btc/app/config.py](bot-kalshi15min-btc/app/config.py)
+   add `executor_webhook_url: Optional[str] = None`. Add a
+   helper in `paper.apply_fill` (or as a post-commit callback in
+   `scheduler._execute_primary`) that fires `aiohttp.ClientSession().post(url, json={"trade_id": id})` on successful fill. Fire-and-forget; do NOT block the fill on webhook delivery.
+2. **Executor-side endpoint:**
+   [executor-portfolio-001/app/web.py](executor-portfolio-001/app/web.py)
+   add `@app.post("/internal/notify-trade")` that triggers an
+   immediate `trade_poller.poll_once()` invocation (rather than
+   processing the inbound trade_id directly — the polling model
+   stays canonical, the webhook just kicks the loop early).
+3. **Auth:** shared HMAC secret in env vars on both services.
+
+Estimated impact:
+- pickup_latency p99: **9.3s → ~0.1s** (network round-trip + handler dispatch).
+- pickup_latency p50: same — webhook delivery latency dominates the loop trigger.
+- Cost: moderate. Moves Paper from a pure "publish via DB" model to "publish + notify," which is a small ground-rule deviation per SYSTEM.md "Contracts Between Services" (line 222-230, "No other channels"). Architect approval required.
+- Risk: webhook delivery failure → executor falls back to its own polling; this is a clean degraded path. Test surface grows.
+- Recovers another ~5s of slippage exposure beyond Option 1.
+
+#### Option 3 — In-process execution
+
+Eliminates the executor as a separate service. Paper Kev would
+import `kalshi_client` directly and place market orders from
+its own scheduler.
+
+- **Major architectural reversal.** Conflicts with SYSTEM.md
+  Layer 2b/2c convention (line 79: "the dumb hand attached to
+  Layer 2b's brain"; line 81: "Layer 2c eliminates the fork by
+  design"). The whole point of Layer 2c is to keep the brain
+  paper-pure and the hand decision-free.
+- Estimated impact: pickup_latency = 0 (eliminated by
+  construction), but Paper Kev now holds Kalshi credentials,
+  loses the kill-switch isolation, and the "executor mirrors
+  verbatim" auditability disappears.
+- **Not recommended.** Listed for completeness per the prompt.
+
+#### Option 4 — Long-poll on `/api/trades`
+
+A middle ground between polling and webhooks. Executor opens an
+HTTP request that blocks server-side until a new trade arrives
+or a timeout (e.g. 30s) elapses, then returns immediately.
+
+- **Paper-side:** add `?since_id=N&long_poll_seconds=30` query
+  params to `/api/trades`. Inside the handler, run an inner loop:
+  query for new rows; if none, sleep 0.5s and re-check; return
+  when the first match arrives or the timeout fires.
+- **Executor-side:** call with the long-poll param, then
+  immediately re-call on response.
+- Estimated impact: pickup_latency p50 → ~0.5s (the inner
+  re-check interval), p99 → ~1s.
+- Cost: Paper now holds an open HTTP connection per executor
+  for ~30s at a time. Single-executor case is fine; multi-executor
+  needs more careful concurrency.
+- No spec deviation — still "pull-based publish."
+
+#### Recommendation
+
+**Option 1 first** (one-line poll-interval reduction).
+Single-line change, zero architectural cost, immediate
+~5s reduction in p50 pickup latency. If the slippage
+calibration block from v2.0 design (Phase 1 §7.1) shows
+the residual gap matters, **Option 4 (long-poll)** is the
+clean follow-up — it eliminates pickup-latency variance
+without breaking the publish-via-DB contract.
+
+**Bigger picture:** pickup latency is at most ~10c of the +15.6c
+mean slippage. The 60s book staleness (Phase 3 §18.A) is the
+dominant cost driver. The Paper→Executor link is an obvious
+cleanup target but won't move the slippage headline alone.
+
+---
+
+## 24. §21 REVIEW
+
+The Phase 4 prompt asked what §21 contains, suggesting it might
+be a "BTC-spot-vs-Kalshi-book correlation analysis from the Phase 3
+prompt's §20 (now likely renumbered to §21)." **§21 is neither.**
+
+§21 is the **CLEANUP section** of Phase 3 — repository hygiene
+notes:
+
+- Names the JSON dumps + analysis script written to
+  `audit_phase3_data/`
+- States no production state was mutated
+- Notes the Railway link state left on the operator's laptop
+- Re-flags the `kevbot-*` repo / detached volume question
+
+There is **no BTC-spot-vs-Kalshi-book correlation analysis**
+anywhere in Phase 1-3 of this audit. I never produced one. The
+Phase 3 prompt did not ask for one — its §16-§19 were schema
+discovery, slippage, staleness, input-tokens. The "n=3 subset"
+phrase the architect mentioned doesn't match anything in §21.
+The only "n=3" subset that surfaced in Phase 3 was the **3
+hypothesis trades** that reached the executor (§17.B, "By
+trade_type" row: n=3 hypothesis with mean slip +11.0¢); not a
+correlation analysis.
+
+**If the architect wants a BTC-spot-vs-Kalshi-book correlation
+analysis** as a future Phase 5 deliverable, here is what it
+would require:
+
+- **Inputs:** `data-btc.kalshi_snapshots` (the Kalshi book log,
+  119,208 rows in the last 14d) + `data-btc.price_ticks`
+  (Coinbase / Kraken / Coinbase-derived BTC spot, presumably
+  millions of rows at sub-second cadence).
+- **Joins:** by `ts_utc`, per Kalshi window (using
+  `floor_strike` to define the YES-pay-out boundary).
+- **Metric:** how does Kalshi's `yes_ask` move as a function of
+  `btc_spot - floor_strike`? What's the lead/lag relationship?
+  Phase 3 §16.3 confirmed both data sources have the right
+  cadence.
+- **Sample:** broader than n=37 — could span the full 14-day
+  data-btc history, sampled at e.g. 1-minute resolution.
+- **Cost:** moderate — single SQLite (data-btc) cross-table
+  join, all on one service, no Paper / Executor involvement.
+  Could run on a single `railway ssh -s data-btc` invocation.
+
+This would directly inform v2.0 design's "Coinbase-lead alpha
+window" thesis (per Phase 4 prompt context #3): if Coinbase
+moves N seconds before Kalshi, the executor's pickup latency
+should be sized as a fraction of that window. Worth scoping
+into Phase 5 if it matters.
+
+---
+
+## 25. ARCHITECT DECISIONS NEEDED (Phase 4)
+
+Continuing numbering from Phase 1-3's items 1-14.
+
+| # | Decision | Affects |
+|---|---|---|
+| 15 | **SYSTEM.md edits**: three drafted edits in §22.A (lines 78, 182, 215). All three are factual updates reflecting Layer 2c going live. Approve, modify, or defer. | spec accuracy |
+| 16 | **No BOT.md edits required** for the architecture-cleanup pass — confirm this matches your read. The v1.5.2-Stage-3+ content drift in BOT.md (Phase 1 §1, §6) is a separate, larger work item. | scope of cleanup |
+| 17 | **Phase 4 prompt's "byte-mirror invariant"** does not exist in any source spec — that was language I introduced in Phase 2 §10.1 to describe spec-drift discipline. If the operator wants such a discipline added to either spec, it is a new write (not a removal). I would not recommend it: the existing SYSTEM.md "Contracts Between Services" + Layer-2c spec already cover the relevant ground. | nothing to remove; possibly nothing to add |
+| 18 | **Pick a §23 fix option.** Recommendation: Option 1 (10s → 2s poll interval) as immediate one-line gain; Option 4 (long-poll) as follow-up if the residual matters after the v2.0 slippage block lands. Option 2 (webhook) is a defensible spec deviation if the architect wants the bigger gain now. Option 3 (in-process) is not recommended. | direct slippage reduction |
+| 19 | **Phase 5 scope.** Two candidates: (a) the BTC-spot-vs-Kalshi-book correlation analysis from §24 — directly tests the Coinbase-lead alpha thesis; (b) v2.0 slippage-block prompt design + draft of the new prompt section. Both are on the v2.0 critical path. | sequencing |
+| 20 | **Three sub-second outliers in Phase 3 §18.D** (1453s, 1240s, 307s submit-to-fill on oids 1, 2, 3). All are the FIRST three orders in the executor's lifetime; all three got `fill_ts_utc` stamped at the same wall-clock time `2026-05-10T17:52:50Z`. This is a **backfill artifact** of the executor's `order_watcher` polling Kalshi's portfolio for the first time and stamping previously-pending orders with that single observation moment. NOT real fill latency. Worth a one-line audit fix in `order_watcher.py` to set `fill_ts_utc = settle_response_ts` rather than `fill_ts_utc = now`, but small. | data-quality flag (carryover from Phase 3 #14) |
+
+---
+
+## 26. CLEANUP
+
+Phase 4 is read-only. No code changed. No source-doc edits to
+SYSTEM.md or BOT.md. Cloned no new repos —
+`executor-portfolio-001/` was already present locally from
+prior phases. Used the existing `audit_phase3_data/` JSON dumps
+for §23.B latency decomposition (no new DB queries). Railway
+link state on the operator's laptop is left at
+`kujaku-ai / patient-renewal / production / data-btc` from
+Phase 3.
+
+**End of Phase 4.**
