@@ -1058,3 +1058,539 @@ step). The only artifact change is this file (Phase 2 sections
 appended to Phase 1).
 
 **End of Phase 2.**
+
+---
+
+# PHASE 3 — LIVE KEV SLIPPAGE + DATA-BTC STALENESS + PAPER INPUT_TOKENS (2026-05-10)
+
+**Phase 3 audited by:** Claude Code, bypass mode, read-only on
+all production DBs. Same audit document; §16–§19 appended.
+§1–§15 unchanged.
+
+---
+
+## 16. SCHEMA DISCOVERY
+
+### 16.0 Service-name correction
+
+The Phase 3 prompt named "Live Kev" as `kevbot-kalshi15min-btc`.
+**That service does not exist on Railway.** Three pieces of evidence
+from the linked `patient-renewal` project:
+
+1. `railway status` lists 6 services: `kujaku-bot-kalshi15min-btc`
+   (Paper Kev), `kujaku-data-qc`, `charting-calculations`,
+   `kujaku-web`, `executor-portfolio-001`, `data-btc`. No `kevbot-*`.
+2. The project carries a **detached** volume named
+   `kevbot-kalshi15min-btc-volume-vuvl` (1.0 GB / 4.9 GB, ready) — i.e.
+   a kevbot service existed once, was decommissioned, and its volume
+   was never reattached.
+3. The Kujaku-ai GitHub org has only two public repos
+   (`kujaku-meta`, `kujaku-web`); no `kevbot-*` source repo is publicly
+   accessible. EXECUTOR.md and Phase 1's `EXECUTOR_AUDIT_2026-05-09.md`
+   both describe `executor-portfolio-001` as the real-money path that
+   mirrors Paper into Kalshi orders.
+
+I proceeded treating **`executor-portfolio-001` as Live Kev** for §17.
+Every §17 metric the prompt names (`limit_price_cents`,
+`slippage_cents`, `placed_ts_utc`, `paper_trade_id`) lives on
+`executor.kalshi_orders` exactly as the prompt expects, so the
+mapping is unambiguous. The naming mismatch is flagged as Decision 9
+in §20.
+
+### 16.1 Paper Kev (`kujaku-bot-kalshi15min-btc`, `/data/bot.db`)
+
+Tables present: `bot_log, decisions, playbook, portfolio_history,
+realized_stats, realized_stats_history, sizing_state,
+sqlite_sequence, stats_cache, trades`.
+
+`decisions` schema: 45 columns including `id, ts_utc, window_ticker,
+context_json, response_json, input_tokens, output_tokens,
+cache_read_input_tokens, cache_creation_input_tokens, review_index,
+review_total, time_since_open_seconds, floor_strike, thesis,
+thesis_timeframe, confluence_signals_json, invalidation, stop_reason`.
+Confirmed all expected fields exist.
+
+Row counts:
+- `decisions` total: **2966**, `ts_utc` range
+  `2026-04-24T04:47:11Z` → `2026-05-11T01:16:50Z` (~17 days).
+- `decisions` with `input_tokens IS NOT NULL`: **2698** (the
+  difference is mostly skip-decisions written by `_write_skip_decision`
+  with no Anthropic call).
+- 14d sub-window: 2423 rows (queries below).
+
+### 16.2 Live Kev = `executor-portfolio-001`, `/data/executor.db`
+
+Tables present: `bot_log, investors, kalshi_orders, paper_trades,
+portfolio_snapshots, reconciliation_events, sqlite_sequence,
+trade_attributions`.
+
+`kalshi_orders` schema: 22 columns including `id, paper_trade_id,
+placed_ts_utc, window_ticker, side, target_contracts,
+limit_price_cents, expiration_ts_utc, status, fill_ts_utc,
+fill_price_cents, filled_contracts, slippage_cents, kalshi_order_id,
+settlement_method`. Every Phase 3 column the prompt names is present.
+
+`paper_trades` schema: 16 columns including `paper_trade_id,
+paper_decision_id, seen_at_ts_utc, eligible, skip_reason,
+paper_window_ticker, paper_side, paper_size_pct, paper_size_dollars,
+paper_fill_price_cents, paper_contracts, paper_fill_ts_utc,
+paper_trade_type, paper_entry_quality_tier`. The
+`paper_entry_quality_tier` column is present **but NULL on every
+row** (37/37) — the executor's `trade_poller` does not currently
+extract the tier from Paper's API response. Tier breakdowns in §17
+therefore use the price-derived tier from the Paper decision's
+`context_json.market.{yes,no}_ask`, not the executor's stored copy.
+
+**Row count + date range — flag-don't-fix:**
+
+```
+kalshi_orders: 37 rows
+  placed_ts_utc range: 2026-05-10T17:28:36Z → 2026-05-11T01:16:58Z
+  status distribution: {'filled': 37}
+  fill_price_cents non-null: 37/37
+  slippage_cents non-null: 37/37
+```
+
+**The "14-day window" the Phase 3 prompt assumed contains ~24
+hours of executor data.** The executor went live (or the table
+was first written) on 2026-05-10. Every row is `status='filled'`;
+zero expired or cancelled. Per Phase 1 commit history (b06df21,
+c282d02 on 2026-05-10), this matches the documented limit-to-market
+switch — market orders fill or fail; they don't expire. So §17.C's
+expiry-rate distribution is **structurally empty** and §17 overall
+is a 37-sample, post-switch snapshot, not a 14-day longitudinal
+study.
+
+### 16.3 data-btc (`/data/collector.db`)
+
+Tables: `collector_log, kalshi_settlements, kalshi_snapshots,
+ohlcv_bars, price_ticks, sqlite_sequence`.
+
+`kalshi_snapshots`: 16 columns, all expected. Confirms
+`yes_bid_size_fp` and `yes_ask_size_fp` exist (per Phase 1 §6 note;
+SHA aec1474 not verified but columns are populated on the recent
+1000 rows: 1000/1000 non-null both).
+
+Row counts:
+- total: **192,458**, range `2026-04-18T09:06:20Z` → `2026-05-11T01:23:33Z`.
+- 14d: **119,208**.
+- For the 25 unique tickers covering the 34 ordered Paper decisions:
+  **2,230** snapshots, ~71-92 per ticker (≈10s polling cadence over
+  the 15-minute window).
+
+---
+
+## 17. LIVE KEV REALIZED SLIPPAGE
+
+**Sample-size disclosure.** n=37 filled orders, 34 unique parent
+Paper decisions, all from 2026-05-10 17:28 UTC onwards (~24h pre-
+audit). All 37 are `status='filled'` because the executor uses
+**market** orders post-2026-05-10. No expired-limit data exists.
+Tier and TTE breakdowns are reported but n<10 in some cells —
+treat as directional, not statistically grounded. Source data:
+[audit_phase3_data/exec_orders.json](audit_phase3_data/exec_orders.json),
+[audit_phase3_data/paper_decisions.json](audit_phase3_data/paper_decisions.json),
+[audit_phase3_data/analyze.py](audit_phase3_data/analyze.py).
+
+### 17.A slip_fill_cents distribution (filled orders)
+
+Defined: `slip_fill_cents = fill_price_cents − decision_price`,
+where `decision_price = mkt_yes_ask` (or `mkt_no_ask`) embedded in
+the Paper decision's `context_json.market`. Positive = adverse to
+us (we paid more than the LLM saw).
+
+| stat | value |
+|---|---|
+| n | 37 |
+| mean | **+15.57¢** |
+| stdev | 13.20¢ |
+| \|slip\| p50 | 12¢ |
+| \|slip\| p90 | 32¢ |
+| \|slip\| p95 | 35¢ |
+| \|slip\| p99 | 43¢ |
+| \|slip\| max | 43¢ |
+
+Histogram (signed, count of orders):
+
+| bucket | n |
+|---|---|
+| ≤ −10 | 0 |
+| (−10, −5] | 1 |
+| (−5, −1] | 3 |
+| 0 | 0 |
+| [1, 5] | 7 |
+| (5, 10) | 4 |
+| ≥ 10 | **22** |
+
+**59% of orders (22/37) were filled ≥10¢ worse than the LLM saw.**
+Only 4 of 37 (11%) were better-than-perceived. Mean +15.57¢ is the
+single most material number in this audit — at the typical 30-50¢
+contract prices Paper Kev trades, that's a 30-50% adverse haircut on
+the per-contract premium relative to what the LLM declared in
+`break_even_prob_at_entry`.
+
+### 17.B Slippage breakdowns
+
+**By tier** (from decision-time price; Phase 3 prompt's bucketing
+`<15 / 15-49 / 50-84 / 85+`):
+
+| tier | n | mean | stdev | \|p50\| | \|p90\| |
+|---|---|---|---|---|---|
+| cheap (<15¢) | 7 | +5.43 | 15.76 | 3 | 8 |
+| middle (15-49¢) | 17 | +17.41 | 10.64 | 18 | 32 |
+| expensive (50-84¢) | 13 | +18.62 | 12.04 | 18 | 32 |
+| very_expensive (85+¢) | 0 | — | — | — | — |
+
+Slippage scales sharply with tier. Cheap-side trades have small
+absolute slippage; middle and expensive trades have ~3.5× the mean
+slippage of cheap. No `very_expensive` orders observed in 24h
+(Rule 5d-hard hard-skips primary at very_expensive — Phase 1 §4).
+
+**By TTE bucket** (window_close − decision_ts):
+
+| TTE | n | mean | stdev | \|p50\| | \|p90\| |
+|---|---|---|---|---|---|
+| <3min | 0 | — | — | — | — |
+| 3-8min | 14 | +8.93 | 12.53 | 7 | 25 |
+| 8-14min | 23 | +19.61 | 11.89 | 22 | 32 |
+
+**Late-window decisions (8-14min remaining) have 2.2× the mean
+slippage of mid-window (3-8min).** This is the inverse of intuition
+("late window = more time pressure = more adverse") — actually the
+8-14min bucket here corresponds to **review-1 of K=2** decisions
+(fired right after window open, ~2 min in, when the book is thin
+and prices fluctuate hard). Mid-window/3-8min corresponds to
+**review-2** decisions (fired ~7-9 min in, when liquidity has
+arrived and quotes are tighter). The R1-vs-R2 angle is reflected
+directly in the side×review breakdown below.
+
+**By trade_type:**
+
+| trade_type | n | mean | stdev | \|p50\| | \|p90\| |
+|---|---|---|---|---|---|
+| primary | 29 | +14.21 | 12.92 | 11 | 32 |
+| primary_scale | 5 | **+26.20** | 13.36 | 32 | 40 |
+| hypothesis | 3 | +11.00 | 2.94 | 10 | 15 |
+
+Three hypothesis orders mirrored — Phase 1 noted commit a275d8f
+"hypothesis-trade filter" was supposed to skip these; some
+hypothesis orders predate that filter or evaded it. Scale entries
+have the worst slippage by mean (+26¢) but n=5.
+
+**By side × review:**
+
+| side/review | n | mean | stdev |
+|---|---|---|---|
+| YES / R1 | 11 | +15.55 | 11.80 |
+| YES / R2 | 8 | +6.75 | 9.18 |
+| NO / R1 | 12 | **+23.33** | 10.70 |
+| NO / R2 | 6 | +11.83 | 15.46 |
+
+NO/R1 is the worst slice (+23.3¢ mean, n=12). NO trades and R1
+reviews each individually run hotter than YES and R2.
+
+### 17.C Expiry rate
+
+| status | n |
+|---|---|
+| filled | 37 |
+| (any other) | 0 |
+
+**Zero expired orders.** The Phase 3 prompt's expectation of an
+"% of submitted limit orders that expired without fill" is
+structurally empty: per Phase 1 commits c282d02 / b06df21
+(2026-05-10), the executor sends **market** orders. They fill at
+the prevailing ask within the matching engine (the +15.6¢ mean
+slip is the cost of crossing the spread to do that), or they fail
+the API call outright (none observed in 24h).
+
+The "realized data-btc yes_ask at submit_ts + 45s (what we'd have
+paid had we held)" subquery is moot for the same reason. There are
+no held orders to compare against.
+
+If the architect wants the limit-era expiry distribution, that
+data is on the **detached** `kevbot-kalshi15min-btc-volume-vuvl`
+volume — would need a temporary attach + read-only ssh, which is
+outside the read-only scope I'm operating under. Flagged in §20.
+
+### 17.D decision_to_submit latency
+
+Defined: `placed_ts_utc − decision.ts_utc` (the full chain:
+Paper LLM call returns → Paper inserts decision row → Paper inserts
+trade row → Executor's `trade_poller` polls and observes →
+Executor signs RSA-PSS → Executor POSTs to Kalshi).
+
+| stat | value |
+|---|---|
+| n | 37 |
+| min | 3.13s |
+| p50 | 10.66s |
+| p90 | 129.45s |
+| p99 | 246.75s |
+| max | 246.75s |
+
+Sub-component: `seen_at_ts_utc − placed_ts_utc` (executor-only
+latency, sign+POST):
+
+| stat | value |
+|---|---|
+| n | 37 |
+| p50 | 0.215s |
+| p99 | 0.324s |
+
+**The executor itself is fast (sub-second).** The 10-247s tail in
+the full chain is upstream — the gap between Paper's decision
+insert and Paper's trade insert + the executor's trade-poll cycle
+catching it. The p90=129s outlier is concerning: by then the
+underlying Kalshi market has moved meaningfully (see §18.C
+below). On a 15-min window, 4 minutes of execution latency is
+nontrivial.
+
+**Correlation of latency with absolute slippage:**
+
+| metric | value |
+|---|---|
+| Pearson r(latency_s, \|slip_fill\|) | 0.227 (n=37) |
+| Spearman r | 0.200 |
+
+Mild positive correlation but not strong at this n. The mean+15.6¢
+slippage is dominated by the spread-crossing cost of market orders,
+not by latency-induced adverse drift — though the latency-driven
+component is the part v2.0 entry-time reasoning could most readily
+recover (the spread itself is a Kalshi-side reality).
+
+---
+
+## 18. BOOK STALENESS (LLM-PERCEIVED vs REALITY)
+
+### 18.A Snapshot age at decision time
+
+The "book age at prompt" = `decision.ts_utc − market.ts_utc`
+where `market.ts_utc` is the snapshot timestamp embedded in
+`decisions.context_json.market.ts_utc` (the snapshot the LLM saw).
+This equation works without a data-btc lookup because Paper Kev
+already records the snapshot's source timestamp in its embedded
+JSON.
+
+**BROADER (full 14d Paper Kev decisions, n=2423):**
+
+| stat | value |
+|---|---|
+| n | 2423 |
+| min | 22.45s |
+| p50 | **59.82s** |
+| p90 | 93.37s |
+| p99 | 260.29s |
+| max | 599.66s |
+
+| threshold | count | rate |
+|---|---|---|
+| > 7s | 2423 | **100.00%** |
+| > 15s | 2423 | 100.00% |
+| > 30s | 2331 | 96.20% |
+| > 60s | 1202 | 49.61% |
+
+**The Phase 3 prompt's >7s anomaly threshold needs revision.**
+Every single decision in 14 days (n=2423) has a snapshot age
+>7s. The minimum observed age is 22.45s. **The median is ~60s.**
+The p99 is 260s and the max is 600s (a 10-minute-stale snapshot
+was used for one decision — investigate).
+
+This is structural: the data-btc collector polls Kalshi at a
+~10s cadence, then Paper Kev fetches data-btc's most-recent
+snapshot via `/api/kalshi/active` HTTP, then runs the LLM call
+(120s timeout, ~30-60s typical) before inserting the decision row.
+The gap between the snapshot's data-btc-side ts_utc and the
+decision's Paper-Kev-side ts_utc is dominated by the LLM call
+itself plus pre-call assembly and post-call validation. **The book
+is stale by approximately one full LLM call duration.**
+
+**LIVE-KEV subset (37 ordered decisions):**
+
+| stat | value |
+|---|---|
+| n | 37 |
+| min | 41.22s |
+| p50 | 78.51s |
+| p90 | 93.60s |
+| p99 | 219.78s |
+| max | 219.78s |
+
+Slightly higher median (79s vs 60s broader) — the ordered subset
+skews toward review-2 decisions which carry the larger user prompt
+and trigger more LLM tokens.
+
+### 18.B Price movement during the staleness window
+
+For each of the 37 ordered decisions: compare the
+`mkt_yes_ask`/`mkt_no_ask` embedded in `context_json` (what the
+LLM saw) against the data-btc snapshot at `decision.ts_utc` (what
+the price actually was when the LLM finished reasoning). Side-aware
+(YES decisions use yes_ask, NO use no_ask).
+
+| stat | value |
+|---|---|
+| n | 37 |
+| mean(real − perceived) | **+8.03¢** |
+| stdev | 15.17¢ |
+| \|delta\| p50 | 6 |
+| \|delta\| p90 | 28 |
+| \|delta\| max | 44 |
+| \|delta\| ≥ 2¢ | **33 / 37 = 89.2%** |
+
+**Nearly nine in ten decisions have ≥2¢ of price movement during
+the staleness window** — i.e. the LLM is reasoning about a price
+that no longer exists by the time it commits. Mean movement is
+adverse (real ask is +8¢ higher than perceived), confirming the
+direction half of the +15.6¢ slippage breakdown: roughly half the
+total slippage is staleness-window drift; the other half is
+post-decision drift + spread-crossing.
+
+### 18.C Price movement decision_ts → submit_ts
+
+| stat | value |
+|---|---|
+| n | 37 |
+| mean(submit_ask − decision_ask) | +4.11¢ |
+| stdev | 8.00¢ |
+| \|delta\| p50 | 1 |
+| \|delta\| p90 | 12 |
+| \|delta\| max | 28 |
+| \|delta\| ≥ 2¢ | 18 / 37 = 48.6% |
+
+Half the time, the price moves ≥2¢ between Paper's decision
+insert and Executor's order POST. Mean is adverse (+4¢) but
+smaller than the staleness window — the latency window is shorter
+on average (10s p50 vs ~80s) so less drift.
+
+### 18.D Price movement submit_ts → fill_ts
+
+| stat | value |
+|---|---|
+| n | 37 |
+| mean(fill_ask − submit_ask) | -0.16¢ |
+| stdev | 10.32¢ |
+| \|delta\| p50 | 0 |
+| \|delta\| p90 | 4 |
+| \|delta\| max | 54 |
+| \|delta\| ≥ 2¢ | 5 / 37 = 13.5% |
+| submit_to_fill_s p50 | 3.2s |
+| submit_to_fill_s p99 | 1453.5s (one outlier) |
+
+**Submit-to-fill is essentially instant** (median 3.2s, mean
+delta zero). The 1453s outlier is one order whose `fill_ts_utc`
+landed long after `placed_ts_utc` — likely a partial-fill or
+sync-lag artifact in the executor's `kalshi_orders.fill_ts_utc`
+write-path; should be investigated separately.
+
+### 18.E Where the slippage comes from (synthesis)
+
+Decomposing the +15.6¢ mean slippage by stage (mean values; the
+stages don't cleanly add because of within-stage variance, but the
+order of magnitude is informative):
+
+| stage | mean delta | window p50 | \|delta\|≥2¢ rate |
+|---|---|---|---|
+| staleness (snapshot → decision) | +8.0¢ | ~80s | 89% |
+| latency (decision → submit) | +4.1¢ | ~10s | 49% |
+| execution (submit → fill) | -0.16¢ | ~3s | 14% |
+| **total observed (decision → fill)** | **+15.6¢** | — | — |
+
+The bulk of slippage is **staleness + latency**, both of which
+are visible to v2.0 design changes (better data-btc cadence,
+fresher snapshot retrieval at the start of LLM call, faster
+executor pickup). The submit-to-fill stage is already near zero.
+
+---
+
+## 19. PAPER KEV `decisions.input_tokens` DISTRIBUTION
+
+Pulled from Paper Kev `/data/bot.db`, last 14 days, `input_tokens
+IS NOT NULL`. **n = 2423.**
+
+| stat | value |
+|---|---|
+| min | 3 (skip-decision sentinel) |
+| p50 | 6,693 |
+| p90 | 7,762 |
+| p99 | 8,717 |
+| max | 9,034 |
+| mean | 6,247 |
+| stdev | 1,810 |
+
+5K-bucket histogram:
+
+| bucket | n |
+|---|---|
+| 0 - 4,999 | 339 |
+| 5,000 - 9,999 | 2,084 |
+| ≥ 10,000 | 0 |
+
+**There are no >100K-token outliers**, contrary to the Phase 3
+prompt's worry about "potential prompt bloat." The 0-4,999
+bucket is dominated by skip-decision rows where the prompt was
+trivially small (some have `input_tokens=3`, indicating a stub
+recorded for `_write_skip_decision` audit purposes). Real LLM
+calls cluster tightly in the 5-9K range.
+
+**p99 outlier cohort (n=25 rows, all input_tokens 8717-9034):**
+
+| feature | distribution |
+|---|---|
+| review_index | 100% are R2 of R2 (review 2 of 2) |
+| strategy_version | 100% v1.5 |
+| time_since_open_seconds | 562s - 711s (i.e. 9.4 - 11.9 min into the window) |
+| context_json bytes | 143,609 - 145,618 |
+
+The p99 cohort is uniformly **second-review decisions at the
+window midpoint+** — those are the prompts that carry the prior-
+decision block + intra-window 1m bar path, and consequently get
+the largest user prompt. The Phase 1 §2 estimate of "8-15K input
+tokens" overshot reality at the upper end; actual ceiling is ~9K.
+
+**Implication for v2.0:** prompt bloat is not currently a problem.
+Adding a slippage block (proposal in Phase 1 §7.1) of even
+generous size — say 1500 tokens — would push p99 to ~10.5K, well
+under any soft limit.
+
+---
+
+## 20. ARCHITECT DECISIONS NEEDED (Phase 3)
+
+Continuing numbering from Phase 2's items 5-8.
+
+| # | Decision | Why now |
+|---|---|---|
+| 9 | **"Live Kev" service identity.** Phase 3 prompt named `kevbot-kalshi15min-btc`; that service does not exist on Railway. There IS a detached volume `kevbot-kalshi15min-btc-volume-vuvl` (1 GB / 4.9 GB), suggesting a prior service was decommissioned. I treated `executor-portfolio-001` as Live Kev (its `kalshi_orders` schema matches every metric the prompt named). Confirm this is what you meant — or, if pre-decommission kevbot data on the detached volume is the intended source for §17, that requires temporary volume reattach (out of scope for read-only). | unblocks slippage analysis going forward |
+| 10 | **§17 sample-size acknowledgment.** n=37 orders over 24h, all post limit-to-market switch (2026-05-10), all `status='filled'`. The 14-day window the prompt assumed contains ~24h of executor data. Either (a) accept the n=37 directional findings as v2.0 design input, (b) wait for accumulated data and re-run §17 after another N days, or (c) attempt to recover pre-switch limit-era data from the detached kevbot volume. | governs how confident v2.0 design can be in the 15.6¢ headline |
+| 11 | **§18.A staleness threshold.** The prompt's >7s anomaly bar is wrong: 100% of decisions exceed it, p50=60s, max=600s. **Staleness is not anomalous — it's structural to a "poll → assemble → call LLM → insert" pipeline with a 30-90s LLM latency.** v2.0 design should set realistic staleness bars (e.g. >120s = anomaly) AND consider whether to refetch the snapshot AT decision insert time (after the LLM returns) so the trade row reflects real-time price for the executor. | concrete v2.0 mechanism choice |
+| 12 | **Slippage block content for v2.0.** Given the headline +15.6¢ mean (staleness 8¢, latency 4¢, execution ~0¢), what does the block surface to the LLM?<br>(a) realized slippage averages by tier × side × review (so the LLM can adjust break_even_prob_at_entry by an "expected fill premium")<br>(b) book-age-at-snapshot warning ("the prices below are 60s old; on average price moves +6c during this window")<br>(c) executor latency tail telemetry (to incentivize tighter trigger choice when latency is elevated)<br>(d) all of the above<br>The current `_build_realized_calibration_section` already emits `avg_fire_premium_cents` for `break_above`/`break_below` triggers — the v2.0 block can be a peer of that, computed from `executor.kalshi_orders.slippage_cents` joined to Paper. | shapes the prompt-side of v2.0 |
+| 13 | **Hypothesis trades reaching the executor.** Schema discovery confirmed 3 of 37 orders are `paper_trade_type='hypothesis'`. Phase 1 commit a275d8f introduced a hypothesis-trade filter; either it's not catching all hypothesis trades or these predate the filter going live. Worth a separate look at the executor's `routing.py` eligibility filter. (Not blocking v2.0 design but flagged.) | side-finding |
+| 14 | **submit_to_fill outlier (1453s on one order).** Median submit-to-fill is 3.2s; one order shows 1453s. Likely a partial-fill or sync-lag in the executor's `kalshi_orders.fill_ts_utc` write-path. Worth investigating separately so it doesn't poison §17 / §18 averages in future runs. | data-quality flag |
+
+---
+
+## 21. CLEANUP
+
+Phase 3 wrote raw JSON snapshots and the analysis script to
+[audit_phase3_data/](audit_phase3_data/) — `exec_orders.json`,
+`paper_decisions.json`, `paper_decisions_14d.json`,
+`dbtc_snapshots.json`, `analyze.py`, `analysis_output.txt`.
+Committed alongside the doc as auditable provenance for §17–§19;
+the analysis script is reproducible by `py audit_phase3_data/analyze.py`
+once the JSON files are in place.
+
+No production state mutated. No code changed in any service repo.
+Railway link state on operator's laptop is left at
+`kujaku-ai / patient-renewal / production` with last linked
+service `data-btc` (relinked through `kujaku-bot-kalshi15min-btc`
+and `executor-portfolio-001` during the audit).
+
+Repo: also note the kevbot-vs-executor naming question — no
+public `kevbot-*` repo exists on the Kujaku-ai GitHub org (only
+`kujaku-meta` and `kujaku-web` are public there); the detached
+`kevbot-kalshi15min-btc-volume-vuvl` Railway volume is the
+strongest evidence a Live Kev service existed once and was
+decommissioned in favor of `executor-portfolio-001`.
+
+**End of Phase 3.**

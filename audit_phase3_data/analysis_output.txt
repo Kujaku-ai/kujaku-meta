@@ -1,0 +1,130 @@
+=== JOIN: 37 executor orders matched to Paper decisions ===
+
+
+========= §17.A — SLIPPAGE DISTRIBUTION (filled orders) =========
+n_filled = 37
+slip_fill stats: mean=+15.57  stdev=13.20
+|slip_fill|: p50=12  p90=32  p95=35  p99=43  max=43
+Histogram (1c buckets):
+      <= -10  0
+    (-10,-5]  1
+     (-5,-1]  3
+           0  0
+       [1,5]  7
+      (5,10)  4
+        >=10  22
+
+========= §17.B — SLIPPAGE BREAKDOWNS =========
+
+— By tier (decision-price tier):
+  tier               n    mean   stdev   |p50|   |p90|
+  cheap              7   +5.43   15.76       3       8
+  middle            17  +17.41   10.64      18      32
+  expensive         13  +18.62   12.04      18      32
+
+— By TTE bucket (window_close − decision_ts):
+  tte          n    mean   stdev   |p50|   |p90|
+  3-8min      14   +8.93   12.53       7      25
+  8-14min     23  +19.61   11.89      22      32
+
+— By trade_type:
+  trade_type         n    mean   stdev   |p50|   |p90|
+  primary           29  +14.21   12.92      11      32
+  primary_scale      5  +26.20   13.36      32      40
+  hypothesis         3  +11.00    2.94      10      15
+
+— By side × review_index:
+  side/ri      n    mean   stdev
+  YES/R1       11  +15.55   11.80
+  YES/R2        8   +6.75    9.18
+  NO/R1       12  +23.33   10.70
+  NO/R2        6  +11.83   15.46
+
+========= §17.C — EXPIRY RATE =========
+status distribution: {'filled': 37}
+non-filled count: 0 of 37
+NOTE: per Phase 1 commit history, executor switched to MARKET orders on 2026-05-10
+(commits c282d02 / b06df21). All 37 orders post-switch are status=filled by
+construction; there is no limit-expiry distribution to report.
+
+========= §17.D — DECISION-TO-SUBMIT LATENCY =========
+n = 37
+decision_ts -> placed_ts: min=3.13s  p50=10.66s  p90=129.45s  p99=246.75s  max=246.75s
+seen_at_ts (executor saw paper trade) -> placed_ts: p50=0.215s  p99=0.324s
+Pearson r(decision_to_submit_s, |slip_fill|) = 0.227  (n=37)
+Spearman r = 0.200
+
+========= §18.A — SNAPSHOT AGE AT DECISION TIME =========
+
+BROADER (full 14d Paper Kev decisions, n=2423):
+n with mkt_ts = 2423
+book_age_s: min=22.45  p50=59.82  p90=93.37  p99=260.29  max=599.66
+>7s:  2423 (100.00%)
+>15s: 2423 (100.00%)
+>30s: 2331 (96.20%)
+>60s: 1202 (49.61%)
+
+LIVE-KEV (only the 34 ordered decisions):
+n = 37
+book_age_s: min=41.22  p50=78.51  p90=93.60  p99=219.78  max=219.78
+
+========= §18.B — PRICE MOVEMENT DURING STALENESS WINDOW =========
+(LLM-perceived snapshot vs data-btc snapshot at decision time, on the side actually traded)
+n = 37
+yes/no_ask delta (real − perceived): mean=+8.03  stdev=15.17
+|delta|: p50=6  p90=28  max=44
+|delta| >= 2c: 33 (89.2%)
+
+========= §18.C — PRICE MOVEMENT DECISION → SUBMIT =========
+(data-btc snapshot at decision_ts vs at placed_ts)
+n = 37
+ask delta (placed − decision): mean=+4.11  stdev=8.00
+|delta|: p50=1  p90=12  max=28
+|delta| >= 2c: 18 (48.6%)
+
+========= §18.D — PRICE MOVEMENT SUBMIT → FILL =========
+(data-btc snapshot at placed_ts vs at fill_ts; filled orders only)
+n = 37
+ask delta (fill − placed): mean=-0.16  stdev=10.32
+|delta|: p50=0  p90=4  max=54
+|delta| >= 2c: 5 (13.5%)
+submit_to_fill_s: p50=3.2s p99=1453.5s
+
+========= §17 RAW JOIN ROWS (for audit reproducibility) =========
+  oid=  1  pdid=3800  NO  tier=cheap  TTE=3-8min  dec_p=12  fill_p=4  slip=-8  d2s=229.4s  trade_type=primary
+  oid=  2  pdid=3801  YES  tier=middle  TTE=8-14min  dec_p=48  fill_p=49  slip=+1  d2s=9.0s  trade_type=primary
+  oid=  3  pdid=3803  YES  tier=expensive  TTE=8-14min  dec_p=63  fill_p=78  slip=+15  d2s=50.6s  trade_type=hypothesis
+  oid=  4  pdid=3805  YES  tier=middle  TTE=8-14min  dec_p=34  fill_p=59  slip=+25  d2s=91.7s  trade_type=primary
+  oid=  5  pdid=3807  NO  tier=middle  TTE=8-14min  dec_p=45  fill_p=63  slip=+18  d2s=3.1s  trade_type=primary
+  oid=  6  pdid=3808  YES  tier=middle  TTE=3-8min  dec_p=16  fill_p=41  slip=+25  d2s=39.5s  trade_type=primary
+  oid=  7  pdid=3809  YES  tier=expensive  TTE=8-14min  dec_p=53  fill_p=63  slip=+10  d2s=9.2s  trade_type=hypothesis
+  oid=  8  pdid=3811  YES  tier=expensive  TTE=8-14min  dec_p=57  fill_p=65  slip=+8  d2s=129.4s  trade_type=hypothesis
+  oid=  9  pdid=3812  YES  tier=expensive  TTE=3-8min  dec_p=58  fill_p=76  slip=+18  d2s=12.1s  trade_type=primary
+  oid= 10  pdid=3815  YES  tier=middle  TTE=8-14min  dec_p=42  fill_p=77  slip=+35  d2s=12.6s  trade_type=primary
+  oid= 11  pdid=3819  NO  tier=middle  TTE=8-14min  dec_p=47  fill_p=58  slip=+11  d2s=16.8s  trade_type=primary
+  oid= 12  pdid=3820  YES  tier=cheap  TTE=3-8min  dec_p=5  fill_p=4  slip=-1  d2s=44.8s  trade_type=primary
+  oid= 13  pdid=3821  NO  tier=middle  TTE=8-14min  dec_p=39  fill_p=45  slip=+6  d2s=9.4s  trade_type=primary
+  oid= 14  pdid=3823  NO  tier=middle  TTE=8-14min  dec_p=47  fill_p=79  slip=+32  d2s=6.2s  trade_type=primary
+  oid= 15  pdid=3823  NO  tier=middle  TTE=8-14min  dec_p=47  fill_p=79  slip=+32  d2s=7.9s  trade_type=primary_scale
+  oid= 16  pdid=3824  YES  tier=cheap  TTE=3-8min  dec_p=11  fill_p=14  slip=+3  d2s=5.1s  trade_type=primary
+  oid= 17  pdid=3827  NO  tier=expensive  TTE=8-14min  dec_p=54  fill_p=86  slip=+32  d2s=5.9s  trade_type=primary
+  oid= 18  pdid=3827  NO  tier=expensive  TTE=8-14min  dec_p=54  fill_p=94  slip=+40  d2s=107.6s  trade_type=primary_scale
+  oid= 19  pdid=3828  YES  tier=cheap  TTE=3-8min  dec_p=4  fill_p=3  slip=-1  d2s=10.7s  trade_type=primary
+  oid= 20  pdid=3830  NO  tier=cheap  TTE=3-8min  dec_p=8  fill_p=51  slip=+43  d2s=130.1s  trade_type=primary
+  oid= 21  pdid=3834  NO  tier=middle  TTE=3-8min  dec_p=41  fill_p=52  slip=+11  d2s=10.1s  trade_type=primary
+  oid= 22  pdid=3835  NO  tier=middle  TTE=8-14min  dec_p=45  fill_p=50  slip=+5  d2s=46.9s  trade_type=primary
+  oid= 23  pdid=3839  YES  tier=expensive  TTE=8-14min  dec_p=53  fill_p=54  slip=+1  d2s=82.1s  trade_type=primary_scale
+  oid= 24  pdid=3840  YES  tier=middle  TTE=3-8min  dec_p=38  fill_p=45  slip=+7  d2s=6.3s  trade_type=primary
+  oid= 25  pdid=3843  YES  tier=expensive  TTE=8-14min  dec_p=62  fill_p=84  slip=+22  d2s=10.1s  trade_type=primary
+  oid= 26  pdid=3843  YES  tier=expensive  TTE=8-14min  dec_p=62  fill_p=94  slip=+32  d2s=111.6s  trade_type=primary_scale
+  oid= 27  pdid=3845  YES  tier=expensive  TTE=8-14min  dec_p=63  fill_p=64  slip=+1  d2s=9.3s  trade_type=primary
+  oid= 28  pdid=3846  YES  tier=middle  TTE=3-8min  dec_p=21  fill_p=26  slip=+5  d2s=4.8s  trade_type=primary
+  oid= 29  pdid=3848  NO  tier=cheap  TTE=3-8min  dec_p=7  fill_p=11  slip=+4  d2s=9.3s  trade_type=primary
+  oid= 30  pdid=3849  NO  tier=middle  TTE=8-14min  dec_p=45  fill_p=67  slip=+22  d2s=164.9s  trade_type=primary
+  oid= 31  pdid=3853  NO  tier=expensive  TTE=8-14min  dec_p=66  fill_p=94  slip=+28  d2s=13.5s  trade_type=primary
+  oid= 32  pdid=3856  NO  tier=middle  TTE=3-8min  dec_p=18  fill_p=30  slip=+12  d2s=5.7s  trade_type=primary
+  oid= 33  pdid=3857  NO  tier=expensive  TTE=8-14min  dec_p=50  fill_p=76  slip=+26  d2s=246.8s  trade_type=primary_scale
+  oid= 34  pdid=3858  YES  tier=cheap  TTE=3-8min  dec_p=4  fill_p=2  slip=-2  d2s=12.3s  trade_type=primary
+  oid= 35  pdid=3859  NO  tier=middle  TTE=8-14min  dec_p=47  fill_p=75  slip=+28  d2s=10.4s  trade_type=primary
+  oid= 36  pdid=3860  NO  tier=expensive  TTE=3-8min  dec_p=74  fill_p=83  slip=+9  d2s=5.9s  trade_type=primary
+  oid= 37  pdid=3861  YES  tier=middle  TTE=8-14min  dec_p=44  fill_p=65  slip=+21  d2s=8.9s  trade_type=primary
