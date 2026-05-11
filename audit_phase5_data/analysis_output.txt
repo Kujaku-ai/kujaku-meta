@@ -1,0 +1,135 @@
+Loading datasets…
+Parsing timestamps…
+  kalshi: 119556 snaps in 1331 tickers
+  coinbase: 118785 ticks
+  exec orders: 37; paper decisions: 34; paper trades: 37
+
+============================================================
+§27.A — DATA PREPARATION
+============================================================
+Pairing: 104509 paired / 1723 unpairable (no ±15s spot tick)
+Tickers with ≥30 paired observations: 1312 / 1331
+
+============================================================
+§27.B — CROSS-CORRELATION (BTC spot vs Kalshi yes_ask)
+============================================================
+
+Note: data cadence is ~10s on both sides; cross-correlation lag
+resolution is bounded by that. Lags reported in 10s-step indices.
+
+Pooled across 1312 qualifying tickers:
+  Mean peak-corr LAG (10s steps): 1.20
+  Mean peak-corr LAG (seconds):    12.0
+  Mean peak-corr MAGNITUDE (Pearson r): 0.367
+  Median peak-corr magnitude: 0.362
+
+Peak-lag histogram (10s-step buckets):
+  lag=0 (0s):  401  ██████████████████████████████████████████
+  lag=1 (10s):  470  ██████████████████████████████████████████████████
+  lag=2 (20s):  295  ███████████████████████████████
+  lag=3 (30s):   97  ██████████
+  lag=4 (40s):   27  ██
+  lag=5 (50s):   18  █
+  lag=6 (60s):    4  
+
+Fraction of tickers with peak lag = 0 (Kalshi tracks BTC same-tick): 30.6%
+Fraction with peak lag >= 1 (Kalshi follows BTC by ≥10s): 69.4%
+
+When Kalshi lags BTC (n=911 windows), peak |r|:
+  mean: 0.368  p50: 0.363  p90: 0.513
+
+============================================================
+§27.C — SLIPPAGE-DIRECTION TEST
+============================================================
+
+n (matched orders with spot lookups): 37
+
+Cross-tab: BTC direction during decision→submit window vs slippage direction:
+
+                             adverse_slip    fav_slip
+  adverse_btc (toward away-strike)             8           0
+  favorable_btc (toward strike)            18           4
+  flat_btc (delta == 0)                 7           0
+
+Mean slip_fill_cents by BTC direction during d→s window:
+  adverse_btc (n=  8): mean slip = +12.12 c   stdev=11.88
+  favorable_btc (n= 22): mean slip = +16.41 c   stdev=14.24
+
+============================================================
+§28 — TRIGGER-FILL vs IMMEDIATE-FILL SLIPPAGE
+============================================================
+
+NOTE: Phase 5 schema discovery confirms ALL 37 orders have
+trigger_type ∈ {break_above, break_below}, fill_method='natural'.
+ZERO orders have entry_strategy='immediate' — Rule 6d-hard (v1.7.7)
+hard-blocks immediate at non-very_cheap tiers, and zero very_cheap
+primaries appeared in the 24h Live Kev sample. Splitting by d2pf
+(decision_ts → paper_fill_ts) instead — captures the 'soft immediate'
+pattern (trigger set at current price, fires within seconds).
+
+EFFECTIVELY IMMEDIATE (d2pf < 5s): n=21
+  mean slip:  +14.90c   stdev: 11.78
+  median:     +11c
+  |slip| p50: 11c   p90: 32c   max: 35c
+
+GENUINELY TRIGGERED  (d2pf ≥ 5s): n=16
+  mean slip:  +16.44c   stdev: 14.80
+  median:     +18c
+  |slip| p50: 21c   p90: 40c   max: 43c
+
+Mann-Whitney U test (slip_fill across the two groups):
+  U=164  z=-0.138  two-sided p=0.8903
+  Mean slip difference (genuine − soft): +1.53c
+  (Effect size and p-value caveats apply at n_soft=21, n_gen=16.)
+
+Slippage by trigger_type (all orders are break_above or break_below):
+  break_above    n= 19  mean=+11.84c  stdev=11.62
+  break_below    n= 18  mean=+19.50c  stdev=13.61
+
+§28.C — Wait-time vs slip correlation (genuinely triggered, n=16):
+  Pearson r(d2pf, slip): 0.162
+  30s-bucket cross-tab:
+    bucket         n   mean_slip     stdev
+    [  5, 30)s     3      +10.00      9.42
+    [ 30, 60)s     4      +11.00      9.90
+    [ 60,120)s     4      +24.50     14.57
+    [120,300)s     5      +18.20     17.21
+
+§28 raw rows (sorted by d2pf):
+  oid= 17  NO break_below   d2pf=  0.70s  dec_p= 54c  fill_p= 86c  slip= +32c  (soft)
+  oid=  7 YES break_above   d2pf=  0.98s  dec_p= 53c  fill_p= 63c  slip= +10c  (soft)
+  oid= 16 YES break_above   d2pf=  1.15s  dec_p= 11c  fill_p= 14c  slip=  +3c  (soft)
+  oid= 29  NO break_below   d2pf=  1.73s  dec_p=  7c  fill_p= 11c  slip=  +4c  (soft)
+  oid=  5  NO break_below   d2pf=  1.83s  dec_p= 45c  fill_p= 63c  slip= +18c  (soft)
+  oid= 27 YES break_above   d2pf=  2.38s  dec_p= 63c  fill_p= 64c  slip=  +1c  (soft)
+  oid= 24 YES break_above   d2pf=  2.65s  dec_p= 38c  fill_p= 45c  slip=  +7c  (soft)
+  oid= 13  NO break_below   d2pf=  2.78s  dec_p= 39c  fill_p= 45c  slip=  +6c  (soft)
+  oid= 21  NO break_below   d2pf=  3.01s  dec_p= 41c  fill_p= 52c  slip= +11c  (soft)
+  oid= 10 YES break_above   d2pf=  3.25s  dec_p= 42c  fill_p= 77c  slip= +35c  (soft)
+  oid= 28 YES break_above   d2pf=  3.59s  dec_p= 21c  fill_p= 26c  slip=  +5c  (soft)
+  oid= 25 YES break_above   d2pf=  3.62s  dec_p= 62c  fill_p= 84c  slip= +22c  (soft)
+  oid= 35  NO break_below   d2pf=  3.80s  dec_p= 47c  fill_p= 75c  slip= +28c  (soft)
+  oid= 31  NO break_below   d2pf=  3.95s  dec_p= 66c  fill_p= 94c  slip= +28c  (soft)
+  oid= 14  NO break_below   d2pf=  4.01s  dec_p= 47c  fill_p= 79c  slip= +32c  (soft)
+  oid= 15  NO break_below   d2pf=  4.01s  dec_p= 47c  fill_p= 79c  slip= +32c  (soft)
+  oid= 19 YES break_above   d2pf=  4.52s  dec_p=  4c  fill_p=  3c  slip=  -1c  (soft)
+  oid=  9 YES break_above   d2pf=  4.67s  dec_p= 58c  fill_p= 76c  slip= +18c  (soft)
+  oid= 32  NO break_below   d2pf=  4.73s  dec_p= 18c  fill_p= 30c  slip= +12c  (soft)
+  oid= 36  NO break_below   d2pf=  4.81s  dec_p= 74c  fill_p= 83c  slip=  +9c  (soft)
+  oid=  2 YES break_above   d2pf=  4.95s  dec_p= 48c  fill_p= 49c  slip=  +1c  (soft)
+  oid= 37 YES break_above   d2pf=  8.11s  dec_p= 44c  fill_p= 65c  slip= +21c  (gen)
+  oid= 11  NO break_below   d2pf=  8.53s  dec_p= 47c  fill_p= 58c  slip= +11c  (gen)
+  oid= 34 YES break_above   d2pf=  9.06s  dec_p=  4c  fill_p=  2c  slip=  -2c  (gen)
+  oid= 12 YES break_above   d2pf= 35.25s  dec_p=  5c  fill_p=  4c  slip=  -1c  (gen)
+  oid=  6 YES break_above   d2pf= 39.21s  dec_p= 16c  fill_p= 41c  slip= +25c  (gen)
+  oid= 22  NO break_below   d2pf= 41.39s  dec_p= 45c  fill_p= 50c  slip=  +5c  (gen)
+  oid=  3 YES break_above   d2pf= 45.49s  dec_p= 63c  fill_p= 78c  slip= +15c  (gen)
+  oid= 23 YES break_above   d2pf= 74.93s  dec_p= 53c  fill_p= 54c  slip=  +1c  (gen)
+  oid=  4 YES break_above   d2pf= 88.95s  dec_p= 34c  fill_p= 59c  slip= +25c  (gen)
+  oid= 26 YES break_above   d2pf=102.20s  dec_p= 62c  fill_p= 94c  slip= +32c  (gen)
+  oid= 18  NO break_below   d2pf=104.73s  dec_p= 54c  fill_p= 94c  slip= +40c  (gen)
+  oid=  8 YES break_above   d2pf=128.12s  dec_p= 57c  fill_p= 65c  slip=  +8c  (gen)
+  oid= 20  NO break_below   d2pf=129.03s  dec_p=  8c  fill_p= 51c  slip= +43c  (gen)
+  oid= 30  NO break_below   d2pf=162.51s  dec_p= 45c  fill_p= 67c  slip= +22c  (gen)
+  oid=  1  NO break_below   d2pf=225.89s  dec_p= 12c  fill_p=  4c  slip=  -8c  (gen)
+  oid= 33  NO break_below   d2pf=243.79s  dec_p= 50c  fill_p= 76c  slip= +26c  (gen)

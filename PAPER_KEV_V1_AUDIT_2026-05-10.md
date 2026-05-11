@@ -2007,3 +2007,386 @@ link state on the operator's laptop is left at
 Phase 3.
 
 **End of Phase 4.**
+
+---
+
+# PHASE 5 — DIAGNOSTIC TRIPLE (2026-05-10)
+
+**Phase 5 audited by:** Claude Code, bypass mode, read-only on
+all production DBs. Same audit document; §27–§30 appended.
+§1–§26 unchanged. Provenance: new dumps in
+[audit_phase5_data/](audit_phase5_data/) — `kalshi_snaps_14d.json`
+(31 MB, 119,556 rows), `coinbase_btc_14d.json` (15 MB,
+118,785 rows), and `analyze.py` reproducing every number below.
+
+---
+
+## 27. BTC-SPOT vs KALSHI-BOOK LEAD/LAG
+
+### 27.A Data preparation
+
+Sample: all KXBTC15M kalshi_snapshots in last 14 days (n=119,556
+across 1,331 unique tickers ≈ 14d × 96 windows/day) + all
+Coinbase BTC/USD ticks in the same window (n=118,785). Both data
+sources are at **~10 second cadence** (with jitter); Coinbase has
+118,766 ticks / 14d ≈ one tick per ~10s. The Phase 5 prompt asked
+for "1-second resolution returns" — that is **not achievable** at
+the underlying data cadence and would require resampling /
+interpolation that introduces artifacts. I report cross-correlation
+at the data's natural ~10s grid resolution and document this as
+the precision floor.
+
+For each kalshi snapshot, paired with the closest Coinbase tick
+within ±15s (tighter than the prompt's ±60s, to keep the pairing
+defensible at this cadence). Of 119,556 snapshots, **104,509
+paired** (87.4%); 1,723 dropped for no spot tick within ±15s.
+Tickers with ≥30 paired observations (the prompt threshold):
+**1,312 of 1,331** (98.6%).
+
+### 27.B Cross-correlation results
+
+For each qualifying ticker:
+- 1-step price differences `Δ_yes_ask[i] = yes_ask[i] − yes_ask[i−1]`
+  and `Δ_spot[i] = spot[i] − spot[i−1]`
+- For lag k ∈ {0, 1, 2, 3, 4, 5, 6} (where lag 1 = ~10s):
+  Pearson r between `Δ_spot[:−k]` (BTC earlier) and `Δ_yes_ask[k:]`
+  (Kalshi later)
+- Pick the lag at which r is maximum
+
+| Pooled stat | value |
+|---|---|
+| n qualifying windows | 1,312 |
+| **Mean peak-correlation lag** | **1.20 grid steps = ~12 seconds** |
+| Mean peak-correlation magnitude (Pearson r) | 0.367 |
+| Median peak |r| | 0.362 |
+
+Peak-lag histogram (10s-step buckets):
+
+| lag | seconds | n windows | % |
+|---|---|---|---|
+| 0 | 0s | 401 | 30.6% |
+| 1 | 10s | **470** | **35.8%** |
+| 2 | 20s | 295 | 22.5% |
+| 3 | 30s | 97 | 7.4% |
+| 4 | 40s | 27 | 2.1% |
+| 5 | 50s | 18 | 1.4% |
+| 6 | 60s | 4 | 0.3% |
+
+**The Coinbase-leads-Kalshi hypothesis is CONFIRMED.** 69.4% of
+windows have a peak correlation at lag ≥ 1 (Kalshi follows BTC
+by ≥10s); the modal lag is exactly 10 seconds. Mean lag ~12s
+across the full sample. Of the windows where Kalshi clearly
+lags (n=911, peak lag ≥ 1), the median |r| is 0.36 with p90 of
+0.51 — a real signal, not noise.
+
+By TTE bucket: not broken out separately because the per-window
+lag is computed across the full window (not at a single TTE
+moment); doing TTE-bucketed lag would require sliding-window
+analysis, deferred to Phase 6 if useful.
+
+### 27.C Slippage-direction test (n=37)
+
+For each of the 37 Live Kev orders: BTC spot at decision_ts and
+at placed_ts, both pulled from Coinbase price_ticks via
+nearest-±60s lookup. "Adverse_btc" = BTC moved AWAY from our
+position's win condition during the d→s window (YES bet → BTC
+fell; NO bet → BTC rose). "Favorable_btc" = the opposite.
+
+| BTC direction during d→s | n | adverse_slip | favorable_slip |
+|---|---|---|---|
+| adverse_btc (toward losing-side) | 8 | 8 | 0 |
+| favorable_btc (toward winning-side) | 22 | 18 | 4 |
+| flat_btc (Δ = 0) | 7 | 7 | 0 |
+
+| direction | n | mean slip | stdev |
+|---|---|---|---|
+| adverse_btc | 8 | +12.12¢ | 11.88 |
+| favorable_btc | 22 | **+16.41¢** | 14.24 |
+
+**Counterintuitive but consistent with the 27.B finding.** When
+BTC moves **favorably** for our trade during the d→s window, the
+Kalshi fill is on average **WORSE** than when BTC moves adversely
+(+16.4¢ vs +12.1¢). The 22 favorable-BTC orders ate the most
+slippage.
+
+The mechanism: by the time Paper's decision is inserted (60-90s
+after the snapshot was fetched), BTC has already moved. The
+~12s Kalshi lag means market-makers see the same BTC move and
+**reprice the side we're buying higher**. By the time the
+executor places the market order (10s later still), the MM
+adjustment is in the book and we cross the spread at the
+already-adjusted price.
+
+Translation for v2.0 design: **the BTC-leads-Kalshi alpha
+exists, but it is consumed by Kalshi MMs by the time the
+executor's market order touches the book.** The +12s lag is
+visible in the data — but it is the MM's lead, not ours.
+"Theoretical fair odds context" added to the prompt would help
+the LLM reason about *expected* Kalshi prices given current BTC
+spot, but capturing the alpha requires either:
+(a) acting *before* the MM repricing (sub-12s end-to-end
+    latency, infeasible per Phase 4 §23.B),
+(b) limit orders inside the MM-anchored spread (executor
+    architectural reversal — limit-to-market switch was 2026-05-10
+    explicitly to abandon this), or
+(c) using BTC-direction itself as a signal feature rather than
+    a hidden free-money window.
+
+### 27.D Verdict
+
+| question | answer |
+|---|---|
+| Coinbase leads Kalshi? | **Yes — by ~12 seconds on average across 1,312 windows** |
+| Does that lead translate to capturable alpha for our market orders? | **No — the +15.6¢ Phase 3 slippage suggests MMs already arbitrage the lead before our order arrives** |
+| Should v2.0 add "theoretical fair odds context" to the prompt? | **Yes for prompt richness, but as a SIGNAL feature, not as a pricing prediction the executor can capture** |
+| Is the operator's design path for "stable + immediate" alive? | **Conditional — see §28** |
+
+---
+
+## 28. TRIGGER-FILL vs IMMEDIATE-FILL SLIPPAGE
+
+### 28.A Re-framing required
+
+Schema discovery in Phase 5 produced a finding that changes the
+shape of §28: **all 37 executor orders have `trigger_type ∈
+{break_above, break_below}` and `fill_method='natural'`. Zero
+orders have `entry_strategy='immediate'`.** Per Phase 1 §4
+documentation of Rule 6d-hard (v1.7.7, [claude_client.py:1546-1560](bot-kalshi15min-btc/app/claude_client.py#L1546-L1560)),
+`immediate` is hard-blocked at every tier above `very_cheap`,
+and zero `very_cheap` primaries appeared in the 24h Live Kev
+sample. So a literal "immediate vs triggered" split has n_immediate=0
+in this sample.
+
+The architect's design hypothesis still has a meaningful test
+under a re-framing: **soft-immediate vs genuinely-triggered**,
+split by the time between decision_ts and paper_fill_ts (d2pf):
+
+- **Effectively immediate**: `d2pf < 5s` — the LLM set the trigger
+  at (or very near) the current price, and the watcher fired it on
+  the next tick. This is the documented "soft immediate" pattern
+  (system prompt: "PREFER TRIGGERS WHEN EDGE IS THIN... A trigger
+  set at the current price fires within seconds on a continuing
+  move").
+- **Genuinely triggered**: `d2pf ≥ 5s` — the LLM set the trigger
+  at a future price level, and the watcher waited for BTC to
+  reach it.
+
+### 28.B Slippage comparison
+
+| group | n | mean slip | stdev | median | \|slip\| p50 | \|slip\| p90 |
+|---|---|---|---|---|---|---|
+| Effectively immediate (d2pf < 5s) | 21 | +14.90¢ | 11.78 | +11¢ | 11¢ | 32¢ |
+| Genuinely triggered (d2pf ≥ 5s) | 16 | +16.44¢ | 14.80 | +18¢ | 21¢ | 40¢ |
+
+Mann-Whitney U test (two-sided, slip across the two groups):
+- U = 164, z = −0.138, **two-sided p = 0.89**
+- Mean slip difference (genuine − soft) = +1.53¢
+- Effect size is tiny; n_soft=21, n_gen=16 limits power, but this
+  is far from a directional signal.
+
+**Verdict: at this sample size, genuinely-triggered fills are NOT
+detectably worse than effectively-immediate fills.** Both groups
+sit at the same +15¢ mean slippage. The architect's hypothesis
+("trigger fires INTO hostile book") gets very weak directional
+support from the +1.5¢ difference but no statistical confirmation.
+
+### 28.B (extension) — by trigger_type
+
+All 37 orders are `break_above` or `break_below`. Splitting:
+
+| trigger_type | n | mean slip | stdev |
+|---|---|---|---|
+| break_above (YES) | 19 | +11.84¢ | 11.62 |
+| break_below (NO) | 18 | **+19.50¢** | 13.61 |
+
+NO triggers (`break_below`) run +7.7¢ worse than YES. This
+matches Phase 3 §17.B's finding that the NO/R1 slice was the
+worst (+23.3¢, n=12). It is not just an R1 effect — it is a
+NO-side / `break_below` effect.
+
+### 28.C Wait-time vs slippage correlation
+
+For genuinely-triggered fills only (n=16):
+
+- Pearson r(d2pf, slip) = **0.162** (weak positive)
+
+30s-bucket cross-tab:
+
+| d2pf bucket | n | mean slip | stdev |
+|---|---|---|---|
+| [5, 30)s | 3 | +10.00¢ | 9.42 |
+| [30, 60)s | 4 | +11.00¢ | 9.90 |
+| [60, 120)s | 4 | **+24.50¢** | 14.57 |
+| [120, 300)s | 5 | +18.20¢ | 17.21 |
+
+The 60-120s wait bucket has the worst slippage by mean (+24.5¢,
+~2× the 30-60s bucket). **Directional support for the architect's
+"trigger fires into hostile book" hypothesis at the long-wait
+end** — but n=4 is too small for confidence. The pattern is
+consistent with what §27 implies: a long-wait trigger gives MMs
+30-120s to reprice in the direction of the BTC move that fires
+the trigger.
+
+### 28.D Verdict
+
+| question | answer |
+|---|---|
+| Are triggered fills worse than soft-immediate fills? | **Not significantly at n=37** (+1.5¢ diff, p=0.89) |
+| Are very-long-wait triggers worse than short-wait triggers? | **Directional yes** — 60-120s wait bucket is +14¢ worse than the 30-60s bucket (n=4 vs 4, weak) |
+| Is the operator's "stable + immediate" design path alive? | **Conditional**: if the goal is to avoid the long-wait subset specifically, yes — but at n=4 the long-wait penalty is not yet a confirmed pattern |
+| Does NO-side trigger entries get worse fills than YES-side? | **Yes, +7.7¢ difference** (n=18 vs 19), consistent across Phase 3 review breakdown — worth investigating as its own fix candidate |
+
+---
+
+## 29. SCALE-ENTRY USAGE RATE
+
+### 29.A Raw rate
+
+Sample: all 14d Paper Kev decisions where `entries_count ≥ 2`
+(i.e. excluding skip-decisions), `response_json` parseable. n =
+**2,429** decisions.
+
+| metric | value |
+|---|---|
+| Total qualifying decisions (14d) | 2,429 |
+| Decisions with ≥1 scale entry | **206** |
+| **Rate** | **8.48%** |
+| Decisions with ≥2 scale entries | 0 (the spec cap is 2; LLM never invokes both) |
+| Parse errors | 0 |
+
+The capability is alive but underused. About 1 in every 12
+trader-decisions includes a scale entry.
+
+### 29.B Cross-decision context
+
+**By primary tier** (with-scale vs without):
+
+| tier | with-scale | without-scale | conditional rate |
+|---|---|---|---|
+| very_cheap | 0 | 431 | 0.0% |
+| cheap | 60 | 455 | 11.7% |
+| middle | 80 | 646 | 11.0% |
+| expensive | 65 | 368 | 15.0% |
+| very_expensive | 1 | 323 | 0.3% |
+
+The LLM uses scale entries roughly equally on cheap / middle /
+expensive primaries (11-15%), and almost never on very_cheap or
+very_expensive. The very_expensive abstinence makes sense
+(Rule 5d-hard hard-skips primary at very_expensive, so most
+very_expensive primary blocks become dissent-only and there is
+no parent for a scale entry).
+
+**By thesis:**
+
+| thesis | with-scale | % of with-scale |
+|---|---|---|
+| continuation | 200 | 97.1% |
+| reversal | 6 | 2.9% |
+
+**By review_index:**
+
+| review | with-scale | % of with-scale |
+|---|---|---|
+| R1 (review 1 of N) | 204 | 99.0% |
+| R2 (review 2 of N) | 2 | 1.0% |
+
+Scale entries are essentially R1-only and continuation-thesis-only.
+This matches the system prompt guidance ("omit scale_entries when
+window expires in <5 minutes"), which de facto means the second
+review (~7-9 min into the 15-min window, ~5-7 min remaining)
+gets very few scale entries.
+
+**Scale-entry strategy distribution** (across the 206 scale entries — sums ≥ 206 because each decision can have 1 entry; total = 206):
+
+| entry_strategy | count | % |
+|---|---|---|
+| break_below | 106 | 51.5% |
+| pullback_to | 37 | 18.0% |
+| break_above | 27 | 13.1% |
+| pullback_and_hold | 20 | 9.7% |
+| pullback_and_reject | 16 | 7.8% |
+
+**Note on pullback_to and pullback_and_hold:** Phase 1 §1
+documented these were REMOVED from `ScaleEntryBlockV16` allowed
+values in v1.6.4 (pullback_to, 2026-04-29) and v1.6.6
+(pullback_and_hold, 2026-04-29). The 37 + 20 = 57 such scale
+entries in this 14d window (which spans 2026-04-27 → 2026-05-11)
+fall predominantly in the pre-removal era (2026-04-27 to
+2026-04-29). Sample records confirm: ids 1351, 1357, 1365, 1367,
+1369 all from 2026-04-27.
+
+**Scale-entry tier distribution:**
+
+| scale tier | count | % |
+|---|---|---|
+| middle | 81 | 39.3% |
+| cheap | 69 | 33.5% |
+| expensive | 44 | 21.4% |
+| very_cheap | 9 | 4.4% |
+| very_expensive | 3 | 1.5% |
+
+Scale tiers cluster in the cheap-to-middle band, which matches
+the system prompt's "EXPENSIVE CONVICTION PATTERN": expensive
+primary + scale at the cheaper retracement zone.
+
+### 29.C Scale-entry executor fill rate (Phase 3 sample only)
+
+From Phase 3 §17.B's `paper_trade_type` breakdown (n=37 executor
+orders):
+
+| trade_type | n in executor | mean slip |
+|---|---|---|
+| primary | 29 | +14.21¢ |
+| primary_scale | **5** | **+26.20¢** |
+| hypothesis | 3 | +11.00¢ |
+
+5 of 37 executor orders (13.5%) are scale entries. Scale-entry
+slip mean (+26.2¢) is meaningfully worse than primary slip
+(+14.2¢). At n=5 this is directional, not statistically
+established — but combined with §29.B's "scale entries
+concentrated on continuation/R1, often at expensive primary
+tier with cheaper retracement target" picture, it is plausible
+that scale entries fire after BTC has moved further in the
+primary's direction (firing the break trigger at a worse price)
+than if they had not been triggered at all.
+
+### 29.D Verdict
+
+| question | answer |
+|---|---|
+| Is the scale-entry capability alive? | **Yes — used in 8.5% of decisions** |
+| Is it dead, underused, working at low rate, or pervasive? | **Working at low rate.** Not dead, but a clear minority pattern — and confined to continuation/R1/cheap-to-expensive primaries |
+| Should v1.7.8 expand scale-entry usage? | **Open question.** Scale entries currently slip ~2× harder than primaries (+26¢ vs +14¢ at n=5), so blanket "use scale entries more" would amplify the slippage problem. The PROFITABLE-by-construction subset is `pullback_and_reject` (the only scale strategy that requires confluence reassertion before firing) — Phase 1 §1 noted PAR is the sanctioned successor to the removed pullback_to / pullback_and_hold |
+
+---
+
+## 30. ARCHITECT DECISIONS NEEDED (Phase 5)
+
+Continuing numbering from Phase 1-4's items 1-20.
+
+| # | Decision | Affects v1.7.8 |
+|---|---|---|
+| 21 | **§27.D adopted: Coinbase-leads-Kalshi is REAL but not capturable by current architecture.** A "theoretical fair odds context" prompt block can land in v2.0 as a SIGNAL feature (LLM-side reasoning richness), not a free-money window for the executor. Confirm or push back. | shapes the v2.0 slippage block design |
+| 22 | **§28.D adopted: trigger-vs-immediate slippage is statistically indistinguishable at n=37.** The "stable + immediate" design path needs a different motivation than "triggers fire into hostile books." Two motivations remain: (a) NO-side triggers run +7.7¢ worse than YES (real but unexplained), (b) very-long-wait triggers (60-120s) directionally worse but n=4. Pick a v1.7.8 patch direction. | direct slippage reduction |
+| 23 | **§29.D adopted: scale entries are alive at 8.5%, slip ~2× harder than primaries.** Three v1.7.8 options: (a) leave as-is and let the v2.0 slippage block teach the LLM to be more cautious, (b) tighten the scale-entry prompt language to default toward `pullback_and_reject` only (the confluence-confirmed variant), (c) add a slippage-aware Pydantic soft rule that blocks scale entries when expected combined slippage exceeds a threshold. | prompt-side or validator-side patch |
+| 24 | **NO-side bias is a previously-unflagged finding.** Phase 3 §17.B noted NO/R1 was worst (+23.3¢, n=12). Phase 5 §28.B isolates the effect to `break_below` (NO triggers): +19.5¢ vs +11.8¢ on `break_above` (YES). Across both phases, NO trades on the executor have a consistent ~+8¢ excess slippage vs YES. **Possible explanations:** Kalshi's NO-side ask has wider spread by structural design; MM inventory imbalance favors YES on KXBTC15M; Paper's break_below trigger evaluation has a sign error. Worth dedicated investigation as v1.7.8 candidate. | possible large-impact fix |
+| 25 | **Phase 5 prompt's 1-second resolution requirement was not achievable.** Underlying data cadence is ~10s on both kalshi_snapshots and price_ticks. I reported at 10s grid resolution and acknowledged the ceiling. If finer cross-correlation is wanted, requires either (a) data-btc collector cadence increase (operational change) or (b) interpolation with documented artifact warnings. | data-pipeline upgrade question |
+
+---
+
+## 31. CLEANUP
+
+Phase 5 wrote raw JSON dumps and the analysis script to
+[audit_phase5_data/](audit_phase5_data/) — `kalshi_snaps_14d.json`,
+`coinbase_btc_14d.json`, `analyze.py`, `analysis_output.txt`.
+Also added `audit_phase3_data/paper_trades.json` (helper for §28
+trigger_type lookup; the paper_trade_ids.txt scratch file is in
+the same dir).
+
+No production state mutated. No code changed in any service repo.
+No source-doc edits. Railway link state on operator's laptop is
+left at `kujaku-ai / patient-renewal / production / data-btc`
+(was relinked through `kujaku-bot-kalshi15min-btc` and
+`executor-portfolio-001` during the audit).
+
+**End of Phase 5.**
