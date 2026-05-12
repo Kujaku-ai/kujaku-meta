@@ -212,7 +212,7 @@ Decommission is intentionally simple: delete the Railway service, remove the GoD
 | QC Collector | 1 | LIVE | `Kujaku-ai/kujaku-data-qc` | (internal) |
 | Charting Calcs (ICT) | 2a | LIVE | `Kujaku-ai/charting-calculations` | `charting-calculations-production.up.railway.app` |
 | Paper Kev | 2b | LIVE (paper-only research) | `Kujaku-ai/kujaku-bot-kalshi15min-btc` | `kalshi15min-btc.kujaku.ai` |
-| Portfolio_001 | 2c | Planned (next deliverable) | `Kujaku-ai/executor-portfolio-001` | `portfolio-001.kujaku.ai` |
+| Portfolio_001 | 2c | LIVE | `Kujaku-ai/executor-portfolio-001` | `portfolio-001.kujaku.ai` |
 | Public Website | 3 | Built, awaiting cutover review | `Kujaku-ai/kujaku-web` | (staging) |
 
 All services deploy to Railway, each as its own service, each with its own env vars and lifecycle.
