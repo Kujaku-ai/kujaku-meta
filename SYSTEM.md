@@ -314,14 +314,16 @@ New folders going forward should follow a pattern that maps clearly to the repo 
 - **Layer 1 BTC** — `kujaku-data-btc` live with Coinbase 1m OHLCV + Kraken fallback + Kalshi orderbook depth.
 - **Layer 1 QC** — `kujaku-data-qc` live (basket: IONQ, RGTI, QBTS, etc.).
 - **Layer 2a ICT** — `charting-calculations` live (FVG, liquidity, momentum, VWAP, trend extended to 30m + 4h, BOS/CHoCH, order blocks).
-- **Layer 2b Paper Kev** — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.7.9`. Strategy lab; thesis-first architecture (v1.5), risk-aware entry framework (v1.5.2), v1.6.x cleanup + analysis rebuild, v1.7.x sizing-overhaul (half-Kelly, expire-without-fill, realized-stats subsystem, SE-gated noise band, edge clamp), v1.7.8/v1.7.9 dashboard observability + Claude Communication panel redesign.
+- **Layer 2b Paper Kev** — `kujaku-bot-kalshi15min-btc` live at `kalshi15min-btc.kujaku.ai`, tagged `v1.7.20` (v1.8.0 cumulation in progress — see BOT.md). Strategy lab; thesis-first architecture (v1.5), risk-aware entry framework (v1.5.2), v1.6.x cleanup + analysis rebuild, v1.7.x sizing-overhaul (half-Kelly, expire-without-fill, realized-stats subsystem, SE-gated noise band, edge clamp), v1.7.8/v1.7.9 dashboard observability + Claude Communication redesign, v1.7.10–v1.7.16 PAR/scale + threshold tuning, v1.7.17 live-orderbook-at-fill, v1.7.18 hard-rules promote + playbook surgery, v1.7.19 PAR Phase-3 panel repair, v1.7.20 cumulation cleanup.
+- **Layer 2c Portfolio_001** — `executor-portfolio-001` LIVE; real-money order router that mirrors Paper Kev's `primary`/`primary_scale` trades onto a single Kalshi account. Tagged `v1.7.14` (v1.7.11 poll-interval cut, v1.7.13 compound pickup cursor, v1.7.14 stale-ask-drift guard). `executor-portfolio-002` was forked at v1.7.14 and is **paused per architect directive** — untouched.
 
 **Built, awaiting cutover review:**
 - **Layer 3** — `kujaku-web`, public-facing frontend. Astro scaffold built (`site/dist/` exists); SITE.md authored. Cutover prompt prepared; awaiting operator green-light.
 
 **Current phase:**
-- Paper Kev continuing as the strategy research lab.
-- Layer 2c executor (Portfolio_001) being built as the first real-money order router.
+- Paper Kev continuing as the strategy research lab (v1.7.20 → v1.8.0 cumulation in progress: v1.7.20 cleanup → v1.7.21 dashboard features → v1.8.0 baseline + coordinated tag).
+- Portfolio_001 (Layer 2c) LIVE and operational — the first real-money order router; mirrors Paper Kev verbatim.
+- Portfolio_002 (a second Layer 2c executor) forked at v1.7.14 and paused per architect directive; untouched.
 
 **After that:**
 - Additional Layer 2a indicators as they earn their place.
@@ -362,6 +364,14 @@ These patterns exist for a reason. Deviating is allowed but requires explicit ju
 ## Session Log
 
 Brief record of major architectural decisions and milestones. Append new entries at the top.
+
+**2026-05-12 — v1.7.x → v1.8.0 cumulation; Portfolio_001 LIVE; Portfolio_002 paused.**
+- Paper Kev v1.7.10–v1.7.19 sprint: removed `break_above`/`break_below` from scale entries (v1.7.10); post-LLM freshness gate (v1.7.12); PAR observability + d3957 guard + hypothesis-drift logging (v1.7.14); min-perceived-ask 20¢ + min-time-to-expiry 5min/4min hard floors (v1.7.15); PAR confluence threshold 3→2 (v1.7.16); **live Kalshi orderbook at fill time** — Paper records the live ask, not a ~10–25 s-stale data-btc snapshot (v1.7.17); hard-rules promote (Rule 5d-hard imperative in the system prompt) + one-time playbook body surgery (v1.7.18); **PAR Phase-3 confluence panel repair** — three signals had been dead since v1.6.5 reading charting fields the API never produced; panel now 3 signals, 2-of-3 threshold (v1.7.19).
+- Layer 2c executor sprint: poll interval 10s→2s (v1.7.11); compound `(paper_fill_ts_utc, paper_trade_id)` pickup cursor — the `MAX(id)` cursor was stranding trigger-based primaries (v1.7.13); stale-ask-drift guard — skip a trade if the executor's live Kalshi ask is >15¢ adverse of Paper's recorded fill (v1.7.14).
+- Audits run this window: `KALSHI_FRESHNESS_AUDIT_2026-05-11` (end-to-end staleness; CloudFront 15s cache on `/markets?status=open` confirmed → faster REST polling is a no-op, WS is the only Layer-1 freshness lever), `COLLECTOR_WS_SCOPING_AUDIT_2026-05-12` (WS build scoped: ~2.5 eng days + 5–8 day soak → v1.9), `HARD_RULES_PROMPT_AUDIT_2026-05-12` (→ v1.7.18), `PAR_DIAGNOSTIC_2026-05-12` (→ v1.7.19), `PORTFOLIO_002_PRESCOPE_AUDIT_2026-05-11`, `V180_CUMULATION_AUDIT_2026-05-12` (this cumulation's plan).
+- **Portfolio_001 went LIVE** (Layer 2c, real-money) — first real-money order router operational, mirroring Paper Kev verbatim.
+- **Portfolio_002** (a second Layer 2c executor) was forked at v1.7.14 and is **paused per architect directive** — its codebase is untouched and excluded from the v1.8.0 cumulation; any future fork-and-mirror of v1.8.0 executor changes to -002 is a separate, later decision.
+- **v1.8.0 cumulation in progress** (Paper Kev): v1.7.20 cleanup pass (this entry's date — removed dead `_SYSTEM_PROMPT_TEMPLATE_V15`; rewrote the stale PAR system-prompt block to the v1.7.19 reality; finished the v1.6.0 "KevBot"→"Kujaku" dashboard rename; corrected `CLAUDE.md`/`COLLECTOR.md`/`EXECUTOR.md` doc drift) → v1.7.21 dashboard features (Live Session live-orderbook overlay + BTC-price prominence) → v1.8.0 baseline (data-btc `POLL_INTERVAL_SECONDS` split + `kalshi_snapshots` retention TTL + cache-header logging) + coordinated tag across the in-scope repos.
 
 **2026-05-09 — Layer 2c introduced; Portfolio_001 spec written.**
 - SYSTEM.md updated to define Layer 2c (execution services): deterministic real-money order routers that consume a Layer 2b brain via its public API and route trades to an exchange account.
